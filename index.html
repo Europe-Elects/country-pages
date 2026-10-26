@@ -201,7 +201,8 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
-const POLL_MIN_SHOWN = 3; // parties whose mean across the polls that included them is below this (%) start switched off
+const POLL_MIN_SHOWN = 3;   // % threshold for parties starting switched on (see buildPolling)
+const POLL_SHOWN_YEARS = 5; // years: above the threshold this long in total, or the mean of the party's latest this-many years of polls
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
 const POLLING_CHARTS = {
@@ -1043,11 +1044,16 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const t1 = nowT;
   // Parties still current: their last average point lies within 60 days of the latest poll.
   series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; sr.current = !!seg && seg[seg.length - 1].t.getTime() >= lastT - 60 * 864e5; });
-  // Shown by default: parties or alliances whose mean across all polls that included them (in the chart period)
-  // is at least POLL_MIN_SHOWN %. A missing value is not a zero: only the polls listing the party count.
-  const recentMean = (sr) => { const vals = polls.filter((p) => p.v[sr.key] != null).map((p) => +p.v[sr.key]);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null; };
-  const stale = series.filter((sr) => { const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
+  // Shown by default (either rule is enough):
+  //  (a) the polling average was above POLL_MIN_SHOWN % for at least POLL_SHOWN_YEARS years in total, or
+  //  (b) the mean of the polls in the party's most recent POLL_SHOWN_YEARS years of polling (all of them if
+  //      it has been polled for less) is at least POLL_MIN_SHOWN %. Only polls listing the party count; a missing value is not a zero.
+  const span = POLL_SHOWN_YEARS * 365.25 * 864e5;
+  const yearsAbove = (sr) => { let ms = 0; sr.curve.forEach((seg) => { for (let i = 1; i < seg.length; i++) if (seg[i - 1].v > POLL_MIN_SHOWN && seg[i].v > POLL_MIN_SHOWN) ms += seg[i].t - seg[i - 1].t; }); return ms; };
+  const recentMean = (sr) => { const mine = polls.filter((p) => p.v[sr.key] != null); if (!mine.length) return null;
+    const lastP = mine[mine.length - 1].t.getTime(); const vals = mine.filter((p) => p.t.getTime() >= lastP - span).map((p) => +p.v[sr.key]);
+    return vals.reduce((a, b) => a + b, 0) / vals.length; };
+  const stale = series.filter((sr) => { if (yearsAbove(sr) >= span) return false; const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
