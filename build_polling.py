@@ -75,11 +75,11 @@ def parse_ropf(text):
     return polls, parties
 
 
-def loess(xs, ys, x0, k):
+def loess(xs, ys, x0, k, span=SPAN_DAYS):
     """Local linear regression at x0 with tricube weights over the k nearest points (within SPAN_DAYS)."""
     dist = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))[:k]
     h = max(dist[-1][0], 1.0) * 1.0001
-    h = min(h, SPAN_DAYS) if dist[0][0] < SPAN_DAYS else h
+    h = min(h, span) if dist[0][0] < span else h
     sw = swx = swy = swxx = swxy = 0.0
     for d, x, y in dist:
         if d >= h:
