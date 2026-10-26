@@ -160,6 +160,7 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
 .pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.pseg{display:inline-flex}.pseg .pchip:first-child{border-radius:999px 0 0 999px}.pseg .pchip:last-child{border-radius:0 999px 999px 0;margin-left:-1px}.pseg .pchip[aria-pressed="false"]{text-decoration:none}.pseg .dot+.dot{margin-left:-3px}
 .rngbtn:focus-visible,.pchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
@@ -514,24 +515,36 @@ const ALLIANCE_TYPES = [
 function buildAlliances(rows, iso, parties) {
   const byId = {};
   parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
-  // Abbreviation of the most recent version of each alliance entity.
-  const newestAbbr = {};
-  rows.forEach((o) => { const id = g(o, 'Europe Elects Entity ID'), v = +g(o, 'Europe Elects Entity Version') || 1, a = g(o, 'Abbreviation');
-    if (id && a && (!newestAbbr[id] || v > newestAbbr[id].v)) newestAbbr[id] = { v, a }; });
+  // Period of one member-party version ("HU001189.v2"): that version's Europarty Start–End in the party sheet.
+  const refPeriod = (ref) => {
+    const m = String(ref || '').match(/^(.+?)\.v(\d+)$/); if (!m) return null;
+    const p = byId[m[1]]; if (!p || !p.history) return null;
+    const h = p.history.ep.find((i) => i.ver === +m[2]); return h && (h.a > -Infinity || h.b < Infinity) ? { a: h.a, b: h.b } : null;
+  };
   // Rows flagged as a regional name variant (e.g. the Swiss language versions of one party) are not alliances.
-  return rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso && !/inactive/i.test(g(o, 'Status', 'x')) && !/^yes$/i.test(g(o, 'Alternative Party Name (Regional Adaptation)'))).map((o) => {
-    const members = [], seen = new Set();
+  const recs = rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso && !/^yes$/i.test(g(o, 'Alternative Party Name (Regional Adaptation)'))).map((o, idx) => {
+    const members = [], seen = new Set(), refs = [];
     for (let n = 1; n <= 10; n++) {
       const id = g(o, 'Party ID ' + n), nm = g(o, 'Party ' + n), exit = g(o, 'Exit ' + n);
       if (!id && !nm) continue;
       const key = id || nm; if (seen.has(key)) continue; seen.add(key);
+      if (id) refs.push(id);
       if (exit) continue;
       const p = byId[id] || byId[id.replace(/\.v\d+$/, '')];
       members.push({ abbr: p ? p.abbr : nm, english: p ? p.english : nm, color: p ? p.color : NONE, party: p });
     }
     const europarty = g(o, 'Europarty Affiliation'), epGroup = g(o, 'European Parliament Group');
+    // When this version applied: optional "Europarty Start/End" columns, else the overlap of the
+    // member-party versions it links to (e.g. Fidesz v2 = unaffiliated 2021–2024).
+    let a = boundDate(g(o, 'Europarty Start')), b = boundDate(g(o, 'Europarty End'), true);
+    if (a === -Infinity && b === Infinity) {
+      refs.map(refPeriod).filter(Boolean).forEach((r) => { a = Math.max(a, r.a); b = Math.min(b, r.b); });
+      if (a > b) { a = -Infinity; b = Infinity; }
+    }
     return {
-      abbr: (newestAbbr[g(o, 'Europe Elects Entity ID')] || {}).a || g(o, 'Abbreviation'), oldAbbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
+      o, idx, entityId: g(o, 'Europe Elects Entity ID'), version: +g(o, 'Europe Elects Entity Version') || 1, a, b,
+      inactive: /inactive/i.test(g(o, 'Status', 'x')),
+      abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
       since: year(g(o, 'Political Activity Started')),
       europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
       color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
@@ -539,6 +552,18 @@ function buildAlliances(rows, iso, parties) {
       members
     };
   });
+  // Versions of one alliance (same Entity ID) become one alliance: the newest version (highest version number,
+  // then latest period, then lowest row) is shown; all versions give the dated Europarty history for the colours.
+  const groups = {};
+  recs.forEach((r) => { const k = r.entityId || 'row' + r.idx; (groups[k] = groups[k] || []).push(r); });
+  return Object.values(groups).map((vs) => {
+    vs.sort((x, y) => (x.version - y.version) || (x.a - y.a) || (x.idx - y.idx));
+    const cur = vs[vs.length - 1];
+    if (cur.inactive) return null;
+    const history = { grp: [], ep: vs.map((v, i) => ({ a: v.a, b: v.b, v: v.europarty === 'None' ? null : v.europarty.split(/[|;,]/)[0].trim(), ver: i + 1 })) };
+    const { o, idx, a, b, inactive, ...rest } = cur;
+    return { ...rest, oldAbbr: vs.map((v) => v.abbr).filter((x) => x !== cur.abbr), history: vs.length > 1 ? history : null };
+  }).filter(Boolean);
 }
 
 /* ---------- Logos (Wikidata / Wikimedia Commons) ---------- */
@@ -1004,7 +1029,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const looseKey = (n) => normKey(String(n || '').replace(GENERIC, ' '));
   const findLoose = (pp) => { const ks = [pp.native, pp.english].map(looseKey).filter((k) => k.length >= 6);
     return ks.length ? parties.find((x) => [x.native, x.english].some((n) => ks.includes(looseKey(n)))) : null; };
-  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.oldAbbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
+  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, ...(a.oldAbbr || []), a.native, a.english].some((n) => n && keys.includes(normKey(n))));
   const lastPoll = new Date(data.polls[data.polls.length - 1].d);
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
   const series = data.parties.map((pp) => {
@@ -1027,7 +1052,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
-    const history = m ? m.history : null;
+    const history = m ? m.history : (al && al.history ? al.history : null);
     // Not a member but interested in joining: the target's colour (lines drawn thinner, see thinAt).
     const iCol = interestColor(m), iFrom = interestFrom(m);
     const memberColor = color;
@@ -1067,18 +1092,18 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const stale = series.filter((sr) => { if (yearsAbove(sr) >= span) return false; const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
   // Alliances and their member parties are mutually exclusive (e.g. CDU/CSU vs CDU + CSU): never both on.
   // exclusive[key] = keys that are switched off when key is switched on. Default: the alliance wins.
-  const exclusive = {};
+  // Shown as one toggle in the legend: [CDU/CSU | CDU + CSU].
+  const groups = [];
   series.forEach((al) => {
     if (!al.alliance) return;
     const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
-    const members = series.filter((sr) => sr.party && memberParties.includes(sr.party)).map((sr) => sr.key);
-    if (!members.length) return;
-    (exclusive[al.key] = exclusive[al.key] || []).push(...members);
-    members.forEach((mk) => (exclusive[mk] = exclusive[mk] || []).push(al.key));
+    const members = series.filter((sr) => sr.party && memberParties.includes(sr.party) && !groups.some((g0) => g0.members.includes(sr.key))).map((sr) => sr.key);
+    if (members.length) groups.push({ alliance: al.key, members });
   });
-  Object.keys(exclusive).forEach((k) => { const sr = series.find((x) => x.key === k);
-    if (sr && sr.alliance && !stale.includes(k)) exclusive[k].forEach((mk) => { if (!stale.includes(mk)) stale.push(mk); }); });
-  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), exclusive, updated: data.updated };
+  groups.forEach((g0) => {
+    if (!stale.includes(g0.alliance)) g0.members.forEach((mk) => { if (!stale.includes(mk)) stale.push(mk); });  // default: the alliance
+  });
+  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), groups, updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
 function viewPolling(cfg, poll) {
@@ -1090,12 +1115,23 @@ function viewPolling(cfg, poll) {
     const spanYears = (POLL.full.b - POLL.full.a) / (365.25 * 864e5);
     const ranges = RANGES.filter(([r]) => r === 'all' || +r < spanYears);
     const latest = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg ? seg[seg.length - 1].v : 0; };
-    const chips = [...POLL.series].sort((p1, p2) => latest(p2) - latest(p1));
+    const inGroup = new Set(POLL.groups.flatMap((g0) => g0.members));
+    const chips = [...POLL.series].filter((sr) => !inGroup.has(sr.key)).sort((p1, p2) => latest(p2) - latest(p1));
+    const byKey = Object.fromEntries(POLL.series.map((sr) => [sr.key, sr]));
+    const chipHtml = (sr) => {
+      const gi = POLL.groups.findIndex((g0) => g0.alliance === sr.key);
+      if (gi < 0) return `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`;
+      // Alliance vs its member parties: one toggle, never both at once (click the active side to hide all).
+      const g0 = POLL.groups[gi], mem = g0.members.map((k) => byKey[k]);
+      return `<span class="pseg" role="group" aria-label="${esc(sr.abbr)}: alliance or member parties">`
+        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="a" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`
+        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="m" aria-pressed="${mem.some((m) => !POLL.hidden.has(m.key))}" title="${esc(mem.map((m) => m.name).join(' · '))}">${mem.map((m) => `<span class="dot" style="background:${m.color}"></span>`).join('')}${esc(mem.map((m) => m.abbr).join(' + '))}</button></span>`;
+    };
     return bar('Polling average', right) + `<section class="card poll">
       <div class="poll-ctl">
         <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
           <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
-        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`).join('')}</div>
+        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map(chipHtml).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
       <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
@@ -1115,13 +1151,14 @@ function bindPolling() {
     drawPolling();
   }; });
   document.querySelectorAll('.poll-chip').forEach((b) => { b.onclick = () => {
-    const k = b.dataset.k;
-    if (POLL.hidden.has(k)) {
-      POLL.hidden.delete(k);
-      // switching on an alliance switches off its members, and the other way round
-      (POLL.exclusive[k] || []).forEach((x) => POLL.hidden.add(x));
-    } else POLL.hidden.add(k);
-    document.querySelectorAll('.poll-chip').forEach((c) => c.setAttribute('aria-pressed', String(!POLL.hidden.has(c.dataset.k))));
+    const k = b.dataset.k; if (POLL.hidden.has(k)) POLL.hidden.delete(k); else POLL.hidden.add(k);
+    b.setAttribute('aria-pressed', String(!POLL.hidden.has(k))); drawPolling();
+  }; });
+  document.querySelectorAll('.poll-seg').forEach((b) => { b.onclick = () => {
+    const g0 = POLL.groups[+b.dataset.g], on = b.getAttribute('aria-pressed') === 'true';
+    const show = on ? [] : (b.dataset.mode === 'a' ? [g0.alliance] : g0.members);
+    [g0.alliance, ...g0.members].forEach((k) => (show.includes(k) ? POLL.hidden.delete(k) : POLL.hidden.add(k)));
+    b.parentNode.querySelectorAll('.poll-seg').forEach((c) => c.setAttribute('aria-pressed', String(!on && c === b)));
     drawPolling();
   }; });
 }
