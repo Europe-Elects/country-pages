@@ -459,6 +459,14 @@ function buildParties(rows, iso, cfg) {
   const versions = {};
   list.forEach((p) => { if (p.entityId) (versions[p.entityId] = versions[p.entityId] || []).push(p); });
   list.forEach((p) => { p.history = affiliationHistory(versions[p.entityId] || [p]); });
+  // Abbreviations: always the one recorded on the most recent version of the entity (highest version number).
+  list.forEach((p) => { p.ownAbbr = p.abbr; });
+  list.forEach((p) => {
+    const vs = versions[p.entityId] || [p];
+    p.abbrs = [...new Set(vs.map((v) => v.ownAbbr).filter(Boolean))];
+    const newest = vs.filter((v) => v.ownAbbr).sort((a, b) => b.version - a.version)[0];
+    if (newest) p.abbr = newest.ownAbbr;
+  });
   const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
   list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
   // Merge duplicate current records with the same native name (keeps the better-documented one).
@@ -473,9 +481,10 @@ function buildParties(rows, iso, cfg) {
   list = list.filter((p) => !p.duplicateOf);
   const seatData = (cfg.seats && cfg.seats.parties) || {};
   list.forEach((p) => {
-    p.seats = seatData[p.abbr] || null;
+    const own = [p.abbr, ...(p.abbrs || [])];
+    p.seats = own.map((a) => seatData[a]).find(Boolean) || null;
     p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0;
-    p.gov = (cfg.governingParties || []).includes(p.abbr);
+    p.gov = own.some((a) => (cfg.governingParties || []).includes(a));
   });
   return { list, merged };
 }
@@ -492,6 +501,10 @@ const ALLIANCE_TYPES = [
 function buildAlliances(rows, iso, parties) {
   const byId = {};
   parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
+  // Abbreviation of the most recent version of each alliance entity.
+  const newestAbbr = {};
+  rows.forEach((o) => { const id = g(o, 'Europe Elects Entity ID'), v = +g(o, 'Europe Elects Entity Version') || 1, a = g(o, 'Abbreviation');
+    if (id && a && (!newestAbbr[id] || v > newestAbbr[id].v)) newestAbbr[id] = { v, a }; });
   // Rows flagged as a regional name variant (e.g. the Swiss language versions of one party) are not alliances.
   return rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso && !/inactive/i.test(g(o, 'Status', 'x')) && !/^yes$/i.test(g(o, 'Alternative Party Name (Regional Adaptation)'))).map((o) => {
     const members = [], seen = new Set();
@@ -505,7 +518,7 @@ function buildAlliances(rows, iso, parties) {
     }
     const europarty = g(o, 'Europarty Affiliation'), epGroup = g(o, 'European Parliament Group');
     return {
-      abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
+      abbr: (newestAbbr[g(o, 'Europe Elects Entity ID')] || {}).a || g(o, 'Abbreviation'), oldAbbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
       since: year(g(o, 'Political Activity Started')),
       europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
       color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
@@ -921,25 +934,30 @@ const partyTag = (europarty, epGroup) => {
 let POLL = null;
 const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
 // Every name a party goes by: multilingual records like "SP/PS" or "Die Mitte / Le Centre" count per language too.
-const nameVariants = (p) => [p.abbr, p.native, p.english].filter(Boolean)
+const nameVariants = (p) => [p.abbr, ...(p.abbrs || []), p.native, p.english].filter(Boolean)
   .flatMap((n) => [n, ...String(n).split(/\s+\/\s+|\/(?=\S)/)]).map((n) => n.trim()).filter(Boolean);
 function buildPolling(data, parties, calendarRows, countryName, alliances) {
   if (!data || !data.parties || !data.polls || !data.polls.length) return null;
   const names = (pp) => [pp.key, pp.abbr, pp.native, pp.english].filter(Boolean).map(normKey);
   const findParty = (keys) => parties.find((x) => x.latest !== false && nameVariants(x).some((n) => keys.includes(normKey(n))))
     || parties.find((x) => nameVariants(x).some((n) => keys.includes(normKey(n))));
-  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
+  // Looser name key: drops articles and generic words like "Erakond"/"Party", so "Parempoolsed" = "Erakond Parempoolsed".
+  const GENERIC = /\b(the|erakond|party|partei|parti|partia|partij|partido|partito|partidul|stranka|strana|puolue|flokkurinn|political|politiskā|movement)\b/giu;
+  const looseKey = (n) => normKey(String(n || '').replace(GENERIC, ' '));
+  const findLoose = (pp) => { const ks = [pp.native, pp.english].map(looseKey).filter((k) => k.length >= 6);
+    return ks.length ? parties.find((x) => [x.native, x.english].some((n) => ks.includes(looseKey(n)))) : null; };
+  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.oldAbbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
   const lastPoll = new Date(data.polls[data.polls.length - 1].d);
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
   const series = data.parties.map((pp) => {
     const keys = names(pp);
     let color = NONE, tag = '', abbr = pp.abbr || pp.key, name = pp.english || pp.native || pp.key;
-    if (abbr.length > 12) abbr = abbr.split(/\s+/).map((w) => w[0]).join('').toUpperCase();
-    const m = findParty(keys);
+    const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
+    const m = byId || findParty(keys) || findLoose(pp);
     const al = m ? null : findAlliance(keys);
     if (m) {
       color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
-      // multilingual abbreviations ("SP/PS") are shortened to the one the poll file uses
+      // abbreviation strictly from the party database (most recent version)
       tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
     } else if (al) {
       // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
