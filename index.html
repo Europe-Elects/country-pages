@@ -204,6 +204,9 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
+// Alliances whose member parties keep their own lines (shown as a toggle: alliance | members), by Entity ID or abbreviation.
+// For every other alliance, member-party lines are cut while the alliance is polled.
+const ALLIANCE_TOGGLE = ['ALA001', 'CDU/CSU'];
 const POLL_MIN_SHOWN = 3;   // % threshold for parties starting switched on (see buildPolling)
 const POLL_SHOWN_YEARS = 5; // years: above the threshold this long in total, or the mean of the party's latest this-many years of polls
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
@@ -1063,7 +1066,25 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     return { key: pp.key, party: m || null, alliance: al || null, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
       colorAt: (t) => (thinAt(t) ? iCol : baseAt(t)), thinAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
-  const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
+  const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: { ...p.v } })).filter((p) => p.t >= from);
+  // Member parties do not run on their own while an alliance they belong to is polled: their line and poll
+  // dots are cut for the alliance's polled period(s), even if separate figures exist. Exception: ALLIANCE_TOGGLE.
+  const isToggle = (al) => ALLIANCE_TOGGLE.includes(al.entityId) || ALLIANCE_TOGGLE.includes(al.abbr);
+  series.filter((sr) => sr.alliance && !isToggle(sr.alliance)).forEach((al) => {
+    const spans = al.curve.map((seg) => [seg[0].t.getTime(), seg[seg.length - 1].t.getTime()]);
+    const pt = polls.filter((p) => p.v[al.key] != null).map((p) => p.t.getTime());
+    if (!spans.length && pt.length) spans.push([Math.min(...pt), Math.max(...pt)]);
+    if (!spans.length) return;
+    const inside = (t) => spans.some(([a, b]) => t >= a && t <= b);
+    const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
+    series.filter((sr) => sr !== al && sr.party && memberParties.includes(sr.party)).forEach((sr) => {
+      sr.curve = sr.curve.flatMap((seg) => { const out = []; let cur = [];
+        seg.forEach((q) => { if (inside(q.t.getTime())) { if (cur.length) out.push(cur); cur = []; } else cur.push(q); });
+        if (cur.length) out.push(cur); return out.filter((x) => x.length > 1); });
+      polls.forEach((p) => { if (p.v[sr.key] != null && inside(p.t.getTime())) delete p.v[sr.key]; });
+    });
+  });
+  for (let i = series.length - 1; i >= 0; i--) if (!series[i].curve.length && !polls.some((p) => p.v[series[i].key] != null)) series.splice(i, 1);
   const today = new Date();
   // Election markers: national parliament general elections only. By-elections (partial, supplementary,
   // recall or repeat votes for single seats) and upper-house-only votes are not marked.
@@ -1095,7 +1116,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   // Shown as one toggle in the legend: [CDU/CSU | CDU + CSU].
   const groups = [];
   series.forEach((al) => {
-    if (!al.alliance) return;
+    if (!al.alliance || !isToggle(al.alliance)) return;
     const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
     const members = series.filter((sr) => sr.party && memberParties.includes(sr.party) && !groups.some((g0) => g0.members.includes(sr.key))).map((sr) => sr.key);
     if (members.length) groups.push({ alliance: al.key, members });
