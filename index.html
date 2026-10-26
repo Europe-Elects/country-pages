@@ -111,6 +111,23 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 button.toggle{min-height:44px;padding:0 18px;border:1px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font:600 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
 button.toggle:hover{background:var(--navy);color:#fff}
 button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.tl{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.tl-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.tl-legend span{display:inline-flex;align-items:center;gap:6px}
+.tl-wrap{position:relative;margin:0 4px}
+.tl-axis{position:absolute;left:0;right:0;bottom:40px;height:2px;background:var(--navy)}
+.tl-tick{position:absolute;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;font-size:13px;color:var(--muted)}
+.tl-tick::before{content:"";width:1px;height:10px;background:var(--navy);margin-bottom:2px}
+.tl-today{position:absolute;bottom:0;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+.tl-dot{position:absolute;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);padding:0;cursor:pointer}
+.tl-dot::after{content:"";position:absolute;inset:-12px}
+.tl-dot:hover,.tl-dot:focus-visible{transform:scale(1.25);outline:none;box-shadow:0 0 0 3px var(--blue)}
+.tl-tip{position:absolute;z-index:3;width:max-content;max-width:min(280px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);overflow:hidden;font-size:14px}
+.tl-tip-type{display:block;padding:6px 12px;color:#fff;font-weight:700}
+.tl-tip-body{padding:8px 12px 10px;display:flex;flex-direction:column;gap:2px}
+.tl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.tl-list li{display:flex;align-items:baseline;gap:8px}
+.tl-list .dot{transform:translateY(1px)}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 </style>
@@ -352,6 +369,9 @@ function buildParties(rows, iso, cfg) {
       affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
     };
   });
+  // Earlier versions of a party that has a current (Latest = Yes) record are dropped, so each party appears once.
+  const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
+  list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
   // Merge duplicate current records with the same native name (keeps the better-documented one).
   const merged = [];
   const groups = {};
@@ -429,32 +449,48 @@ async function wikidataEntities(qids) {
   return out;
 }
 const claimVals = (e, prop) => (((e && e.claims) || {})[prop] || []).filter((c) => c.rank !== 'deprecated').map((c) => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value).filter(Boolean);
+const LOGO_DEBUG = /(^|[?&])debug=logos/.test(location.search);
 async function loadLogos(parties, countryName) {
-  const cacheKey = `ee-logos-v1-${ISO}`;
-  try { const c = JSON.parse(localStorage.getItem(cacheKey) || 'null'); if (c && Date.now() - c.t < LOGOS.cacheHours * 3600e3) return c.logos; } catch (e) { /* storage unavailable */ }
+  const cacheKey = `ee-logos-v2-${ISO}`;
+  if (!LOGO_DEBUG) {
+    try { const c = JSON.parse(localStorage.getItem(cacheKey) || 'null'); if (c && Object.keys(c.logos).length && Date.now() - c.t < LOGOS.cacheHours * 3600e3) return { logos: c.logos, report: [] }; } catch (e) { /* storage unavailable */ }
+  }
   const titles = [...new Set([countryName, ...parties.flatMap((p) => [p.english, p.native]).filter(Boolean)])];
   const t2q = await titlesToQids(titles);
   const countryQ = t2q[countryName];
   const forced = (p) => (p.entityId in LOGO_OVERRIDES ? LOGO_OVERRIDES[p.entityId] : p.wikidata);
   const qids = [...new Set(parties.flatMap((p) => [forced(p), t2q[p.english], t2q[p.native]]).filter(Boolean))];
-  const ents = await wikidataEntities(qids);
-  const logos = {};
+  const ents = qids.length ? await wikidataEntities(qids) : {};
+  const logos = {}, report = [];
   parties.forEach((p) => {
-    if (LOGO_OVERRIDES[p.entityId] === '') return;
+    const row = { abbr: p.abbr, name: p.english, qid: '', result: 'No Wikipedia article found for the English or native name' };
+    report.push(row);
+    if (LOGO_OVERRIDES[p.entityId] === '') { row.result = 'Hidden by LOGO_OVERRIDES'; return; }
     const f = forced(p);
-    for (const q of [f, t2q[p.english], t2q[p.native]].filter(Boolean)) {
-      const e = ents[q]; if (!e) continue;
+    for (const [q, title] of [[f, ''], [t2q[p.english], p.english], [t2q[p.native], p.native]].filter((x) => x[0])) {
+      const e = ents[q]; row.qid = q;
+      if (!e) { row.result = 'Wikidata item not returned'; continue; }
       if (q !== f) {
-        const inCountry = countryQ && claimVals(e, 'P17').some((v) => v.id === countryQ);
+        const countries = claimVals(e, 'P17').map((v) => v.id);
+        const inCountry = countryQ && (countries.includes(countryQ) || (!countries.length && norm(title).includes(norm(countryName))));
         const isParty = claimVals(e, 'P31').some((v) => v.id === 'Q7278') || claimVals(e, 'P1142').length > 0;
-        if (!inCountry || !isParty) continue;
+        if (!inCountry) { row.result = countries.length ? 'Rejected: Wikidata country is not ' + countryName : 'Rejected: no country on Wikidata'; continue; }
+        if (!isParty) { row.result = 'Rejected: not marked as a political party'; continue; }
       }
-      const file = claimVals(e, 'P154')[0];
-      if (file) { logos[p.versionId] = file; break; }
+      const file = claimVals(e, 'P154')[0] || claimVals(e, 'P8972')[0];
+      if (file) { logos[p.versionId] = file; row.result = 'Logo: ' + file; break; }
+      row.result = 'Matched, but no logo on Wikidata';
     }
   });
-  try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), logos })); } catch (e) { /* storage unavailable */ }
-  return logos;
+  if (Object.keys(logos).length) { try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), logos })); } catch (e) { /* storage unavailable */ } }
+  return { logos, report };
+}
+function viewLogoReport(report, err) {
+  return `<section class="card" style="padding:14px 16px;font-size:14px"><h2 style="margin:0 0 8px;font-size:17px">Logo lookup report</h2>
+    ${err ? `<p style="color:#B00020">Lookup failed: ${esc(err)}</p>` : ''}
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%"><thead><tr><th style="text-align:left;padding:4px 8px">Party</th><th style="text-align:left;padding:4px 8px">Wikidata</th><th style="text-align:left;padding:4px 8px">Result</th></tr></thead><tbody>
+    ${report.map((r) => `<tr style="border-top:1px solid #ECEAE4"><td style="padding:4px 8px"><strong>${esc(r.abbr)}</strong> ${esc(r.name)}</td><td style="padding:4px 8px">${r.qid ? `<a href="https://www.wikidata.org/wiki/${esc(r.qid)}" target="_blank" rel="noopener">${esc(r.qid)}</a>` : '–'}</td><td style="padding:4px 8px">${esc(r.result)}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
 }
 const logoImg = (p, size) => (p.logo ? `<img class="logo" src="https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(p.logo)}?width=${size * 3}" alt="" loading="lazy" style="height:${size}px;max-width:${size * 2}px" onerror="this.remove()">` : '');
 
@@ -516,13 +552,63 @@ function buildElections(rows, countryName) {
   }).filter((e) => !e.when || e.when >= today) // future only; rows without a readable date are kept
     .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
 }
+const ELECTION_LABELS = { european: 'European Parliament', parliament: 'Parliament', president: 'Presidential', regional: 'Regional', local: 'Local', referendum: 'Referendum', '': 'Other' };
+const TIMELINE_LIST_MAX = 5; // up to this many elections also get a visible list; more = pop-ups only
+let TL = [];
 function viewElections(cfg, elections) {
-  const list = elections && elections.length ? elections : (cfg.elections || []);
+  let list = elections && elections.length ? elections : (cfg.elections || []).map((e) => ({ ...e, when: (parseElectionDate(e.date) || {}).date || null }));
   if (!list.length) return '';
   const right = cfg.calendarUrl ? `<a href="${esc(cfg.calendarUrl)}" target="_blank" rel="noopener">Full calendar →</a>` : '';
-  return bar('Upcoming elections', right) + `<div class="grid-e">${list.map((e) => `<div class="card elec">
-    <span class="type" style="background:${ELECTION_COLORS[e.kind] || '#5B6170'}">${esc(e.type)}</span>
-    <div class="body">${e.spec ? `<span style="font-size:14px;font-weight:600">${esc(e.spec)}</span>` : ''}<span class="big">${esc(e.date)}</span><span class="muted" style="font-size:14px">${esc(e.detail || '')}</span>${e.comment ? `<span class="muted" style="font-size:13px;font-style:italic">${esc(e.comment)}</span>` : ''}</div></div>`).join('')}</div>`;
+  const dated = list.filter((e) => e.when), tba = list.filter((e) => !e.when);
+  const color = (e) => ELECTION_COLORS[e.kind] || '#8A9099';
+  let body = '';
+  if (dated.length) {
+    const DAY = 864e5, start = new Date(); start.setHours(0, 0, 0, 0);
+    const last = Math.max(...dated.map((e) => e.when.getTime()), start.getTime() + 365 * DAY);
+    const end = new Date(new Date(last).getFullYear() + 1, 0, 1).getTime(); // run to the next 1 January
+    const pos = (t) => 2 + (t - start.getTime()) / (end - start.getTime()) * 94; // % with side margins
+    // stack dots that would overlap
+    const placed = [];
+    TL = dated.map((e) => { const x = pos(e.when.getTime()); const stack = placed.filter((q) => Math.abs(q - x) < 2.2).length; placed.push(x); return { ...e, x, stack }; });
+    const maxStack = Math.max(0, ...TL.map((d) => d.stack));
+    const ticks = []; for (let y = start.getFullYear() + 1; ; y++) { const t = new Date(y, 0, 1).getTime(); if (t > end) break; ticks.push({ y, x: pos(t) }); }
+    const kinds = [...new Set(list.map((e) => e.kind || ''))];
+    body = `<div class="tl-legend">${kinds.map((k) => `<span><span class="dot" style="background:${ELECTION_COLORS[k] || '#8A9099'}"></span>${esc(ELECTION_LABELS[k] || ELECTION_LABELS[''])}</span>`).join('')}</div>
+      <div class="tl-wrap" id="tl" style="height:${64 + maxStack * 20}px">
+        <div class="tl-axis"></div>
+        <div class="tl-today" style="left:2%"><span>Today</span></div>
+        ${ticks.map((t) => `<div class="tl-tick" style="left:${t.x}%"><span>${t.y}</span></div>`).join('')}
+        ${TL.map((d, i) => `<button type="button" class="tl-dot" data-i="${i}" style="left:${d.x}%;bottom:${33 + d.stack * 20}px;background:${color(d)}" aria-label="${esc(`${d.type}${d.spec ? ' – ' + d.spec : ''}: ${d.date}. ${d.detail || ''}`)}"></button>`).join('')}
+        <div class="tl-tip" id="tl-tip" role="tooltip" hidden></div>
+      </div>
+      ${TL.length <= TIMELINE_LIST_MAX
+        ? `<ul class="tl-list">${TL.map((d) => `<li><span class="dot" style="background:${color(d)}"></span><span><strong>${esc(d.date)}</strong> · ${esc(d.type)}${d.spec ? ' – ' + esc(d.spec) : ''} <span class="muted">· ${esc(d.detail || '')}</span>${d.comment ? ` <em class="muted">${esc(d.comment)}</em>` : ''}</span></li>`).join('')}</ul>`
+        : `<p class="note-s" style="margin:0">${TL.length} elections · hover or tap a dot for details.</p>`}`;
+  }
+  if (tba.length) body += `<div><span class="label" style="font-size:12px">Date to be announced</span><ul class="tl-list">${tba.map((e) => `<li><span class="dot" style="background:${color(e)}"></span><span>${esc(e.type)}${e.spec ? ' – ' + esc(e.spec) : ''} <span class="muted">· ${esc(e.detail || '')}</span></span></li>`).join('')}</ul></div>`;
+  return bar('Upcoming elections', right) + `<section class="card tl">${body}</section>`;
+}
+function bindTimeline() {
+  const wrap = document.getElementById('tl'), tip = document.getElementById('tl-tip'); if (!wrap || !tip) return;
+  let pinned = null;
+  const show = (btn) => {
+    const d = TL[+btn.dataset.i];
+    tip.innerHTML = `<span class="tl-tip-type" style="background:${ELECTION_COLORS[d.kind] || '#8A9099'}">${esc(d.type)}</span>
+      <div class="tl-tip-body">${d.spec ? `<span style="font-weight:600">${esc(d.spec)}</span>` : ''}<strong class="big" style="font-size:19px">${esc(d.date)}</strong><span class="muted">${esc(d.detail || '')}</span>${d.comment ? `<em class="muted">${esc(d.comment)}</em>` : ''}</div>`;
+    tip.hidden = false;
+    const w = wrap.clientWidth, tw = tip.offsetWidth, cx = btn.offsetLeft + btn.offsetWidth / 2;
+    tip.style.left = Math.max(0, Math.min(w - tw, cx - tw / 2)) + 'px';
+    tip.style.bottom = (parseFloat(btn.style.bottom) + 24) + 'px';
+  };
+  const hide = () => { if (!pinned) tip.hidden = true; };
+  wrap.querySelectorAll('.tl-dot').forEach((btn) => {
+    btn.addEventListener('mouseenter', () => show(btn));
+    btn.addEventListener('mouseleave', hide);
+    btn.addEventListener('focus', () => show(btn));
+    btn.addEventListener('blur', () => { pinned = null; hide(); });
+    btn.addEventListener('click', () => { pinned = pinned === btn ? null : btn; if (pinned) show(btn); else tip.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { pinned = null; tip.hidden = true; } });
 }
 const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>';
 const PAUSE_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="currentColor"/></svg>';
@@ -595,7 +681,6 @@ function tags(p) {
   p.ideologies.forEach((i) => t.push(`<span class="tag" style="border:1px solid ${i.color};background:${i.color}1F;color:#1A1D23">${esc(i.name)}</span>`));
   if (p.eu) t.push(`<span class="tag eu">EU: ${esc(p.eu)}</span>`);
   if (p.status !== 'active') t.push(`<span class="tag warn">${esc(p.status.charAt(0).toUpperCase() + p.status.slice(1))}</span>`);
-  if (!p.latest) t.push(`<span class="tag warn">Earlier version</span>`);
   return `<div class="tags">${t.join('')}</div>`;
 }
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
@@ -622,14 +707,16 @@ function smallTile(p, years) {
 }
 function viewParties(parties, cfg, activeOnly) {
   const years = (cfg.seats && cfg.seats.years) || [];
-  const vis = parties.filter((p) => !activeOnly || (p.status === 'active' && p.latest));
-  const hidden = parties.length - parties.filter((p) => p.status === 'active' && p.latest).length;
+  // Realigned and renamed records are never shown. Inactive parties appear only when the box is unticked.
+  const shown = (p) => p.status !== 'renamed' && p.status !== 'realigned' && (p.status !== 'inactive' || !activeOnly);
+  const vis = parties.filter(shown);
+  const hidden = parties.filter((p) => p.status === 'inactive').length;
   const hasSeats = !!(cfg.seats && cfg.seats.parties);
   const isMajor = (p) => (hasSeats ? p.seatsNow > 0 : p.european);
   const major = vis.filter(isMajor).sort((a, b) => b.seatsNow - a.seatsNow || b.affs.length - a.affs.length || a.english.localeCompare(b.english));
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
-  const filter = `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
-    <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive, renamed or earlier records hidden` : 'Including inactive, renamed and earlier records'}</span></div>`;
+  const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
+    <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
   return bar(hasSeats ? 'In national parliament' : 'Parties with a European affiliation', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
     bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European affiliation'} · hover for the native name</span>`) +
@@ -637,7 +724,7 @@ function viewParties(parties, cfg, activeOnly) {
 }
 function viewLegend(parties, showAll) {
   const key = (x) => norm(x).replace(/-/g, ' ');
-  const live = parties.filter((p) => p.status === 'active' && p.latest);
+  const live = parties.filter((p) => p.status === 'active');
   const count = (name) => live.filter((p) => p.ideologies.some((i) => key(i.name) === key(name))).length;
   const items = IDEOLOGIES.map(([n, c, t]) => ({ n, c, t, k: count(n) }));
   const present = items.filter((i) => i.k > 0);
@@ -687,7 +774,7 @@ async function main() {
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p></footer>`;
-    bindFilter(); bindLegend(); bindParl();
+    bindFilter(); bindLegend(); bindParl(); bindTimeline();
     postHeight();
   };
   const bindLegend = () => {
@@ -708,13 +795,14 @@ async function main() {
   };
   render();
   if (LOGOS.enabled) {
-    loadLogos(parties, cfg.name).then((logos) => {
+    loadLogos(parties, cfg.name).then(({ logos, report }) => {
       parties.forEach((p) => { p.logo = logos[p.versionId] || ''; });
-      if (!Object.keys(logos).length) return;
+      if (LOGO_DEBUG) app.insertAdjacentHTML('beforeend', viewLogoReport(report));
+      if (!Object.keys(logos).length) { postHeight(); return; }
       document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
       document.getElementById('logo-credit').textContent = ' Party logos from Wikimedia Commons via Wikidata.';
       bindFilter(); postHeight();
-    }).catch((e) => console.warn('Logos not loaded', e));
+    }).catch((e) => { console.warn('Logos not loaded', e); if (LOGO_DEBUG) { app.insertAdjacentHTML('beforeend', viewLogoReport([], e.message)); postHeight(); } });
   }
 }
 
