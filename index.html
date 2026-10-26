@@ -129,6 +129,16 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .tl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}
 .tl-list li{display:flex;align-items:baseline;gap:8px}
 .tl-list .dot{transform:translateY(1px)}
+.proj{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.proj-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.proj-legend span{display:inline-flex;align-items:center;gap:6px}
+.proj-chart{position:relative;width:100%}
+.proj-chart svg{display:block}
+.proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#565B66}
+.proj-chart .lab{font:600 14px 'Advent Pro',system-ui,sans-serif}
+.proj-tip{position:absolute;top:8px;z-index:3;min-width:220px;max-width:min(320px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:8px 12px;font-size:14px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.proj-tip div{display:flex;align-items:center;gap:8px}
+.proj-tip div strong{margin-left:auto;padding-left:12px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 </style>
@@ -153,7 +163,17 @@ const SOURCES = {
   alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' },
   // Electoral calendar (separate spreadsheet). Columns: Country, Specification, Type, Mode, Sequence,
   // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
-  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' }
+  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' },
+  // European Parliament projection (Mastersheet, wide format: Country, EU Parliament group, Party,
+  // Party Name + Group, then one column per month such as "Jul-26"). Rows are matched on the country name.
+  projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' }
+};
+const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
+
+// Polling-average charts (Datawrapper chart IDs) per country, e.g. AL: 'abGxs'.
+// A country's own polling block in COUNTRIES takes priority. The latest chart version is always shown.
+const POLLING_CHARTS = {
+  AL: 'abGxs'
 };
 
 // Party logos from Wikidata (property P154, files on Wikimedia Commons).
@@ -205,7 +225,7 @@ const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00',
   'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
   'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
 // EP groups / pill labels map to the Europarty of the same family.
-const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL' };
+const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN' };
 const textOn = (hex) => { const h = hex.replace('#', ''); const [r, g2, b2] = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * r + 0.7152 * g2 + 0.0722 * b2 > 0.25 ? '#1A1D23' : '#FFFFFF'; };
 const pillColor = (label) => {
   if (/^unaffiliated$/i.test(label)) return ['#C9CCD3', '#1A1D23'];
@@ -554,7 +574,7 @@ function buildElections(rows, countryName) {
   }).filter((e) => !e.when || e.when >= today) // future only; rows without a readable date are kept
     .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
 }
-const ELECTION_LABELS = { european: 'European Parliament', parliament: 'Parliament', president: 'Presidential', regional: 'Regional', local: 'Local', referendum: 'Referendum', '': 'Other' };
+const ELECTION_LABELS = { european: 'European Parliament', parliament: 'National parliament', president: 'Presidential', regional: 'Regional', local: 'Local', referendum: 'Referendum', '': 'Other' };
 const TIMELINE_LIST_MAX = 5; // up to this many elections also get a visible list; more = pop-ups only
 let TL = [];
 function viewElections(cfg, elections) {
@@ -590,6 +610,100 @@ function viewElections(cfg, elections) {
   if (tba.length) body += `<div><span class="label" style="font-size:12px">Date to be announced</span><ul class="tl-list">${tba.map((e) => `<li><span class="dot" style="background:${color(e)}"></span><span>${esc(e.type)}${e.spec ? ' – ' + esc(e.spec) : ''} <span class="muted">· ${esc(e.detail || '')}</span></span></li>`).join('')}</ul></div>`;
   return bar('Upcoming elections', right) + `<section class="card tl">${body}</section>`;
 }
+/* ---------- European Parliament projection ---------- */
+function parseMonthHeader(h) {
+  const t = String(h || '').trim().toLowerCase(); let m;
+  if ((m = t.match(/^([a-z]+)\.?[-\s'’/]+(\d{2}|\d{4})$/))) {
+    const mi = MONTHS.findIndex((x) => x.startsWith(m[1].slice(0, 3))); if (mi < 0) return null;
+    const y = m[2].length === 2 ? 2000 + +m[2] : +m[2]; return new Date(y, mi, 1);
+  }
+  if ((m = t.match(/^(\d{4})-(\d{1,2})/))) return new Date(+m[1], +m[2] - 1, 1);
+  if ((m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return new Date(+m[3], +m[1] - 1, 1);
+  return null;
+}
+function buildProjection(rows, countryName, parties) {
+  const mine = rows.filter((o) => { const c = g(o, 'Country'); return norm(c) === norm(countryName) || c.toUpperCase() === ISO; });
+  if (!mine.length) return null;
+  const months = Object.keys(mine[0]).map((k) => ({ k, d: parseMonthHeader(k) })).filter((x) => x.d).sort((a, b) => a.d - b.d);
+  const byName = (name) => parties.find((p) => [p.native, p.english, p.abbr].some((x) => norm(x) === norm(name)));
+  const groupCount = {};
+  const series = mine.map((o) => {
+    const group = g(o, 'EU Parliament group', 'European Parliament group', 'EP group');
+    const party = g(o, 'Party');
+    const match = byName(party);
+    const ep = GROUP_TO_EUROPARTY[group] || group;
+    const color = EUROPARTY_COLORS[ep] || NONE;
+    groupCount[color] = (groupCount[color] || 0) + 1;
+    const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
+    return { party, short: match ? match.abbr : party, label: g(o, 'Party Name + Group') || `${party} (${group})`, group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
+  }).filter((sr) => sr.values.some((v) => v != null));
+  if (!series.length) return null;
+  return { months: months.map((m) => m.d), series };
+}
+let PROJ = null;
+function viewProjection(proj, cfg) {
+  PROJ = proj; if (!proj) return '';
+  const last = proj.months.length - 1;
+  const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
+  const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
+    <div class="proj-legend">${proj.series.map((sr) => `<span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="${sr.color}" stroke-width="3" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/></svg>${esc(sr.label)}</span>`).join('')}</div>
+    <div class="proj-chart" id="proj-chart"></div>
+    <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover or tap the chart for earlier months.</p></section>`;
+}
+function drawProjection() {
+  const host = document.getElementById('proj-chart'); if (!host || !PROJ) return;
+  const { months, series } = PROJ;
+  const W = host.clientWidth, H = W < 560 ? 260 : 320, m = { l: 30, r: W < 560 ? 62 : 84, t: 12, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const t0 = months[0].getTime(), t1 = months[months.length - 1].getTime();
+  const x = (i) => m.l + (months.length === 1 ? iw / 2 : (months[i].getTime() - t0) / (t1 - t0) * iw);
+  const vmax = Math.max(1, ...series.flatMap((sr) => sr.values.filter((v) => v != null)));
+  const step = vmax <= 12 ? 1 : vmax <= 30 ? 2 : vmax <= 60 ? 5 : 10;
+  const ymax = Math.ceil((vmax + (vmax <= 12 ? 1 : step)) / step) * step;
+  const y = (v) => m.t + ih - v / ymax * ih;
+  let svg = '';
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#E4E2DB'}" stroke-width="1"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  // x ticks: January of each year (or first month)
+  months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="ax">${d.toLocaleDateString('en-GB', { month: 'short' })} ’${String(d.getFullYear()).slice(2)}</text><line x1="${x(i)}" x2="${x(i)}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/>`; });
+  // lines (broken at gaps)
+  series.forEach((sr) => {
+    let d = '', pen = false;
+    sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/>`;
+    sr.values.forEach((v, i) => { const lone = v != null && sr.values[i - 1] == null && sr.values[i + 1] == null; if (lone) svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${sr.color}"/>`; });
+  });
+  // end labels with simple collision avoidance
+  // Parties that dropped out before the latest month get an end dot but no label (they stay in the legend and pop-up).
+  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${sr.color}"/>`; });
+  const lastIdx = months.length - 1;
+  const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  ends.forEach((e) => { svg += `<circle cx="${x(e.i)}" cy="${y(e.v)}" r="4.5" fill="${e.sr.color}" stroke="#fff" stroke-width="1.5"/><text x="${x(e.i) + 9}" y="${e.yy + 4}" class="lab" fill="${e.sr.color === '#FFD700' || e.sr.color === '#90ee90' ? '#8A6D00' : e.sr.color}"><tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}</text>`; });
+  const lastI = months.length - 1;
+  const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
+    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#1A1D23" stroke-dasharray="3 3" visibility="hidden"/>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="proj-hit"/></svg><div class="proj-tip" id="proj-tip" hidden></div>`;
+  const hit = document.getElementById('proj-hit'), cross = document.getElementById('proj-x'), tip = document.getElementById('proj-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    let best = 0; months.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
+    cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
+    const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.label)}</span><strong>${o.v}</strong></div>`).join('');
+    tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+let projResize = null;
+window.addEventListener('resize', () => { clearTimeout(projResize); projResize = setTimeout(drawProjection, 150); });
+
 function bindTimeline() {
   const wrap = document.getElementById('tl'), tip = document.getElementById('tl-tip'); if (!wrap || !tip) return;
   let pinned = null;
@@ -661,7 +775,10 @@ function bindParl() {
   document.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimer) stop(); setParlYear(+b.dataset.i); }; });
 }
 function viewPolling(cfg) {
-  const p = cfg.polling; if (!p || !p.embed) return '';
+  const id = POLLING_CHARTS[ISO];
+  const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420,
+    note: `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}.` } : null);
+  if (!p || !p.embed) return '';
   return bar('Polling average', `<a href="${esc(p.dataUrl || DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`) + `<section class="card poll">
     <iframe title="${esc(p.title || 'Polling average')}" aria-label="Line chart" src="${esc(p.embed)}" scrolling="no" height="${p.height || 400}" data-external="1"></iframe>
     ${p.note ? `<p>${esc(p.note)}</p>` : ''}</section>`;
@@ -783,22 +900,24 @@ async function main() {
   try { partyRows = await loadWithFallback(SOURCES.parties); }
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
   try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
-  let calendarRows = [];
+  let calendarRows = [], projectionRows = [];
+  try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
   try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
   const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
   cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
   document.title = `Europe Elects – ${cfg.name}`;
   const current = parties.filter((p) => p.latest);
   const elections = buildElections(calendarRows, cfg.name);
+  const projection = buildProjection(projectionRows, cfg.name, current);
   const alliances = buildAlliances(allianceRows, ISO, parties);
   alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
 
   const render = () => {
-    app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg) +
+    app.innerHTML = viewHeader(cfg) + viewProjection(projection, cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg) +
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p></footer>`;
-    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances();
+    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); drawProjection();
     postHeight();
   };
   const bindLegend = () => {
