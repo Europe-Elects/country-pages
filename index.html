@@ -1,163 +1,1296 @@
-#!/usr/bin/env python3
-"""
-Build polling-average files for the Europe Elects country pages.
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Europe Elects – Country page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F7F6F2;--line:#E4E2DB;--line2:#ECEAE4;--navy:#1B2A4A;--blue:#2A5DB0;--gold:#F2B705;--ink:#1A1D23;--muted:#565B66;--chip:#EFEDE7;--tag:#E7EEF9;--tagInk:#1E4C99}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{font-family:'Advent Pro',system-ui,sans-serif;font-size:16px;color:var(--ink);line-height:1.35}
+a{color:var(--tagInk)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.wrap{max-width:1120px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;flex-direction:column;align-items:center;gap:14px}
+.eyebrow{margin:0;font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
+h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-size:30px;line-height:1;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:2px}
+.card{background:#fff;border:1px solid var(--line);border-radius:6px}
+.lead{align-self:stretch;border-top:4px solid var(--blue);border-radius:8px;padding:4px 22px}
+.lead-row{padding:14px 0;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:6px}
+.lead-row:last-child{border-bottom:0}
+.label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;color:#fff;text-transform:uppercase}
+.tagb{padding:3px 9px;border-radius:4px;background:var(--tag);color:var(--tagInk);font-size:13px;font-weight:600}
+.partyb{padding:3px 9px;border-radius:999px;background:#fff;border:1px solid #D5D3CC;font-size:14px;font-weight:600}
+.name{font-size:21px;font-weight:700}
+.bar{background:var(--navy);color:#fff;padding:12px 18px;border-radius:4px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;margin-top:12px}
+.bar h2{margin:0;font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.bar .note{font-size:14px;color:#D6DCE8}
+.bar a{font-size:15px;font-weight:600;color:var(--gold);text-decoration:none}
+.bar a:hover{text-decoration:underline}
+.badge{padding:3px 12px;border-radius:999px;background:var(--gold);color:var(--navy);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.grid-e{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.elec{overflow:hidden;display:flex;flex-direction:column}
+.elec .type{padding:7px 14px;color:#fff;font-size:14px;font-weight:700}
+.elec .body{padding:10px 14px 12px;display:flex;flex-direction:column;gap:2px}
+.big{font-size:22px;font-weight:700}
+.muted{color:var(--muted)}
+.parl{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.parl .meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.seatwrap{position:relative}
+.seatbar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:#ECEAE4}
+.seatbar div{min-width:0;box-shadow:inset -1px 0 0 #fff;transition:flex-grow .9s ease}
+@media (prefers-reduced-motion: reduce){.seatbar div{transition:none}}
+.parl-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+button.play{display:inline-flex;align-items:center;gap:8px}
+.yrbtns{display:flex;flex-wrap:wrap;gap:4px}
+.yrbtn{min-height:44px;min-width:56px;padding:0 10px;border:1px solid #D5D3CC;border-radius:6px;background:#fff;color:var(--ink);font:600 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+.yrbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.yrbtn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.majline{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
+.keys{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.poll{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.poll iframe{width:0;min-width:100%;border:none}
+.poll p{margin:0;font-size:13px;font-style:italic;color:var(--muted)}
+.grid-a{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+.grid-p{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px}
+.grid-m{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,176px),1fr));gap:8px}
+.tile{display:flex;flex-direction:column;gap:9px;padding:11px 14px 13px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
+.tile.small{gap:6px;padding:9px 11px 10px;border-top-width:4px}
+.tile .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.nm{display:flex;align-items:center;gap:8px;min-width:0}
+.logo{display:block;flex:none;width:auto;object-fit:contain}
+.abbr{font-size:23px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.small .abbr{font-size:18px}
+.yr{font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap}
+.tile h3{margin:0;font-size:16px;font-weight:700;line-height:1.25}
+.small h3{font-size:15px;font-weight:600;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;flex-wrap:wrap;gap:4px;font-size:13px;font-weight:600;line-height:1}
+.small .tags{font-size:12px}
+.tag{padding:3px 7px;border-radius:4px;background:var(--chip);color:#2B2F36}
+.tag.gov{background:#1F7A4D;color:#fff}
+.tag.eu{background:#E3F2EA;color:#14583A}
+.tag.warn{background:#FFF1D6;color:#6B4A00}
+.tag.type{background:var(--tag);color:var(--tagInk);padding:4px 8px}
+.kv{display:flex;flex-direction:column;gap:3px}
+.kv div{display:flex;gap:8px;font-size:14px;line-height:1.35}
+.kv span:first-child{flex:none;width:100px;color:var(--muted)}
+.kv span:last-child{font-weight:700}
+.small .kv div{font-size:13px;gap:6px}
+.small .kv span:first-child{width:92px}
+.note-s{font-size:13px;color:var(--muted)}
+.seats{display:flex;flex-direction:column;gap:4px;padding-top:10px;margin-top:auto;border-top:1px solid var(--line2)}
+.seats .lbl{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--blue)}
+.seats .num{font-size:28px;font-weight:700;line-height:1}
+.mini{display:flex;gap:3px;height:34px;margin-top:4px}
+.mini div{flex:1;display:flex;justify-content:center;align-items:flex-end}
+.mini i{display:block;width:100%;max-width:16px;border-radius:2px}
+.yrs{display:flex;gap:3px;font-size:12px;color:var(--muted)}
+.yrs span{flex:1;text-align:center}
+.al[hidden]{display:none}
+.al{display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
+.al .members{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line2)}
+.al .mlabel{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:#fff;border:1px solid #D5D3CC;border-radius:999px;font-size:14px;font-weight:600}
+.filter{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;padding:2px 14px}
+.filter label{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-size:16px;font-weight:600;cursor:pointer}
+.filter input{width:20px;height:20px;margin:0;accent-color:var(--navy)}
+.lg{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line);border-radius:6px}
+.lg .t{display:flex;align-items:center;gap:8px}
+.lg h3{margin:0;font-size:17px;font-weight:700}
+.lg p{margin:0;font-size:14px;line-height:1.45;color:#2B2F36}
+.count{margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--navy);color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+.status{padding:28px;text-align:center;font-size:17px}
+button.toggle{min-height:44px;padding:0 18px;border:1px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font:600 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+button.toggle:hover{background:var(--navy);color:#fff}
+button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.tl{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.tl-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.tl-legend span{display:inline-flex;align-items:center;gap:6px}
+.tl-wrap{position:relative;margin:0 4px}
+.tl-axis{position:absolute;left:0;right:0;bottom:40px;height:2px;background:var(--navy)}
+.tl-tick{position:absolute;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;font-size:13px;color:var(--muted)}
+.tl-tick::before{content:"";width:1px;height:10px;background:var(--navy);margin-bottom:2px}
+.tl-today{position:absolute;bottom:0;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+.tl-cluster{position:absolute;bottom:33px;width:0;height:0;z-index:1}
+.tl-cluster.scatter:hover,.tl-cluster.scatter:focus-within{z-index:4}
+.tl-cluster.scatter::before{content:"";position:absolute;left:calc(var(--pw) / -2);bottom:-8px;width:var(--pw);height:calc(var(--ph) + 12px);background:#fff;border:1px solid #D5D3CC;border-radius:8px;box-shadow:0 8px 24px rgba(27,42,74,.16);opacity:0;transform:scale(.9);transform-origin:50% 100%;transition:opacity .2s,transform .2s;pointer-events:none}
+.tl-cluster.scatter:hover::before,.tl-cluster.scatter:focus-within::before{pointer-events:auto}
+.tl-cluster.scatter:hover::before,.tl-cluster.scatter:focus-within::before{opacity:1;transform:none}
+.tl-count{position:absolute;left:14px;bottom:30px;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;transition:opacity .2s}
+.tl-cluster.scatter:hover .tl-count,.tl-cluster.scatter:focus-within .tl-count{opacity:0}
+.tl-dot{position:absolute;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);padding:0;cursor:pointer;transform:translate(0,0) scale(var(--s,1));transition:transform .25s ease}
+.scatter .tl-dot{width:14px;height:14px;margin-left:-7px}
+.tl-cluster.scatter:hover .tl-dot,.tl-cluster.scatter:focus-within .tl-dot{width:18px;height:18px;margin-left:-9px;transform:translate(var(--tx),var(--ty)) scale(var(--s,1))}
+@media (prefers-reduced-motion: reduce){.tl-dot,.tl-cluster.scatter::before{transition:none}}
+.tl-dot::after{content:"";position:absolute;inset:-12px}
+.tl-dot:hover,.tl-dot:focus-visible{--s:1.25;outline:none;box-shadow:0 0 0 3px var(--blue)}
+.tl-tip{position:absolute;z-index:3;width:max-content;max-width:min(280px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);overflow:hidden;font-size:14px}
+.tl-tip-type{display:block;padding:6px 12px;color:#fff;font-weight:700}
+.tl-tip-body{padding:8px 12px 10px;display:flex;flex-direction:column;gap:2px}
+.tl-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.tl-list li{display:flex;align-items:baseline;gap:8px}
+.tl-list .dot{transform:translateY(1px)}
+.proj{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.proj .poll-parties{margin-bottom:2px}
+.proj-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.proj-legend span{display:inline-flex;align-items:center;gap:6px}
+.proj-chart{position:relative;width:100%}
+.proj-chart svg{display:block}
+.proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#6B707A;font-variant-numeric:tabular-nums}
+.proj-chart .lab{font:600 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.proj-tip[hidden]{display:none}
+.proj-tip{position:absolute;top:8px;z-index:3;min-width:220px;max-width:min(320px,100%);background:rgba(255,255,255,.97);border:1px solid #D5D3CC;border-radius:4px;box-shadow:0 8px 24px rgba(27,42,74,.16);padding:8px 12px 10px;font-size:14px;display:flex;flex-direction:column;gap:3px;pointer-events:none;font-variant-numeric:tabular-nums}
+.proj-tip>strong{display:block;padding-bottom:6px;margin-bottom:3px;border-bottom:1px solid #ECEAE4;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
+.proj-tip div{display:flex;align-items:center;gap:8px}
+.proj-tip div strong{margin-left:auto;padding-left:12px}
+.poll-ctl{display:flex;flex-direction:column;gap:8px}
+.poll-range,.poll-parties{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.rngbtn:focus-visible,.pchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
+footer p{margin:0 0 4px}
+footer .team{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card status">Loading party data…</div></div>
 
-Reads every <iso>.ropf file in the poll repository (ROPF, Rich Opinion Poll File Format),
-keeps national polls (•SC: N), fits a LOESS curve per party and writes polling/<ISO>.json.
+<script>
+/* =====================================================================
+   EUROPE ELECTS – COUNTRY PAGE TEMPLATE
+   Usage:  index.html?country=AL   (ISO-2 code; defaults to AL)
+   Party and alliance data load live from the Google Sheet below.
+   Everything that is NOT in those sheets lives in COUNTRIES (per country).
+   ===================================================================== */
 
-Usage:  python3 scripts/build_polling.py <path-to-apopod> <output-dir>
-No third-party packages needed.
-"""
-import json, os, re, sys, datetime as dt
+const SHEET_ID = '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8';
+const SOURCES = {
+  // publishedCsv: optional "File › Share › Publish to web › CSV" link for the tab.
+  // Recommended: it keeps every value as text. The gviz fallback can drop
+  // values in columns that mix numbers and text (e.g. "1992 (SI)").
+  parties:   { gid: '0',         publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' },
+  alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' },
+  // Electoral calendar (separate spreadsheet). Columns: Country, Specification, Type, Mode, Sequence,
+  // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
+  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' },
+  // European Parliament projection (Mastersheet, wide format: Country, EU Parliament group, Party,
+  // Party Name + Group, then one column per month such as "Jul-26"). Rows are matched on the country name.
+  projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' }
+};
+const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 
-SPAN_DAYS = 90          # LOESS window half-width cap: polls further away than this get no weight
-NEIGHBOURS = 0.06       # fraction of a party's polls used for each local fit (adaptive span) ...
-MIN_NEIGHBOURS = 8      # ... but at least this many
-GAP_DAYS = 150          # break a party's line where it went unpolled for longer than this
-MIN_POLLS = 4           # parties with fewer national polls get dots only, no line
-GRID_DAYS = 7           # spacing of the published curve points
-NO_POLLING = {'RU', 'BY', 'AZ', 'FR'}  # countries that never get a polling average
+// Team members responsible for each country (shown at the bottom of the page).
+// Paste the tab's "Publish to web" CSV link into publishedCsv. Entries reading "active team member" are skipped.
+const TEAM_SOURCE = { sheetId: '1GaBoIAmC0q_zr3sT__ZlkyWS0SffGogxIubIkteJ3wI', gid: '1332653481', publishedCsv: '' };
+const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], member: ['Team member', 'Responsible', 'Responsible team member', 'Country coordinator', 'Coordinator', 'Editor', 'Name', 'Member'] };
 
-FIELD = re.compile(r'•([A-Z]+):\s*(\S+)')
-RESULT = re.compile(r'(?<![•\w])([^\s•:][^\s:]*):\s*([<>]?\d+(?:[.,]\d+)?)')
+// Polling-average charts (Datawrapper chart IDs) per country, e.g. AL: 'abGxs'.
+// A country's own polling block in COUNTRIES takes priority. The latest chart version is always shown.
+// Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
+// built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
+const POLLING_YEARS = 10; // show at most this many years of polls
+const POLL_MIN_SHOWN = 3; // parties below this current average (%) start hidden in the polling chart
+// Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
+const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
+const POLLING_CHARTS = {
+  AL: 'abGxs'
+};
 
+// Party logos from Wikidata (property P154, files on Wikimedia Commons).
+// A logo is used only when the Wikidata item is a political party in the page's country.
+// LOGO_OVERRIDES: Europe Elects Entity ID -> Wikidata ID ('Q123') to force a match, or '' to hide a logo.
+// A "Wikidata ID" column in the party sheet, if added, is used the same way.
+// "Get the data" link on the polling chart (a country's polling.dataUrl overrides it).
+const DATA_ACCESS_URL = 'https://europeelects.eu/data-access-request/';
 
-def parse_date(s, end=False):
-    """ROPF dates: YYYY-MM-DD, YYYY-MM or YYYY. Partial dates take the middle of the period."""
-    p = s.split('-')
-    try:
-        if len(p) == 3:
-            return dt.date(int(p[0]), int(p[1]), int(p[2]))
-        if len(p) == 2:
-            return dt.date(int(p[0]), int(p[1]), 15)
-        return dt.date(int(p[0]), 7, 1)
-    except ValueError:
-        return None
+const LOGOS = { enabled: true, cacheHours: 24 };
+const LOGO_OVERRIDES = {};
 
+const COUNTRIES = {
+  AL: {
+    name: 'Albania',
+    government: [
+      { label: 'Head of state', pill: 'Unaffiliated', name: 'Bajram Begaj', tag: 'Independent' },
+      { label: 'Head of government', pill: 'PES', name: 'Edi Rama', tag: 'Socialist Party of Albania (PS)' },
+      { label: 'Government', pill: 'PES', parties: ['Socialist Party of Albania (PS)'], note: 'Single-party majority · 83 of 140 seats' }
+    ],
+    governingParties: ['PS'],               // abbreviations, as in the party sheet
+    calendarUrl: '',                        // optional link for the "Electoral calendar" bar
+    elections: [ // fallback only, used if the calendar sheet can't be loaded
+      { kind: 'local',      type: 'Local (nationwide)',               date: '1 May 2027',  detail: 'Direct · single vote · date not confirmed' },
+      { kind: 'president',  type: 'Head of state / presidential',     date: '1 May 2027',  detail: 'Indirect · first round · date not confirmed' },
+      { kind: 'parliament', type: 'National parliament (unicameral)', date: '13 May 2029', detail: 'Direct · single vote · date not confirmed' }
+    ],
+    chamber: { name: 'Kuvendi', type: 'Unicameral', seats: 140, elected: 'May 2025' },
+    seats: {
+      years: [2009, 2013, 2017, 2021, 2025],  // null = did not contest
+      parties: {
+        'PS': [65, 65, 74, 74, 83], 'PD': [68, 50, 43, 50, 41], 'PL': [4, 16, 19, 4, 4],
+        'PSD': [0, 0, 1, 3, 3], 'MUNDËSIA': [null, null, null, null, 2], 'PDIU': [1, 4, 3, 2, 2],
+        'BASHKË': [null, null, null, null, 1], 'SHB': [null, null, null, null, 1], 'PAA': [0, 0, 0, 1, 1],
+        'PBDNJ': [1, 1, 0, 1, 1], 'PR': [1, 3, 0, 3, 1], 'NTH': [null, null, null, null, 0],
+        'KEA': [null, null, null, null, 0], 'PLL': [0, 0, 0, 1, 0], 'LZHK': [0, 0, 0, 1, 0], 'PKD': [0, 1, 0, 0, 0]
+      },
+      order: ['BASHKË', 'PS', 'SHB', 'PKD', 'PAA', 'PL', 'PLL', 'LZHK', 'MUNDËSIA', 'PSD', 'PBDNJ', 'PDIU', 'PD', 'PR'] // left → right in the seat bar
+    },
+    polling: { embed: 'https://datawrapper.dwcdn.net/abGxs/24/', title: 'Polling average of Albania', height: 409,
+               note: 'This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in Albania.' }
+  }
+};
 
-def parse_ropf(text):
-    polls, parties = [], {}
-    for line in text.splitlines():
-        if not line.strip() or line.startswith('&'):
-            continue  # '&' = alternative response scenario of the previous poll: use the first one only
-        if line.startswith('•PF:'):
-            fields = {}
-            for k, v in FIELD.findall(line):
-                fields.setdefault(k, v)
-            # pollster / commissioner can contain spaces: read them up to the next bullet
-            m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
-            if fields.get('SC', 'N') != 'N':
-                continue
-            fs, fe = parse_date(fields.get('FS', '')), parse_date(fields.get('FE', ''), True)
-            if not fs and not fe:
-                continue
-            fs, fe = fs or fe, fe or fs
-            mid = fs + (fe - fs) / 2
-            # drop metadata: pollster/commissioner run up to the next bullet, other fields are one token
-            body = re.sub(r'•(PF|C):\s*[^•]*', ' ', line)
-            body = re.sub(r'•[A-Z]+:\s*\S+', ' ', body)
-            values = {}
-            for key, val in RESULT.findall(body):
-                val = val.replace(',', '.')
-                num = float(val.strip('<>')) / (2 if val.startswith('<') else 1)
-                values[key] = num
-            if values:
-                polls.append({'d': mid, 'pf': pf, 'v': values})
-        else:
-            m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
-            if m and '•A:' in line:
-                key = m.group(1)
-                attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
-                abbr = attrs.pop('A', key)
-                en = attrs.pop('EN', '')
-                native = next(iter(attrs.values()), '')
-                parties[key] = {'key': key, 'id': m.group(2), 'abbr': abbr, 'native': native, 'english': en}
-    return polls, parties
+/* ---------- Colours ---------- */
+const NONE = '#8A9099';
+// Europe Elects palette (adapted from the Political Party Database Codebook, Poguntke et al., 2025).
+// Display name for Europarties: Patriots.eu is always shown as PfE.
+const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
+const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79',
+  'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
+  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
+// EP groups / pill labels map to the Europarty of the same family.
+const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN' };
+const textOn = (hex) => { const h = hex.replace('#', ''); const [r, g2, b2] = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * r + 0.7152 * g2 + 0.0722 * b2 > 0.25 ? '#1A1D23' : '#FFFFFF'; };
+const pillColor = (label) => {
+  if (/^unaffiliated$/i.test(label)) return ['#C9CCD3', '#1A1D23'];
+  for (const part of String(label).split(/[–|]/).map((x) => x.trim())) {
+    const c = EUROPARTY_COLORS[part] || EUROPARTY_COLORS[GROUP_TO_EUROPARTY[part]];
+    if (c) return [c, textOn(c)];
+  }
+  return ['#5B6170', '#FFFFFF'];
+};
+const ELECTION_COLORS = { local: '#A8459A', president: '#B35600', parliament: '#0F7591', european: '#2A5DB0', regional: '#4E7A2A', referendum: '#5B6170' };
+const IDEOLOGIES = [
+ [
+  "Agrarianism",
+  "#90ee90",
+  "Agrarian parties are political movements whose primary political concern is the representation of farmers, rural communities, and agricultural producers, often advocating for stronger support for domestic food production and regional development. They tend to emphasize rural representation, decentralization, and policies aimed at protecting farmers from economic pressures, whether from global markets, urban elites, or regulation, with agricultural interests typically taking precedence over broader ideological positioning. While they can range from centre-left to conservative, they are generally united by a belief that agriculture and rural life deserve a stronger political voice and protection."
+ ],
+ [
+  "Animal rights",
+  "#009076",
+  "Animal rights parties are political movements whose primary political concern is the protection of animals, animal welfare, and the ethical relationship between humans, animals, and nature. They tend to advocate stronger animal protection laws, more sustainable environmental policies, and ethical reforms in areas such as agriculture, food production, scientific testing, and biodiversity. They overlap ideologically with Green politics and left-wing politics, but distinguish themselves by placing animal welfare and animal rights at the centre of their political agenda rather than treating them as secondary issues within broader environmental or social programmes."
+ ],
+ [
+  "Centre-left",
+  "#FF0000",
+  "Centre-left parties are political movements whose primary political concern is the promotion of social justice, economic equality, and strong public institutions within a democratic political framework. They tend to advocate redistributive economic policies, expansive welfare states, labour rights, public investment in healthcare and education, and protections for disadvantaged groups, while generally supporting a mixed economy that combines market mechanisms with state intervention. They distinguish themselves from more radical left-wing parties by accepting parliamentary democracy, political pluralism, and a mixed-market economy rather than seeking a fundamental transformation of capitalism, while distinguishing themselves from centre-right and centrist parties by placing greater emphasis on redistribution, public services, labour protections, and reducing social and economic inequalities."
+ ],
+ [
+  "Centre-right",
+  "#3399FF",
+  "Centre-right parties are political movements whose primary political concern is the promotion of social stability, economic responsibility, democratic institutions, and often values rooted in Christian democracy, liberal conservatism, or civic patriotism. They tend to advocate market-oriented economies, strong but limited government, support for heteronormative families and civil society, and gradual reform, while often combining economic liberalism with a commitment to social cohesion and institutional continuity. They distinguish themselves from centrist and centre-left parties by placing greater emphasis on market economics, lower taxation, individual responsibility, traditional social values, and more restrained state intervention in the economy, while distinguishing themselves from national-conservative and right-wing parties by typically supporting liberal democracy, international cooperation, political moderation, and a more inclusive or institution-oriented understanding of national identity."
+ ],
+ [
+  "Centrism",
+  "#fa8c00",
+  "Centrist and liberal-centre parties are political movements whose primary political concern is the promotion of political moderation as well as economic and social policies that avoid ideological extremes. They tend to advocate institutional reform, civil liberties, pro-European or international cooperation, and mixed economic approaches that combine market mechanisms with targeted state intervention. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on political reform, social liberalism, environmental sustainability, and a more active role for the state in addressing inequality or modernisation, while distinguishing themselves from centre-left parties by generally favouring market economics, fiscal moderation, and incremental political and economic change."
+ ],
+ [
+  "Christian fundamentalism",
+  "#a16585",
+  "Christian fundamentalist parties are political movements whose primary political concern is the preservation of religiously informed public ethics and socially conservative understandings of family and community. They tend to advocate policies rooted in Christian or religious values, often viewing the Christian Bible as a foundational guide for policymaking, alongside support for traditional family structures, cultural continuity, and a cautious approach to rapid social change, frequently opposing the liberalization of issues such as abortion, euthanasia, or changes to marriage and gender norms. They distinguish themselves from national-conservative parties by placing greater emphasis on religious doctrine and biblical morality rather than national identity, sovereignty, or cultural nationalism, while distinguishing themselves from broader centre-right parties by giving moral and religious values precedence over economic liberalism, pragmatic governance, or broad ideological coalitions. They further distinguish themselves from centre-left parties by promoting a vision of social justice rooted more in charity, community responsibility, and faith-based solidarity than in redistribution, labour politics, or class-based bargaining."
+ ],
+ [
+  "Eurofederalism",
+  "#502379",
+  "European federalist parties are political movements whose primary political concern is the deepening of European integration and the strengthening of supranational democratic governance across Europe. They tend to advocate a more politically integrated or federal European Union, stronger common institutions, transnational democracy, coordinated responses to challenges such as climate change and migration, and policies that transcend traditional national politics. They distinguish themselves from mainstream centrist and pro-European parties by placing European integration itself at the centre of their political agenda, often advocating far-reaching institutional reform or federalism, while distinguishing themselves from Eurosceptic and nationalist parties by viewing shared sovereignty, cross-border cooperation, and a stronger European political identity as solutions rather than threats to democracy and prosperity."
+ ],
+ [
+  "Far-left",
+  "#7c0000",
+  "Far-left parties are political movements whose primary political concern is the transformation or replacement of capitalist economic systems in favour of socialism, communism, or other forms of collective economic organization. They tend to advocate strong public or collective ownership of key industries, extensive workers’ rights, economic planning, anti-imperialism, and a rapid or far-reaching restructuring of capitalist economies, often viewing liberal capitalism as inherently exploitative and class-based inequality as a central political problem. They distinguish themselves from broader left-wing parties by rejecting the institutions of liberal democratic capitalism as insufficient for achieving social and economic equality, often favouring revolutionary change, workers’ democracy, or alternative political models over parliamentary democracy within the capitalist system."
+ ],
+ [
+  "Far-right",
+  "#70463A",
+  "Far-right parties are political movements whose primary political concern is the protection of national identity, cultural homogeneity, sovereignty, and traditional social order, often framed as a response to perceived threats from immigration, multiculturalism, globalization, or supranational institutions. They tend to advocate restrictive immigration policies, strong law-and-order approaches, national preference in welfare and economics, social conservatism, and skepticism or rejection of international organizations, while emphasizing cultural traditionalism and national sovereignty over liberal democratic constraints and, in some cases, questioning multiparty parliamentarism in favour of stronger majoritarian, leader-centred, or ethnically defined conceptions of political representation. They distinguish themselves from mainstream right-wing and national-conservative parties by embracing more exclusionary or ethnonationalist conceptions of national identity and by displaying greater skepticism toward multiparty parliamentary democracy itself, often favouring stronger executive authority, plebiscitary leadership, or political systems that subordinate pluralism to a unified conception of the nation."
+ ],
+ [
+  "Green politics",
+  "#009900",
+  "Green parties are political movements whose primary political concern is environmental sustainability, climate protection, and the ecological transformation of society and the economy, typically paired with social progressivism and centre-left economic politics. They tend to advocate ambitious climate action, renewable energy, biodiversity protection, sustainable economic development, social justice, and participatory democracy, often linking environmental concerns with progressive positions on human rights, equality, and international cooperation. They distinguish themselves from centre-left and social democratic parties by placing ecological sustainability and long-term environmental limits at the centre of policymaking rather than treating them as one priority among many, while distinguishing themselves from animal rights parties by focusing more broadly on systemic environmental transformation, climate policy, and sustainability rather than primarily on animal welfare or animal rights."
+ ],
+ [
+  "Islamism",
+  "#8A9099",
+  "Islamist parties are political movements whose primary political concern is the promotion of law and social order informed by Islamic values and religious principles. They tend to advocate socially conservative policies, stronger roles for religion in public life, support for heteronormative family structures, and, in some cases, the greater incorporation of Islamic legal or moral frameworks into governance, often pairing this with economic conservatism or welfare-oriented communitarianism. They distinguish themselves from mainstream conservative and centre-right parties by placing religious doctrine and faith-based morality at the centre of policymaking, while distinguishing themselves from secular nationalist or right-wing parties by prioritizing religious identity and moral order over ethnic nationalism or purely state-centred conceptions of national identity."
+ ],
+ [
+  "Left-wing",
+  "#990000",
+  "Left-wing and democratic socialist parties are political movements whose primary political concern is the overcoming or fundamental transformation of capitalism through liberal-democratic and parliamentary means in pursuit of greater social and economic equality. They tend to advocate progressive taxation, welfare expansion, workers’ rights, environmental sustainability, anti-discrimination policies, democratic control over economic decision-making, and stronger public intervention in the economy, often combining social progressivism with critiques of inequality and corporate power. They distinguish themselves from centre-left and social democratic parties by viewing capitalism as a system that should ultimately be transcended rather than merely regulated or reformed, while distinguishing themselves from communist and anti-capitalist parties by accepting pluralist liberal democracy and seeking systemic change through electoral, parliamentary, and democratic institutions rather than rejecting the liberal democratic state or embracing revolutionary politics."
+ ],
+ [
+  "Liberalism",
+  "#FFD700",
+  "Liberal parties are political movements whose primary political concern is the protection of individual liberty, political pluralism, and constitutional democracy within a capitalist economic framework. They tend to advocate civil liberties, rule of law, market-oriented economies, international cooperation, European integration, and institutional reform, often combining economic liberalism with socially progressive or moderate positions on cultural issues and a broad skepticism toward state intervention in both the economy and individuals’ private lives. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on individual freedoms, social liberalism, institutional reform, and internationalism over tradition, authority, or social conservatism, while distinguishing themselves from centre-left and social democratic parties by placing greater trust in markets, entrepreneurship, fiscal moderation, and individual choice, alongside a broader rejection of state interventionism in the economy and social private life."
+ ],
+ [
+  "Libertarianism",
+  "#F2C300",
+  "Libertarian and classical liberal parties are political movements whose primary political concern is the maximization of individual liberty through a broad rejection of state interventionism in both the economy and private life. They tend to advocate a minimal state primarily limited to upholding laws, policing, national defence, secure borders, and the protection of property rights and free markets, while favouring privatization or market provision of services such as healthcare, education, and welfare. They generally support low taxation, deregulation, strong civil liberties, individual responsibility, and extensive personal freedoms, often combining economically laissez-faire policies with socially liberal or anti-authoritarian positions. They distinguish themselves from mainstream liberal and centre-right parties by advocating a far smaller role for the state and stronger free-market economics, while distinguishing themselves from conservative parties by typically rejecting moral paternalism and state involvement in regulating private or social behaviour."
+ ],
+ [
+  "Monarchism",
+  "#8A9099",
+  "Monarchist and royalist parties are political movements whose primary political concern is the preservation or restoration of monarchy as a source of national unity, historical continuity, and political legitimacy. They tend to advocate traditional values, patriotism, institutional continuity, and stronger national identity, often viewing constitutional or symbolic monarchy as a stabilizing force above partisan politics. They distinguish themselves from mainstream conservative and centre-right parties by placing the monarchy or dynastic legitimacy at the centre of their political identity and constitutional vision, while distinguishing themselves from far-right parties by typically emphasizing historical continuity and constitutional order over ethnonationalism."
+ ],
+ [
+  "National-conservatism",
+  "#0000FF",
+  "National-conservative parties are political movements whose primary political concern is the protection of national sovereignty, cultural continuity, social order, and traditional values within the framework of representative democracy. They tend to advocate stronger borders, law and order, national identity, social conservatism, market-oriented or mixed economies, and skepticism toward supranational governance, often emphasizing patriotism, gradual change, and institutional stability, while many national-conservative parties combine this with Atlanticism, support for NATO, and strong transatlantic partnerships. They distinguish themselves from centre-right and liberal parties by placing greater emphasis on national identity, cultural conservatism, sovereignty, and skepticism toward immigration or supranational institutions, while distinguishing themselves from far-right parties by generally accepting pluralist liberal democracy, multiparty parliamentarism, constitutional constraints, and transatlantic cooperation rather than embracing anti-system politics, ethnonationalism, or hostility toward Western alliances."
+ ],
+ [
+  "Pirate politics",
+  "#9c36b8",
+  "Pirate parties are political movements whose primary political concern is the protection of digital rights, civil liberties, transparency, and participatory democracy in the information age. They tend to advocate internet freedom, data privacy, government transparency, open-source technologies, copyright reform, democratic innovation, and strong protections against state or corporate surveillance, often pairing these positions with socially liberal and pro-democratic values. They distinguish themselves from liberal and centrist parties by placing digital rights, democratic participation, and transparency at the centre of policymaking rather than treating them as secondary issues, while distinguishing themselves from broader progressive or left-wing parties by focusing less on traditional economic redistribution and more on civil liberties, decentralization, technological openness, and democratic reform."
+ ],
+ [
+  "Right-wing",
+  "#000000",
+  "Right-wing parties are political movements whose primary political concern is the protection of national sovereignty, traditional social order, and the perceived interests of “ordinary people” against political elites, globalization, immigration, or supranational institutions. They tend to advocate restrictive immigration policies, stronger borders, law and order, welfare chauvinism or economic protectionism, skepticism toward supranational governance, and culturally conservative positions, often combining nationalism with anti-establishment or populist rhetoric and a more skeptical stance toward transatlantic institutions or alliances. They distinguish themselves from national-conservative parties by placing greater emphasis on populist anti-elite politics, political personalization, and skepticism toward transatlanticism or Western institutional alignment, while distinguishing themselves from far-right parties by generally avoiding explicit ethnonationalism and accepting multiparty parliamentary democracy, even if they challenge liberal norms, minority protections, or judicial constraints."
+ ]
+];
 
+/* ---------- Helpers ---------- */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const isNone = (v) => !v || /^(unaffiliated|\*|none|-|–|n\/a|no)$/i.test(String(v).trim());
+const year = (v) => { const m = String(v || '').match(/\d{4}/); return m ? m[0] : ''; };
+const inParens = (v) => { const m = String(v || '').match(/\(([^)]+)\)/); return m ? m[1] : ''; };
 
-def loess(xs, ys, x0, k, span=SPAN_DAYS):
-    """Local linear regression at x0 with tricube weights over the k nearest points (within SPAN_DAYS)."""
-    dist = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))[:k]
-    h = max(dist[-1][0], 1.0) * 1.0001
-    h = min(h, span) if dist[0][0] < span else h
-    sw = swx = swy = swxx = swxy = 0.0
-    for d, x, y in dist:
-        if d >= h:
-            continue
-        w = (1 - (d / h) ** 3) ** 3
-        sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y
-    if sw == 0:
-        return None
-    den = sw * swxx - swx * swx
-    if abs(den) < 1e-9:
-        return swy / sw
-    b = (sw * swxy - swx * swy) / den
-    a = (swy - b * swx) / sw
-    return a + b * x0
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+function toObjects(rows) {
+  const head = (rows[0] || []).map(norm);
+  return rows.slice(1).map((r) => { const o = {}; head.forEach((h, i) => { if (h && !(h in o)) o[h] = (r[i] || '').trim(); }); return o; });
+}
+const g = (o, ...keys) => { for (const k of keys) { const v = o[norm(k)]; if (v) return v; } return ''; };
+const gStarts = (o, prefix) => { const p = norm(prefix); for (const k in o) if (k.startsWith(p) && o[k]) return o[k]; return ''; };
 
+async function loadSheet(src) {
+  const url = src.publishedCsv || `https://docs.google.com/spreadsheets/d/${src.sheetId || SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${src.gid}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return toObjects(parseCSV(await res.text()));
+}
 
-def build_country(polls, parties):
-    polls.sort(key=lambda p: p['d'])
-    day0 = polls[0]['d']
-    out_parties = []
-    keys = sorted({k for p in polls for k in p['v']}, key=lambda k: -max(p['v'].get(k, 0) for p in polls))
-    for key in keys:
-        pts = [((p['d'] - day0).days, p['v'][key]) for p in polls if key in p['v']]
-        info = parties.get(key, {'key': key, 'abbr': key, 'native': '', 'english': '', 'id': ''})
-        curve = []
-        if len(pts) >= MIN_POLLS:
-            xs, ys = [x for x, _ in pts], [y for _, y in pts]
-            k = max(MIN_NEIGHBOURS, round(NEIGHBOURS * len(pts)))
-            # split into segments where the party went unpolled for a long time
-            segs, start = [], 0
-            for i in range(1, len(xs)):
-                if xs[i] - xs[i - 1] > GAP_DAYS:
-                    segs.append((start, i)); start = i
-            segs.append((start, len(xs)))
-            for a, b in segs:
-                if b - a < MIN_POLLS:
-                    continue
-                sx, sy = xs[a:b], ys[a:b]
-                seg = []
-                x = sx[0]
-                while x <= sx[-1]:
-                    v = loess(sx, sy, x, min(k, len(sx)))
-                    if v is not None:
-                        seg.append([(day0 + dt.timedelta(days=x)).isoformat(), round(max(v, 0), 1)])
-                    x += GRID_DAYS
-                v = loess(sx, sy, sx[-1], min(k, len(sx)))
-                if v is not None:
-                    seg.append([(day0 + dt.timedelta(days=sx[-1])).isoformat(), round(max(v, 0), 1)])
-                curve.append(seg)
-        out_parties.append({**info, 'key': key, 'n': len(pts), 'curve': curve})
+/* ---------- Model ---------- */
+// Affiliation history across all versions of a party: dated Europarty and EP-group intervals.
+// colourAt(t): the Europarty in force at t sets the colour; without one, the EP group's family; else grey.
+function boundDate(v, isEnd) {
+  const t = String(v || '').trim(); if (!t) return isEnd ? Infinity : -Infinity;
+  if (/^\d{4}$/.test(t)) return (isEnd ? new Date(+t, 11, 31) : new Date(+t, 0, 1)).getTime();
+  const r = parseElectionDate(t); return r ? r.date.getTime() : (isEnd ? Infinity : -Infinity);
+}
+function affiliationHistory(versions) {
+  const ep = [], grp = [];
+  versions.forEach((v) => {
+    const a = v.aff || {};
+    const epVal = isNone(a.ep) ? null : a.ep.split(/[|;,]/)[0].trim();
+    if (epVal || a.epS || a.epE) ep.push({ a: boundDate(a.epS), b: boundDate(a.epE, true), v: epVal, ver: v.version });
+    const gVal = isNone(a.grp) || /^NI$/i.test(String(a.grp).trim()) ? null : a.grp.split(/[;,]/)[0].trim();
+    if (gVal || a.grpS || a.grpE) grp.push({ a: boundDate(a.grpS), b: boundDate(a.grpE, true), v: gVal, ver: v.version });
+  });
+  return { ep, grp };
+}
+function colourAt(history, t, fallback) {
+  if (!history) return fallback;
+  const pick = (list) => { const hit = list.filter((i) => t >= i.a && t <= i.b).sort((p1, p2) => (p1.a - p2.a) || (p1.ver - p2.ver)); return hit.length ? hit[hit.length - 1] : undefined; };
+  const e = pick(history.ep);
+  if (e && e.v) return EUROPARTY_COLORS[e.v] || NONE;
+  const gI = IS_EU ? pick(history.grp) : undefined;
+  if (gI && gI.v) return EUROPARTY_COLORS[GROUP_TO_EUROPARTY[gI.v]] || NONE;
+  // Dated history but nothing in force at t (e.g. before the party joined): grey. No history at all: current colour.
+  if (e || gI || history.ep.length || (IS_EU && history.grp.length)) return NONE;
+  return fallback;
+}
+
+function buildParties(rows, iso, cfg) {
+  const ideoColor = (i) => { const r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === norm(i).replace(/-/g, ' ')); return r ? r[1] : (/^regional/i.test(i) ? '#008080' : NONE); };
+  let list = rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso).map((o) => {
+    const europarty = g(o, 'Europarty Affiliation'), europartyEnd = g(o, 'Europarty End');
+    const epGroup = g(o, 'European Parliament Group');
+    const epLink = gStarts(o, 'Documented Links');
+    const intl = g(o, 'International Party Federation'), intlStart = g(o, 'International Affiliation Start'), intlEnd = g(o, 'International Affiliation End');
+    const affs = [];
+    if (!isNone(europarty)) affs.push(['Europarty', epName(europarty) + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
+    if (IS_EU && !isNone(epGroup)) affs.push(['EP group', epGroup]);
+    if (IS_EU && !isNone(epLink)) affs.push(['EP group link', epLink]);
+    if (!isNone(intl)) affs.push(['International', intl + (intlEnd ? ` (until ${year(intlEnd)})` : '')]);
+    else if (intlEnd) { const nm = inParens(intlEnd) || inParens(intlStart) || 'International'; affs.push(['International', `${nm} (${year(intlStart) || '?'}–${year(intlEnd)})`]); }
+    const currentEuroparty = !isNone(europarty) && !europartyEnd ? europarty.split(/[|;,]/)[0].trim() : '';
+    const ideology = g(o, 'Ideological Orientation');
     return {
-        'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
-        'parties': out_parties,
-        'polls': [{'d': p['d'].isoformat(), 'pf': p['pf'], 'v': p['v']} for p in polls],
+      status: (g(o, 'Status') || 'active').toLowerCase(), latest: !/^no$/i.test(g(o, 'Latest')),
+      native: g(o, 'Name (Native)'), english: g(o, 'Name (English)') || g(o, 'Name (Native)'),
+      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'), version: +g(o, 'Europe Elects Entity Version') || 1,
+      aff: { ep: europarty, epS: g(o, 'Europarty Start'), epE: europartyEnd, grp: epGroup, grpS: g(o, 'EP Group Start'), grpE: g(o, 'EP Group End') }, wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
+      abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), country: g(o, 'Country'),
+      ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
+      european: !!currentEuroparty || (IS_EU && !isNone(epGroup)), europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
+      eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
+      affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
+    };
+  });
+  // Earlier versions of a party that has a current (Latest = Yes) record are dropped, so each party appears once.
+  const versions = {};
+  list.forEach((p) => { if (p.entityId) (versions[p.entityId] = versions[p.entityId] || []).push(p); });
+  list.forEach((p) => { p.history = affiliationHistory(versions[p.entityId] || [p]); });
+  const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
+  list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
+  // Merge duplicate current records with the same native name (keeps the better-documented one).
+  const merged = [];
+  const groups = {};
+  list.filter((p) => p.latest).forEach((p) => { (groups[norm(p.native)] = groups[norm(p.native)] || []).push(p); });
+  Object.values(groups).forEach((ps) => {
+    if (ps.length < 2) return;
+    ps.sort((a, b) => b.affs.length - a.affs.length);
+    ps.slice(1).forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
+  });
+  list = list.filter((p) => !p.duplicateOf);
+  const seatData = (cfg.seats && cfg.seats.parties) || {};
+  list.forEach((p) => {
+    p.seats = seatData[p.abbr] || null;
+    p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0;
+    p.gov = (cfg.governingParties || []).includes(p.abbr);
+  });
+  return { list, merged };
+}
+
+const ALLIANCE_TYPES = [
+  ['National parliamentary group', 'Parliamentary group'],
+  ['Formally Registered Electoral Alliance (Nationwide List)', 'Electoral alliance · nationwide list'],
+  ['Formally Registered Electoral Alliance (Subnational List)', 'Electoral alliance · subnational list'],
+  ['Subnational Parliamentary Group', 'Subnational parliamentary group'],
+  ['(Potential) Governing Coalition', 'Governing coalition'],
+  ['Alternative Party Name (Regional Adaptation)', 'Regional name variant'],
+  ['Official Nuance Labels', 'Official nuance label']
+];
+function buildAlliances(rows, iso, parties) {
+  const byId = {};
+  parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
+  // Rows flagged as a regional name variant (e.g. the Swiss language versions of one party) are not alliances.
+  return rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso && !/inactive/i.test(g(o, 'Status', 'x')) && !/^yes$/i.test(g(o, 'Alternative Party Name (Regional Adaptation)'))).map((o) => {
+    const members = [], seen = new Set();
+    for (let n = 1; n <= 10; n++) {
+      const id = g(o, 'Party ID ' + n), nm = g(o, 'Party ' + n), exit = g(o, 'Exit ' + n);
+      if (!id && !nm) continue;
+      const key = id || nm; if (seen.has(key)) continue; seen.add(key);
+      if (exit) continue;
+      const p = byId[id] || byId[id.replace(/\.v\d+$/, '')];
+      members.push({ abbr: p ? p.abbr : nm, english: p ? p.english : nm, color: p ? p.color : NONE, party: p });
     }
+    const europarty = g(o, 'Europarty Affiliation'), epGroup = g(o, 'European Parliament Group');
+    return {
+      abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
+      since: year(g(o, 'Political Activity Started')),
+      europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
+      color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
+      types: ALLIANCE_TYPES.filter(([h]) => /^yes$/i.test(g(o, h))).map(([, t]) => t),
+      members
+    };
+  });
+}
 
+/* ---------- Logos (Wikidata / Wikimedia Commons) ---------- */
+async function wikiJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+async function titlesToQids(titles) {
+  const out = {};
+  for (let i = 0; i < titles.length; i += 50) {
+    const chunk = titles.slice(i, i + 50);
+    const j = await wikiJSON('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageprops&ppprop=wikibase_item|disambiguation&titles=' + encodeURIComponent(chunk.join('|')));
+    const q = j.query || {}; const map = {}; chunk.forEach((t) => { map[t] = t; });
+    [...(q.normalized || []), ...(q.redirects || [])].forEach((n) => { for (const k in map) if (map[k] === n.from) map[k] = n.to; });
+    const byTitle = {};
+    Object.values(q.pages || {}).forEach((pg) => { const pp = pg.pageprops || {}; if (pp.wikibase_item && !('disambiguation' in pp)) byTitle[pg.title] = pp.wikibase_item; });
+    for (const k in map) if (byTitle[map[k]]) out[k] = byTitle[map[k]];
+  }
+  return out;
+}
+async function wikidataEntities(qids) {
+  const out = {};
+  for (let i = 0; i < qids.length; i += 50) {
+    const j = await wikiJSON('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims&ids=' + qids.slice(i, i + 50).join('|'));
+    Object.assign(out, j.entities || {});
+  }
+  return out;
+}
+const claimVals = (e, prop) => (((e && e.claims) || {})[prop] || []).filter((c) => c.rank !== 'deprecated').map((c) => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value).filter(Boolean);
+const LOGO_DEBUG = /(^|[?&])debug=logos/.test(location.search);
+async function loadLogos(parties, countryName) {
+  const cacheKey = `ee-logos-v2-${ISO}`;
+  if (!LOGO_DEBUG) {
+    try { const c = JSON.parse(localStorage.getItem(cacheKey) || 'null'); if (c && Object.keys(c.logos).length && Date.now() - c.t < LOGOS.cacheHours * 3600e3) return { logos: c.logos, report: [] }; } catch (e) { /* storage unavailable */ }
+  }
+  const titles = [...new Set([countryName, ...parties.flatMap((p) => [p.english, p.native]).filter(Boolean)])];
+  const t2q = await titlesToQids(titles);
+  const countryQ = t2q[countryName];
+  const forced = (p) => (p.entityId in LOGO_OVERRIDES ? LOGO_OVERRIDES[p.entityId] : p.wikidata);
+  const qids = [...new Set(parties.flatMap((p) => [forced(p), t2q[p.english], t2q[p.native]]).filter(Boolean))];
+  const ents = qids.length ? await wikidataEntities(qids) : {};
+  const logos = {}, report = [];
+  parties.forEach((p) => {
+    const row = { abbr: p.abbr, name: p.english, qid: '', result: 'No Wikipedia article found for the English or native name' };
+    report.push(row);
+    if (LOGO_OVERRIDES[p.entityId] === '') { row.result = 'Hidden by LOGO_OVERRIDES'; return; }
+    const f = forced(p);
+    for (const [q, title] of [[f, ''], [t2q[p.english], p.english], [t2q[p.native], p.native]].filter((x) => x[0])) {
+      const e = ents[q]; row.qid = q;
+      if (!e) { row.result = 'Wikidata item not returned'; continue; }
+      if (q !== f) {
+        const countries = claimVals(e, 'P17').map((v) => v.id);
+        const inCountry = countryQ && (countries.includes(countryQ) || (!countries.length && norm(title).includes(norm(countryName))));
+        const isParty = claimVals(e, 'P31').some((v) => v.id === 'Q7278') || claimVals(e, 'P1142').length > 0;
+        if (!inCountry) { row.result = countries.length ? 'Rejected: Wikidata country is not ' + countryName : 'Rejected: no country on Wikidata'; continue; }
+        if (!isParty) { row.result = 'Rejected: not marked as a political party'; continue; }
+      }
+      const file = claimVals(e, 'P154')[0] || claimVals(e, 'P8972')[0];
+      if (file) { logos[p.versionId] = file; row.result = 'Logo: ' + file; break; }
+      row.result = 'Matched, but no logo on Wikidata';
+    }
+  });
+  if (Object.keys(logos).length) { try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), logos })); } catch (e) { /* storage unavailable */ } }
+  return { logos, report };
+}
+function viewLogoReport(report, err) {
+  return `<section class="card" style="padding:14px 16px;font-size:14px"><h2 style="margin:0 0 8px;font-size:17px">Logo lookup report</h2>
+    ${err ? `<p style="color:#B00020">Lookup failed: ${esc(err)}</p>` : ''}
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%"><thead><tr><th style="text-align:left;padding:4px 8px">Party</th><th style="text-align:left;padding:4px 8px">Wikidata</th><th style="text-align:left;padding:4px 8px">Result</th></tr></thead><tbody>
+    ${report.map((r) => `<tr style="border-top:1px solid #ECEAE4"><td style="padding:4px 8px"><strong>${esc(r.abbr)}</strong> ${esc(r.name)}</td><td style="padding:4px 8px">${r.qid ? `<a href="https://www.wikidata.org/wiki/${esc(r.qid)}" target="_blank" rel="noopener">${esc(r.qid)}</a>` : '–'}</td><td style="padding:4px 8px">${esc(r.result)}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+const logoImg = (p, size) => (p.logo ? `<img class="logo" src="https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(p.logo)}?width=${size * 3}" alt="" loading="lazy" style="height:${size}px;max-width:${size * 2}px" onerror="this.remove()">` : '');
 
-def main(src, dst):
-    os.makedirs(dst, exist_ok=True)
-    if not os.path.isdir(src):
-        print(f'Poll database not found at {src}; no polling files built (pages fall back to Datawrapper charts).')
-        return
-    done = []
-    for name in sorted(os.listdir(src)):
-        m = re.fullmatch(r'([a-z]{2})\.ropf', name)  # one file per country; variants like fi_p20.ropf are skipped
-        if not m or m.group(1).upper() in NO_POLLING:
-            continue
-        with open(os.path.join(src, name), encoding='utf-8') as fh:
-            polls, parties = parse_ropf(fh.read())
-        if not polls:
-            continue
-        data = build_country(polls, parties)
-        iso = m.group(1).upper()
-        with open(os.path.join(dst, iso + '.json'), 'w', encoding='utf-8') as fh:
-            json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
-        done.append(f'{iso}:{len(data["polls"])}')
-    print('Built', len(done), 'countries:', ' '.join(done))
+/* ---------- Views ---------- */
+const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
+const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(epName(label))}</span>`; };
 
+function viewHeader(cfg) {
+  const rows = (cfg.government || []).map((r) => `<div class="lead-row"><span class="label">${esc(r.label)}</span><div class="row">
+    ${r.pill ? pill(r.pill) : ''}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
+    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => `<span class="partyb">${esc(p)}</span>`).join('')}
+    ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
+  return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
+    ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
+}
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+// Parses the calendar's date text. Returns { date: last possible day, precision } or null.
+function parseElectionDate(raw) {
+  const t = String(raw || '').trim(); if (!t) return null;
+  let m;
+  const endOfMonth = (y, mo) => new Date(y, mo + 1, 0);
+  const monthIdx = (w) => MONTHS.findIndex((x) => x.startsWith(String(w).toLowerCase().slice(0, 3)));
+  if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return { date: new Date(+m[1], +m[2] - 1, +m[3]), precision: 'day' };
+  if ((m = t.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/))) {
+    let d = +m[1], mo = +m[2];
+    if (mo > 12 && d <= 12) { const x = d; d = mo; mo = x; } // m/d/yyyy
+    return { date: new Date(+m[3], mo - 1, d), precision: 'day' };
+  }
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/)) && monthIdx(m[1]) >= 0) return { date: new Date(+m[3], monthIdx(m[1]), +m[2]), precision: 'day' };
+  if ((m = t.match(/^(\d{1,2})\.?\s+([A-Za-z]+)\.?,?\s+(\d{4})$/)) && monthIdx(m[2]) >= 0) return { date: new Date(+m[3], monthIdx(m[2]), +m[1]), precision: 'day' };
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{4})$/)) && monthIdx(m[1]) >= 0) return { date: endOfMonth(+m[2], monthIdx(m[1])), precision: 'month' };
+  if ((m = t.match(/^(\d{1,2})[./](\d{4})$/))) return { date: endOfMonth(+m[2], +m[1] - 1), precision: 'month' };
+  if ((m = t.match(/^(\d{4})$/))) return { date: new Date(+m[1], 11, 31), precision: 'year' };
+  const d = new Date(t); return isNaN(d) ? null : { date: d, precision: 'day' };
+}
+function electionKind(type) {
+  const t = norm(type);
+  if (/europ/.test(t)) return 'european';
+  // Regional first, so e.g. "single vote regional parliament and president" counts as regional (green).
+  if (/region|provinc|subnational|state (parliament|assembly|election)/.test(t)) return 'regional';
+  if (/referend/.test(t)) return 'referendum';
+  if (/local|municipal/.test(t)) return 'local';
+  if (/presiden|head of state/.test(t)) return 'president';
+  if (/parliament|legislat|national/.test(t)) return 'parliament';
+  return '';
+}
+function buildElections(rows, countryName) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cap = (x) => x ? x.charAt(0).toUpperCase() + x.slice(1) : '';
+  return rows.filter((o) => norm(g(o, 'Country')) === norm(countryName)).map((o) => {
+    const raw = g(o, '(Expected) Date', 'Expected Date', 'Date');
+    const parsed = parseElectionDate(raw);
+    const status = g(o, 'Date Status');
+    let dateTxt = raw;
+    if (parsed && parsed.precision === 'day') dateTxt = parsed.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    else if (parsed && parsed.precision === 'month') dateTxt = parsed.date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const detail = [cap(g(o, 'Mode')), g(o, 'Sequence'), status ? (/^not/i.test(status) ? 'date ' + status.toLowerCase() : 'date ' + status.toLowerCase().replace(/^date\s+/, '')) : ''].filter(Boolean).join(' · ');
+    return { type: cap(g(o, 'Type')), spec: g(o, 'Specification'), comment: g(o, 'Comment'), kind: electionKind(g(o, 'Type')),
+             date: dateTxt || 'Date to be announced', detail, when: parsed ? parsed.date : null };
+  }).filter((e) => !e.when || e.when >= today) // future only; rows without a readable date are kept
+    .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
+}
+const ELECTION_LABELS = { european: 'European Parliament', parliament: 'National parliament', president: 'Presidential', regional: 'Regional', local: 'Local', referendum: 'Referendum', '': 'Other' };
+const TIMELINE_LIST_MAX = 5; // up to this many elections also get a visible list; more = pop-ups only
+let TL = [];
+function viewElections(cfg, elections) {
+  let list = elections && elections.length ? elections : (cfg.elections || []).map((e) => ({ ...e, when: (parseElectionDate(e.date) || {}).date || null }));
+  if (!list.length) return '';
+  const right = cfg.calendarUrl ? `<a href="${esc(cfg.calendarUrl)}" target="_blank" rel="noopener">Full calendar →</a>` : '';
+  const dated = list.filter((e) => e.when), tba = list.filter((e) => !e.when);
+  const color = (e) => ELECTION_COLORS[e.kind] || '#8A9099';
+  let body = '';
+  if (dated.length) {
+    const DAY = 864e5, start = new Date(); start.setHours(0, 0, 0, 0);
+    const last = Math.max(...dated.map((e) => e.when.getTime()), start.getTime() + 365 * DAY);
+    const end = new Date(new Date(last).getFullYear() + 1, 0, 1).getTime(); // run to the next 1 January
+    const pos = (t) => 2 + (t - start.getTime()) / (end - start.getTime()) * 94; // % with side margins
+    // stack dots that would overlap
+    // Group elections on the same or nearby dates. Up to 5: a vertical stack. More: a compact scatter
+    // (max 3 rows) that spreads out on a panel when hovered or focused.
+    TL = dated.map((e) => ({ ...e, x: pos(e.when.getTime()) })).sort((p1, p2) => p1.x - p2.x);
+    const groups = [];
+    TL.forEach((d) => { const g0 = groups[groups.length - 1]; if (g0 && d.x - g0.x0 < 2.2) g0.items.push(d); else groups.push({ x0: d.x, items: [d] }); });
+    const STACK_MAX = 5, ROWS = 3, GAP = 20, PANEL_COLS = 6, PANEL_GAP = 24;
+    groups.forEach((gr) => {
+      const n = gr.items.length; gr.x = gr.items.reduce((a, d) => a + d.x, 0) / n; gr.scatter = n > STACK_MAX;
+      const cols = Math.ceil(n / ROWS), pcols = Math.min(PANEL_COLS, n), prows = Math.ceil(n / PANEL_COLS);
+      gr.panel = { w: pcols * PANEL_GAP + 12, h: prows * PANEL_GAP + 12 };
+      gr.items.forEach((d, i) => {
+        if (!gr.scatter) { d.ox = 0; d.oy = i * GAP; d.ex = 0; d.ey = d.oy; return; }
+        const r = i % ROWS, c = Math.floor(i / ROWS);
+        d.ox = (c - (cols - 1) / 2) * 9 + (r % 2 ? 4 : 0); d.oy = r * 11; // compact scatter
+        const pr = Math.floor(i / PANEL_COLS), pc = i % PANEL_COLS, rowLen = Math.min(PANEL_COLS, n - pr * PANEL_COLS);
+        d.ex = (pc - (rowLen - 1) / 2) * PANEL_GAP; d.ey = 18 + pr * PANEL_GAP;     // spread-out panel
+      });
+    });
+    TL = groups.flatMap((gr) => gr.items);
+    const maxStack = Math.max(0, ...groups.map((gr) => (gr.scatter ? 1.2 : gr.items.length - 1)));
+    const ticks = []; for (let y = start.getFullYear() + 1; ; y++) { const t = new Date(y, 0, 1).getTime(); if (t > end) break; ticks.push({ y, x: pos(t) }); }
+    const kinds = [...new Set(list.map((e) => e.kind || ''))];
+    body = `<div class="tl-legend">${kinds.map((k) => `<span><span class="dot" style="background:${ELECTION_COLORS[k] || '#8A9099'}"></span>${esc(ELECTION_LABELS[k] || ELECTION_LABELS[''])}</span>`).join('')}</div>
+      <div class="tl-wrap" id="tl" style="height:${64 + maxStack * 20}px">
+        <div class="tl-axis"></div>
+        <div class="tl-today" style="left:2%"><span>Today</span></div>
+        ${ticks.map((t) => `<div class="tl-tick" style="left:${t.x}%"><span>${t.y}</span></div>`).join('')}
+        ${groups.map((gr) => `<div class="tl-cluster${gr.scatter ? ' scatter' : ''}" style="left:${gr.x}%;--pw:${gr.panel.w}px;--ph:${gr.panel.h}px">${gr.scatter ? `<span class="tl-count" aria-hidden="true">${gr.items.length}</span>` : ''}${gr.items.map((d) => { const i = TL.indexOf(d); return `<button type="button" class="tl-dot" data-i="${i}" style="left:${d.ox}px;bottom:${d.oy}px;--tx:${d.ex - d.ox}px;--ty:${-(d.ey - d.oy)}px;background:${color(d)}" aria-label="${esc(`${d.type}${d.spec ? ' – ' + d.spec : ''}: ${d.date}. ${d.detail || ''}`)}"></button>`; }).join('')}</div>`).join('')}
+        <div class="tl-tip" id="tl-tip" role="tooltip" hidden></div>
+      </div>
+      ${TL.length <= TIMELINE_LIST_MAX
+        ? `<ul class="tl-list">${TL.map((d) => `<li><span class="dot" style="background:${color(d)}"></span><span><strong>${esc(d.date)}</strong> · ${esc(d.type)}${d.spec ? ' – ' + esc(d.spec) : ''} <span class="muted">· ${esc(d.detail || '')}</span>${d.comment ? ` <em class="muted">${esc(d.comment)}</em>` : ''}</span></li>`).join('')}</ul>`
+        : `<p class="note-s" style="margin:0">${TL.length} elections · hover or tap a dot for details.</p>`}`;
+  }
+  if (tba.length) body += `<div><span class="label" style="font-size:12px">Date to be announced</span><ul class="tl-list">${tba.map((e) => `<li><span class="dot" style="background:${color(e)}"></span><span>${esc(e.type)}${e.spec ? ' – ' + esc(e.spec) : ''} <span class="muted">· ${esc(e.detail || '')}</span></span></li>`).join('')}</ul></div>`;
+  return bar('Upcoming elections', right) + `<section class="card tl">${body}</section>`;
+}
+/* ---------- Chart helpers ---------- */
+// Monotone cubic path (no overshoot), for smooth averages.
+function smoothPath(pts) {
+  if (pts.length < 3) return pts.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('');
+  const n = pts.length, dx = [], dy = [], m = [], t = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0]; dy[i] = pts[i + 1][1] - pts[i][1]; m[i] = dx[i] ? dy[i] / dx[i] : 0; }
+  t[0] = m[0]; t[n - 1] = m[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i]);
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += `C${(pts[i][0] + h).toFixed(1)},${(pts[i][1] + h * t[i]).toFixed(1)} ${(pts[i + 1][0] - h).toFixed(1)},${(pts[i + 1][1] - h * t[i + 1]).toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`;
+  }
+  return d;
+}
+const inkFor = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c === NONE ? '#565B66' : c);
+// End label with a marker on the line and a thin leader when the label had to be moved.
+const endLabel = (x0, yLine, xText, yText, color, inner, title) =>
+  `<circle cx="${x0}" cy="${yLine}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5"/>` +
+  (Math.abs(yText - yLine) > 3 ? `<polyline points="${x0 + 5},${yLine} ${xText - 4},${yText}" fill="none" stroke="${color}" stroke-width="1" opacity=".6"/>` : '') +
+  `<text x="${xText}" y="${yText + 4}" class="lab" fill="${inkFor(color)}" style="cursor:help"><title>${esc(title)}</title>${inner}</text>`;
 
-if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else 'polling')
+/* ---------- European Parliament projection ---------- */
+function parseMonthHeader(h) {
+  const t = String(h || '').trim().toLowerCase(); let m;
+  if ((m = t.match(/^([a-z]+)\.?[-\s'’/]+(\d{2}|\d{4})$/))) {
+    const mi = MONTHS.findIndex((x) => x.startsWith(m[1].slice(0, 3))); if (mi < 0) return null;
+    const y = m[2].length === 2 ? 2000 + +m[2] : +m[2]; return new Date(y, mi, 1);
+  }
+  if ((m = t.match(/^(\d{4})-(\d{1,2})/))) return new Date(+m[1], +m[2] - 1, 1);
+  if ((m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return new Date(+m[3], +m[1] - 1, 1);
+  return null;
+}
+function buildProjection(rows, countryName, parties) {
+  const mine = rows.filter((o) => { const c = g(o, 'Country'); return norm(c) === norm(countryName) || c.toUpperCase() === ISO; });
+  if (!mine.length) return null;
+  const months = Object.keys(mine[0]).map((k) => ({ k, d: parseMonthHeader(k) })).filter((x) => x.d).sort((a, b) => a.d - b.d);
+  // Match a projection row to the party database: exact name/abbreviation first, then one name containing the other.
+  const byName = (...names) => {
+    const keys = names.filter(Boolean).map((n) => normKey(String(n).replace(/\s*\([^)]*\)\s*$/, ''))).filter(Boolean);
+    const cands = parties.filter((p) => p.status !== 'renamed');
+    return cands.find((p) => [p.abbr, p.native, p.english].some((x) => x && keys.includes(normKey(x))))
+      || cands.find((p) => [p.native, p.english].some((x) => { const k = normKey(x); return keys.some((q) => { const [sh, lo] = q.length < k.length ? [q, k] : [k, q]; return sh.length >= 12 && sh.length / lo.length >= 0.6 && lo.includes(sh); }); }));
+  };
+  // Fallback abbreviation: a bracketed abbreviation in the name, else the initials of its main words.
+  const abbrOf = (name) => { const br = String(name).match(/\(([^)]{2,12})\)/); if (br && !/^(EPP|S&D|RE|ECR|PfE|ESN|LEFT|NI|G\/EFA|Greens\/EFA)$/.test(br[1])) return br[1];
+    const words = String(name).replace(/\([^)]*\)/g, '').split(/[\s–—-]+/).filter((w) => w && !/^(of|for|and|the|in|de|du|des|la|le|et|und|für|der|die|das|na|za|i|a)$/i.test(w));
+    return words.length > 1 ? words.map((w) => w[0].toUpperCase()).join('') : String(name); };
+  const groupCount = {};
+  const series = mine.map((o) => {
+    const group = g(o, 'EU Parliament group', 'European Parliament group', 'EP group');
+    const party = g(o, 'Party');
+    const match = byName(party, g(o, 'Party Name + Group'), g(o, 'Prev. Name'));
+    const ep = GROUP_TO_EUROPARTY[group] || group;
+    const color = match && match.color !== NONE ? match.color : (EUROPARTY_COLORS[ep] || NONE);
+    groupCount[color] = (groupCount[color] || 0) + 1;
+    const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
+    const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
+    const tag = partyTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group);
+    return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
+  }).filter((sr) => sr.values.some((v) => v != null));
+  if (!series.length) return null;
+  return { months: months.map((m) => m.d), series, hidden: new Set() };
+}
+let PROJ = null;
+function viewProjection(proj, cfg) {
+  PROJ = proj; if (!proj) return '';
+  const last = proj.months.length - 1;
+  const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
+  const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
+    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}</button>`).join('')}</div>
+    <div class="proj-chart" id="proj-chart"></div>
+    <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
+}
+function drawProjection() {
+  const host = document.getElementById('proj-chart'); if (!host || !PROJ) return;
+  const { months } = PROJ;
+  const series = PROJ.series.filter((sr) => !PROJ.hidden.has(sr.key));
+  const W = host.clientWidth, small = W < 560, H = small ? 260 : 320, m = { l: 30, r: small ? 62 : 190, t: 12, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const t0 = months[0].getTime(), t1 = months[months.length - 1].getTime();
+  const x = (i) => m.l + (months.length === 1 ? iw / 2 : (months[i].getTime() - t0) / (t1 - t0) * iw);
+  const vmax = Math.max(1, ...series.flatMap((sr) => sr.values.filter((v) => v != null)));
+  const step = vmax <= 12 ? 1 : vmax <= 30 ? 2 : vmax <= 60 ? 5 : 10;
+  const ymax = Math.ceil((vmax + (vmax <= 12 ? 1 : step)) / step) * step;
+  const y = (v) => m.t + ih - v / ymax * ih;
+  let svg = '';
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  // x ticks: January of each year (or first month)
+  months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="ax">${d.toLocaleDateString('en-GB', { month: 'short' })} ’${String(d.getFullYear()).slice(2)}</text><line x1="${x(i)}" x2="${x(i)}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/>`; });
+  // lines (broken at gaps)
+  series.forEach((sr) => {
+    let d = '', pen = false;
+    sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/>`;
+    sr.values.forEach((v, i) => { if (v != null) svg += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${months.length > 30 ? 1.6 : 2.2}" fill="${sr.color}"/>`; });
+  });
+  // end labels with simple collision avoidance
+  // Parties that dropped out before the latest month get an end dot but no label (they stay in the legend and pop-up).
+  const inkOf = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c);
+  // Parties that dropped out before the latest month: dot + abbreviation at their last point.
+  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${sr.color}"/><text x="${x(i) + 6}" y="${y(sr.values[i]) - 6}" class="lab" style="font-size:12px;cursor:help" fill="${inkOf(sr.color)}"><title>${esc(sr.label)}</title>${esc(sr.short)}</text>`; });
+  const lastIdx = months.length - 1;
+  const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  ends.forEach((e) => { svg += endLabel(x(e.i), y(e.v), x(e.i) + 14, e.yy, e.sr.color,
+    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
+  const lastI = months.length - 1;
+  const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
+    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="proj-marks"></g>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="proj-hit"/></svg><div class="proj-tip" id="proj-tip" hidden></div>`;
+  const hit = document.getElementById('proj-hit'), cross = document.getElementById('proj-x'), tip = document.getElementById('proj-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    let best = 0; months.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
+    cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
+    document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${sr.color}" stroke="#fff" stroke-width="2"/>`).join('');
+    const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.short)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v}</strong></div>`).join('');
+    tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); document.getElementById('proj-marks').innerHTML = ''; };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+function bindProjection() {
+  document.querySelectorAll('.proj-chip').forEach((b) => { b.onclick = () => {
+    const k = b.dataset.k; if (PROJ.hidden.has(k)) PROJ.hidden.delete(k); else PROJ.hidden.add(k);
+    b.setAttribute('aria-pressed', String(!PROJ.hidden.has(k))); drawProjection();
+  }; });
+}
+let projResize = null;
+window.addEventListener('resize', () => { clearTimeout(projResize); projResize = setTimeout(drawProjection, 150); });
+
+function bindTimeline() {
+  const wrap = document.getElementById('tl'), tip = document.getElementById('tl-tip'); if (!wrap || !tip) return;
+  let pinned = null;
+  const show = (btn) => {
+    const d = TL[+btn.dataset.i];
+    tip.innerHTML = `<span class="tl-tip-type" style="background:${ELECTION_COLORS[d.kind] || '#8A9099'}">${esc(d.type)}</span>
+      <div class="tl-tip-body">${d.spec ? `<span style="font-weight:600">${esc(d.spec)}</span>` : ''}<strong class="big" style="font-size:19px">${esc(d.date)}</strong><span class="muted">${esc(d.detail || '')}</span>${d.comment ? `<em class="muted">${esc(d.comment)}</em>` : ''}</div>`;
+    tip.hidden = false;
+    const wr = wrap.getBoundingClientRect(), br = btn.getBoundingClientRect();
+    const w = wrap.clientWidth, tw = tip.offsetWidth, cx = br.left - wr.left + br.width / 2;
+    tip.style.left = Math.max(0, Math.min(w - tw, cx - tw / 2)) + 'px';
+    tip.style.bottom = (wr.bottom - br.top + 8) + 'px';
+  };
+  const hide = () => { if (!pinned) tip.hidden = true; };
+  wrap.querySelectorAll('.tl-dot').forEach((btn) => {
+    btn.addEventListener('mouseenter', () => show(btn));
+    btn.addEventListener('mouseleave', hide);
+    btn.addEventListener('focus', () => show(btn));
+    btn.addEventListener('blur', () => { pinned = null; hide(); });
+    btn.addEventListener('click', () => { pinned = pinned === btn ? null : btn; if (pinned) show(btn); else tip.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { pinned = null; tip.hidden = true; } });
+}
+const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>';
+const PAUSE_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="currentColor"/></svg>';
+let PARL = null;
+function viewParliament(cfg, parties) {
+  const c = cfg.chamber; if (!c) { PARL = null; return ''; }
+  const S = cfg.seats || {}; const years = S.years || []; const last = years.length - 1;
+  const byAbbr = Object.fromEntries(parties.map((p) => [p.abbr, p]));
+  const order = (S.order || []).slice();
+  Object.keys(S.parties || {}).forEach((a) => { if (!order.includes(a) && (S.parties[a] || []).some((v) => v > 0)) order.push(a); });
+  const majority = Math.floor(c.seats / 2) + 1;
+  PARL = { years, elected: c.elected, segs: order.map((a) => ({ a, color: byAbbr[a] ? byAbbr[a].color : NONE, vals: ((S.parties || {})[a] || []).map((v) => v || 0) })) };
+  const controls = years.length > 1 ? `<div class="parl-ctl">
+      <button type="button" class="toggle play" id="parl-play">${PLAY_ICON}<span>Play ${years[0]}–${years[last]}</span></button>
+      <div class="yrbtns" role="group" aria-label="Election year">${years.map((y, i) => `<button type="button" class="yrbtn" data-i="${i}" aria-pressed="false">${y}</button>`).join('')}</div>
+    </div>` : '';
+  return bar('National parliament', `<span class="badge">${esc(c.type)}</span>`) + `<section class="card parl">
+    <div class="meta"><span><strong>${esc(c.name)}</strong> · ${c.seats} seats · <span id="parl-when">elected ${esc(c.elected)}</span></span><span class="muted">${majority} seats for a majority</span></div>
+    ${controls}
+    <div class="seatwrap"><div class="seatbar" id="parl-bar" role="img">${PARL.segs.map((s, i) => `<div data-i="${i}" style="flex:${s.vals[last] || 0} 0 0;background:${s.color}"></div>`).join('')}</div>
+    <div class="majline" aria-hidden="true" style="left:${(majority / c.seats * 100).toFixed(2)}%"></div></div>
+    <div class="keys" id="parl-keys" aria-live="polite"></div></section>`;
+}
+function setParlYear(i) {
+  const barEl = document.getElementById('parl-bar'); if (!PARL || !barEl) return;
+  const y = PARL.years[i];
+  barEl.querySelectorAll('div').forEach((d) => { const sg = PARL.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}: ${n}`; });
+  const live = PARL.segs.map((sg) => ({ a: sg.a, color: sg.color, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  barEl.setAttribute('aria-label', `Seats ${y || ''}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
+  document.getElementById('parl-keys').innerHTML = live.map((x) => `<span><span class="dot" style="background:${x.color}"></span><strong>${esc(x.a)}</strong> ${x.n}</span>`).join('');
+  const when = document.getElementById('parl-when');
+  if (when && y) when.textContent = i === PARL.years.length - 1 && PARL.elected ? `elected ${PARL.elected}` : `${y} election`;
+  document.querySelectorAll('.yrbtn').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
+}
+let parlTimer = null;
+function bindParl() {
+  if (!PARL) return;
+  const last = PARL.years.length - 1;
+  setParlYear(last);
+  const btn = document.getElementById('parl-play');
+  const label = (playing) => { btn.innerHTML = playing ? `${PAUSE_ICON}<span>Pause</span>` : `${PLAY_ICON}<span>Play ${PARL.years[0]}–${PARL.years[last]}</span>`; };
+  const stop = () => { clearInterval(parlTimer); parlTimer = null; label(false); };
+  if (btn) btn.onclick = () => {
+    if (parlTimer) return stop();
+    let i = 0; setParlYear(0); label(true);
+    parlTimer = setInterval(() => { i++; setParlYear(i); if (i >= last) stop(); }, 1400);
+  };
+  document.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimer) stop(); setParlYear(+b.dataset.i); }; });
+}
+// Short EP-group labels as used on Europe Elects charts; parties outside the EP get the group of their Europarty.
+const EUROPARTY_TO_GROUP = { 'EPP': 'EPP', 'PES': 'S&D', 'ECR': 'ECR', 'ALDE': 'RE', 'EDP': 'RE', 'EGP': 'G/EFA', 'EFA': 'G/EFA', 'Volt': 'G/EFA', 'PPEU': 'G/EFA',
+  'PEL': 'LEFT', 'ELA': 'LEFT', 'Patriots.eu': 'PfE', 'ESN': 'ESN', 'ECPP': 'ECR', 'Animal Politics EU': 'LEFT' };
+const groupLabel = (g2) => ({ 'Greens/EFA': 'G/EFA', 'Renew': 'RE' }[g2] || g2);
+// Chart label format: ABBR (EUROPARTY–EP GROUP). Outside the EU the group follows from the Europarty.
+const partyTag = (europarty, epGroup) => {
+  if (!IS_EU) return epName(europarty);
+  const grp = groupLabel(epGroup || EUROPARTY_TO_GROUP[europarty || ''] || '');
+  const ep = epName(europarty);
+  return ep && grp ? `${ep}–${grp}` : (ep || grp);
+};
+let POLL = null;
+const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
+function buildPolling(data, parties, calendarRows, countryName, alliances) {
+  if (!data || !data.parties || !data.polls || !data.polls.length) return null;
+  const names = (pp) => [pp.key, pp.abbr, pp.native, pp.english].filter(Boolean).map(normKey);
+  const findParty = (keys) => parties.find((x) => [x.abbr, x.native, x.english].some((n) => n && keys.includes(normKey(n))));
+  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
+  const lastPoll = new Date(data.polls[data.polls.length - 1].d);
+  const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
+  const series = data.parties.map((pp) => {
+    const keys = names(pp);
+    let color = NONE, tag = '', abbr = pp.abbr || pp.key, name = pp.english || pp.native || pp.key;
+    if (abbr.length > 12) abbr = abbr.split(/\s+/).map((w) => w[0]).join('').toUpperCase();
+    const m = findParty(keys);
+    const al = m ? null : findAlliance(keys);
+    if (m) {
+      color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
+      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
+    } else if (al) {
+      // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
+      color = al.color; abbr = al.abbr || abbr; name = al.english || name;
+      tag = al.europarty === 'None' ? (IS_EU ? groupLabel(al.epGroup || '') : '') : (al.europarty.includes('|') ? epName(al.europarty) : partyTag(al.europarty, al.epGroup));
+    } else {
+      // Joint lists without an alliance record ("A/B", "A–B"): use the first member party found.
+      const part = String(pp.key).split(/[\/+–—-]/).map((x) => findParty([normKey(x)])).find(Boolean);
+      if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
+    }
+    const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
+    const history = m ? m.history : null;
+    return { key: pp.key, abbr, name, tag, color, curve, colorAt: (t) => (history ? colourAt(history, t, color) : color) };
+  }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
+  const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
+  const today = new Date();
+  const elections = (calendarRows || []).filter((o) => norm(g(o, 'Country')) === norm(countryName) && electionKind(g(o, 'Type')) === 'parliament')
+    .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
+    .filter((d) => d && d < today && d >= from);
+  const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
+  const t1 = lastPoll.getTime();
+  const yearAgo = t1 - 365 * 864e5;
+  // Hidden by default: parties not polled in the past year, and parties below 3% in the current average.
+  const current = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg && seg[seg.length - 1].t.getTime() >= t1 - 60 * 864e5 ? seg[seg.length - 1].v : null; };
+  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo) || (current(sr) ?? 0) < POLL_MIN_SHOWN).map((sr) => sr.key);
+  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
+}
+const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
+function viewPolling(cfg, poll) {
+  if (NO_POLLING.includes(ISO)) { POLL = null; return ''; }
+  POLL = poll || null;
+  const right = `<a href="${esc(DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`;
+  const note = `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}.`;
+  if (POLL) {
+    const spanYears = (POLL.full.b - POLL.full.a) / (365.25 * 864e5);
+    const ranges = RANGES.filter(([r]) => r === 'all' || +r < spanYears);
+    const latest = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg ? seg[seg.length - 1].v : 0; };
+    const chips = [...POLL.series].sort((p1, p2) => latest(p2) - latest(p1));
+    return bar('Polling average', right) + `<section class="card poll">
+      <div class="poll-ctl">
+        <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
+          <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
+        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`).join('')}</div>
+      </div>
+      <div class="proj-chart" id="poll-chart"></div>
+      <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
+  }
+  const id = POLLING_CHARTS[ISO];
+  const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
+  if (!p || !p.embed) return '';
+  return bar('Polling average', right) + `<section class="card poll">
+    <iframe title="${esc(p.title || 'Polling average')}" aria-label="Line chart" src="${esc(p.embed)}" scrolling="no" height="${p.height || 400}" data-external="1"></iframe>
+    ${p.note ? `<p>${esc(p.note)}</p>` : ''}</section>`;
+}
+function bindPolling() {
+  if (!POLL) return;
+  document.querySelectorAll('.rngbtn').forEach((b) => { b.onclick = () => {
+    const r = b.dataset.r; POLL.range = r;
+    POLL.view = r === 'all' ? { ...POLL.full } : { a: Math.max(POLL.full.a, POLL.full.b - +r * 365.25 * 864e5), b: POLL.full.b };
+    drawPolling();
+  }; });
+  document.querySelectorAll('.poll-chip').forEach((b) => { b.onclick = () => {
+    const k = b.dataset.k; if (POLL.hidden.has(k)) POLL.hidden.delete(k); else POLL.hidden.add(k);
+    b.setAttribute('aria-pressed', String(!POLL.hidden.has(k))); drawPolling();
+  }; });
+}
+function drawPolling() {
+  const host = document.getElementById('poll-chart'); if (!host || !POLL) return;
+  document.querySelectorAll('.rngbtn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === POLL.range)));
+  const hint = document.getElementById('poll-hint');
+  if (hint) hint.textContent = POLL.range === 'custom' ? `${new Date(POLL.view.a).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} – ${new Date(POLL.view.b).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · choose “All” to reset` : 'or drag across the chart to zoom in';
+  const series = POLL.series.filter((sr) => !POLL.hidden.has(sr.key));
+  const { a: t0, b: t1 } = POLL.view;
+  const polls = POLL.polls.filter((p) => p.t.getTime() >= t0 && p.t.getTime() <= t1);
+  const elections = POLL.elections.filter((d) => d.getTime() >= t0 && d.getTime() <= t1);
+  const W = host.clientWidth, small = W < 560;
+  const H = small ? 300 : 420, m = { l: 42, r: small ? 100 : 196, t: 14, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const x = (t) => m.l + (t - t0) / Math.max(1, t1 - t0) * iw;
+  const tAt = (px) => t0 + (px - m.l) / iw * (t1 - t0);
+  const shownKeys = new Set(series.map((sr) => sr.key));
+  const vmax = Math.max(10, ...polls.flatMap((p) => Object.entries(p.v).filter(([k]) => shownKeys.has(k)).map(([, v]) => v)));
+  const step = vmax > 60 ? 10 : 5;
+  const ymax = Math.ceil(vmax / step) * step;
+  const y = (v) => m.t + ih - v / ymax * ih;
+  const byKey = Object.fromEntries(series.map((sr) => [sr.key, sr]));
+  let svg = `<defs><clipPath id="poll-clip"><rect x="${m.l}" y="0" width="${iw}" height="${H}"/></clipPath></defs>`;
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}${v === ymax ? '%' : ''}</text>`;
+  // x ticks: years for long spans, months for short ones
+  const spanM = (t1 - t0) / (30.44 * 864e5);
+  const stepM = [1, 2, 3, 6, 12, 24, 36].find((k) => spanM / k * 52 <= iw) || 60;
+  const d0 = new Date(t0); let tick = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+  while (tick.getMonth() % Math.min(stepM, 12)) tick = new Date(tick.getFullYear(), tick.getMonth() + 1, 1);
+  for (; tick.getTime() <= t1; tick = new Date(tick.getFullYear(), tick.getMonth() + stepM, 1)) {
+    if (stepM >= 12 && tick.getMonth() !== 0) continue;
+    const xx = x(tick.getTime());
+    const label = tick.getMonth() === 0 ? String(tick.getFullYear()) : tick.toLocaleDateString('en-GB', { month: 'short' });
+    svg += `<line x1="${xx}" x2="${xx}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/><text x="${xx}" y="${H - 8}" text-anchor="middle" class="ax"${tick.getMonth() === 0 ? ' style="font-weight:700"' : ''}>${label}</text>`;
+  }
+  let lastLab = -Infinity;
+  elections.forEach((d) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#C8202F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>`;
+    if (xx - lastLab > 120 && xx > m.l + 60) { svg += `<text x="${xx - 5}" y="${m.t + 11}" text-anchor="end" class="ax" style="font-size:12px;fill:#8A2A2A">${small ? d.getFullYear() : 'Parliamentary election ' + d.getFullYear()}</text>`; lastLab = xx; } });
+  const ordered = [...series].sort((p1, p2) => (p1.color === NONE ? 0 : 1) - (p2.color === NONE ? 0 : 1));
+  svg += '<g clip-path="url(#poll-clip)">';
+  ordered.forEach((sr) => sr.curve.forEach((seg) => {
+    const pts = seg.filter((q, i) => { const t = q.t.getTime(); const nxt = seg[i + 1], prv = seg[i - 1]; return (t >= t0 && t <= t1) || (nxt && nxt.t.getTime() >= t0 && t < t0) || (prv && prv.t.getTime() <= t1 && t > t1); });
+    if (pts.length < 2) return;
+    // split the line where the party's affiliation (and so its colour) changed
+    const runs = []; let run = null;
+    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()); if (!run || run.c !== c) { if (run) run.pts.push(q); run = { c, pts: [q] }; runs.push(run); } else run.pts.push(q); });
+    runs.forEach((rn) => { if (rn.pts.length < 2) return;
+      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE ? 1.6 : 2.4}" stroke-linejoin="round" stroke-linecap="round"/>`; });
+  }));
+  svg += '</g>';
+  const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
+    let best = seg[0]; for (const q of seg) if (Math.abs(q.t.getTime() - t) < Math.abs(best.t.getTime() - t)) best = q; return best.v; } return null; };
+  // end labels at the right edge of the current view
+  const ends = series.map((sr) => { const v = valueAt(sr, t1); return v != null && v >= 0.5 ? { sr, v, yy: y(v) } : null; }).filter(Boolean).sort((p1, p2) => p1.yy - p2.yy);
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 16) ends[k].yy = ends[k - 1].yy + 16;
+  const over = ends.length ? ends[ends.length - 1].yy - (m.t + ih) : 0;
+  if (over > 0) ends.forEach((e) => { e.yy -= over; });
+  ends.forEach((e) => {
+    const nm = small ? e.sr.abbr : `${e.sr.abbr}${e.sr.tag ? ' (' + e.sr.tag + ')' : ''}`;
+    svg += endLabel(m.l + iw, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
+  const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.v)}%`).join(', ');
+  host.innerHTML = `<canvas id="poll-dots" width="${W * (window.devicePixelRatio || 1)}" height="${H * (window.devicePixelRatio || 1)}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></canvas>
+    <svg width="${W}" height="${H}" style="position:relative" role="img" aria-label="Polling average: ${esc(summary)}">${svg}
+    <rect id="poll-sel" x="0" y="${m.t}" width="0" height="${ih}" fill="rgba(42,93,176,.12)" stroke="#2A5DB0" visibility="hidden"/>
+    <line id="poll-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="poll-marks"></g>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="poll-hit" style="cursor:crosshair"/></svg><div class="proj-tip" id="poll-tip" hidden></div>`;
+  const cv = document.getElementById('poll-dots'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip(); ctx.globalAlpha = 0.2;
+  const r = small ? 1.4 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2.4 : 1.8);
+  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); } });
+  // hover / tap pop-up, drag to zoom
+  const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip'), sel = document.getElementById('poll-sel');
+  const pxOf = (evt) => { const rc = host.getBoundingClientRect(); return Math.max(m.l, Math.min(m.l + iw, (evt.touches ? evt.touches[0].clientX : evt.clientX) - rc.left)); };
+  let dragFrom = null;
+  const show = (evt) => {
+    const px = pxOf(evt), t = tAt(px);
+    if (dragFrom != null) { sel.setAttribute('x', Math.min(dragFrom, px)); sel.setAttribute('width', Math.abs(px - dragFrom)); sel.setAttribute('visibility', 'visible'); tip.hidden = true; return; }
+    cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+    document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
+      .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
+    const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(o.sr.abbr)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+    tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); document.getElementById('poll-marks').innerHTML = ''; };
+  hit.addEventListener('mousemove', show);
+  hit.addEventListener('mouseleave', () => { hide(); if (dragFrom != null) { dragFrom = null; sel.setAttribute('visibility', 'hidden'); } });
+  hit.addEventListener('mousedown', (evt) => { if (evt.button !== 0) return; evt.preventDefault(); dragFrom = pxOf(evt); hide(); });
+  hit.addEventListener('mouseup', (evt) => {
+    if (dragFrom == null) return; const px = pxOf(evt), a = Math.min(dragFrom, px), b = Math.max(dragFrom, px); dragFrom = null;
+    sel.setAttribute('visibility', 'hidden');
+    if (b - a < 12) return;
+    const ta = tAt(a), tb = tAt(b);
+    if (tb - ta < 45 * 864e5) return; // at least ~6 weeks
+    POLL.view = { a: ta, b: tb }; POLL.range = 'custom'; drawPolling();
+  });
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+let pollResize = null;
+window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize = setTimeout(drawPolling, 150); });
+function viewAlliances(alliances) {
+  if (!alliances.length) return '';
+  return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
+    <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
+      <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
+      <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
+      <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
+      ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
+      <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
+    </article>`).join('')}</div><div id="al-more-wrap" hidden><button type="button" class="toggle" id="al-more" aria-expanded="false" aria-controls="al-grid"></button></div>`;
+}
+// Alliances: show one row of cards, the rest behind "Show all".
+function applyAllianceRows() {
+  const grid = document.getElementById('al-grid'), wrap = document.getElementById('al-more-wrap'), btn = document.getElementById('al-more');
+  if (!grid || !wrap) return;
+  const cards = [...grid.children];
+  cards.forEach((c) => { c.hidden = false; });
+  const firstTop = cards.length ? cards[0].offsetTop : 0;
+  const extra = cards.filter((c) => c.offsetTop > firstTop + 2);
+  if (!extra.length) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  if (!state.allAlliances) extra.forEach((c) => { c.hidden = true; });
+  btn.textContent = state.allAlliances ? 'Show fewer alliances' : `Show all ${cards.length} alliances`;
+  btn.setAttribute('aria-expanded', String(!!state.allAlliances));
+}
+function bindAlliances() {
+  const btn = document.getElementById('al-more'); if (!btn) return;
+  btn.onclick = () => { state.allAlliances = !state.allAlliances; applyAllianceRows(); postHeight(); };
+  applyAllianceRows();
+}
+let alResize = null;
+window.addEventListener('resize', () => { clearTimeout(alResize); alResize = setTimeout(() => { applyAllianceRows(); postHeight(); }, 150); });
+
+function tags(p) {
+  const t = [];
+  if (p.gov) t.push(`<span class="tag gov">In government</span>`);
+  p.ideologies.forEach((i) => t.push(`<span class="tag" style="border:1px solid ${i.color};background:${i.color}1F;color:#1A1D23">${esc(i.name)}</span>`));
+  if (p.eu) t.push(`<span class="tag eu">EU: ${esc(p.eu)}</span>`);
+  if (p.status !== 'active') t.push(`<span class="tag warn">${esc(p.status.charAt(0).toUpperCase() + p.status.slice(1))}</span>`);
+  return `<div class="tags">${t.join('')}</div>`;
+}
+const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
+function bigTile(p, years) {
+  if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${tags(p)}${kv(affs0)}</article>`; }
+  const max = Math.max(1, ...p.seats.map((v) => v || 0));
+  const yy = years.map((y) => '’' + String(y).slice(2));
+  const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
+  const affs = p.affs.length ? p.affs : [['Affiliation', 'None']];
+  return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
+    <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
+    <h3>${esc(p.english)}</h3>${tags(p)}${kv(affs)}
+    <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
+      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
+      <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
+}
+function smallTile(p, years) {
+  const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
+  return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
+    <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
+    <h3>${esc(p.english)}</h3>${tags(p)}${kv(p.affs)}
+    ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
+}
+function viewParties(parties, cfg, activeOnly) {
+  const years = (cfg.seats && cfg.seats.years) || [];
+  // Realigned and renamed records are never shown. Inactive parties appear only when the box is unticked.
+  const shown = (p) => p.status !== 'renamed' && p.status !== 'realigned' && (p.status !== 'inactive' || !activeOnly);
+  const vis = parties.filter(shown);
+  const hidden = parties.filter((p) => p.status === 'inactive').length;
+  const hasSeats = !!(cfg.seats && cfg.seats.parties);
+  const isMajor = (p) => (hasSeats ? p.seatsNow > 0 : p.european);
+  const major = vis.filter(isMajor).sort((a, b) => b.seatsNow - a.seatsNow || b.affs.length - a.affs.length || a.english.localeCompare(b.english));
+  const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
+  const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
+    <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
+  return bar(hasSeats ? 'In national parliament' : 'Parties with a European affiliation', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+    `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
+    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European affiliation'} · hover for the native name</span>`) +
+    `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
+}
+function viewLegend(parties, showAll) {
+  const key = (x) => norm(x).replace(/-/g, ' ');
+  const live = parties.filter((p) => p.status === 'active');
+  const count = (name) => live.filter((p) => p.ideologies.some((i) => key(i.name) === key(name))).length;
+  const items = IDEOLOGIES.map(([n, c, t]) => ({ n, c, t, k: count(n) }));
+  const present = items.filter((i) => i.k > 0);
+  const shown = showAll ? items : present;
+  // Ideologies used in this country that have no legend definition yet
+  const known = new Set(IDEOLOGIES.map(([n]) => key(n)));
+  const undef = {};
+  live.forEach((p) => p.ideologies.forEach((i) => { if (!known.has(key(i.name))) undef[i.name] = (undef[i.name] || 0) + 1; }));
+  const undefTxt = Object.entries(undef).map(([n, k]) => `${esc(n)} (${k})`).join(', ');
+  const hiddenCount = items.length - present.length;
+  return bar('Ideology legend', `<span class="note">${showAll ? 'All ideologies · those present in this country are marked' : 'Ideologies of the parties on this page'}</span>`) +
+    (shown.length ? `<div class="grid-a">${shown.map(({ n, c, t, k }) => `<div class="lg" style="background:${c}12">
+      <div class="t"><span class="dot" style="width:14px;height:14px;background:${c}"></span><h3>${esc(n)}</h3>${k ? `<span class="count">${k} ${k === 1 ? 'party' : 'parties'} here</span>` : ''}</div>
+      <p>${esc(t)}</p></div>`).join('')}</div>` : '') +
+    (undefTxt ? `<p class="note-s" style="margin:0">Also used here, without a legend definition yet: ${undefTxt}.</p>` : '') +
+    (hiddenCount ? `<div><button type="button" id="legend-toggle" class="toggle" aria-expanded="${showAll}">${showAll ? 'Show only ideologies in this country' : `Show all ${items.length} ideologies`}</button></div>` : '');
+}
+
+/* ---------- App ---------- */
+const params = new URLSearchParams(location.search);
+const ISO = (params.get('country') || 'AL').toUpperCase();
+// Outside the EU, parties are labelled and coloured strictly by Europarty; EP groups are not shown.
+const EU_MEMBERS = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'AX', 'EU'];
+const IS_EU = EU_MEMBERS.includes(ISO);
+const app = document.getElementById('app');
+let state = { activeOnly: true, showAllIdeo: false, allAlliances: false };
+
+async function main() {
+  const cfg = COUNTRIES[ISO] || {};
+  let partyRows, allianceRows = [];
+  const loadWithFallback = async (src) => {
+    try { return await loadSheet(src); }
+    catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ sheetId: src.sheetId, gid: src.gid, publishedCsv: '' }); }
+  };
+  try { partyRows = await loadWithFallback(SOURCES.parties); }
+  catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
+  try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
+  let calendarRows = [], projectionRows = [], teamRows = [];
+  try { teamRows = await loadWithFallback(TEAM_SOURCE); } catch (e) { console.warn('Team sheet not loaded', e); }
+  try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
+  try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
+  const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
+  cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+  document.title = `Europe Elects – ${cfg.name}`;
+  const current = parties.filter((p) => p.latest);
+  const elections = buildElections(calendarRows, cfg.name);
+  const team = [...new Set(teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country); return c.toUpperCase() === ISO || norm(c) === norm(cfg.name); })
+    .flatMap((o) => TEAM_COLUMNS.member.map((k) => g(o, k)).filter(Boolean).slice(0, 1))
+    .flatMap((v) => v.split(/\s*[,;\n]\s*/)).map((v) => v.trim())
+    .filter((v) => v && !/active team member/i.test(v)))];
+  const projection = buildProjection(projectionRows, cfg.name, current);
+  let pollData = null;
+  if (!NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
+  const alliances = buildAlliances(allianceRows, ISO, parties);
+  const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
+  alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
+
+  const render = () => {
+    app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
+      viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
+      `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
+      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">Responsible team member${team.length > 1 ? 's' : ''}: <strong>${team.map(esc).join(', ')}</strong></p>` : ''}</footer>`;
+    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling();
+    postHeight();
+  };
+  const bindLegend = () => {
+    const btn = document.getElementById('legend-toggle');
+    if (btn) btn.addEventListener('click', () => {
+      state.showAllIdeo = !state.showAllIdeo;
+      document.getElementById('legend').innerHTML = viewLegend(parties, state.showAllIdeo);
+      bindLegend(); postHeight();
+    });
+  };
+  const bindFilter = () => {
+    const box = document.getElementById('active-only');
+    if (box) box.addEventListener('change', () => {
+      state.activeOnly = box.checked;
+      document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
+      bindFilter(); postHeight();
+    });
+  };
+  render();
+  if (LOGOS.enabled) {
+    loadLogos(parties, cfg.name).then(({ logos, report }) => {
+      parties.forEach((p) => { p.logo = logos[p.versionId] || ''; });
+      if (LOGO_DEBUG) app.insertAdjacentHTML('beforeend', viewLogoReport(report));
+      if (!Object.keys(logos).length) { postHeight(); return; }
+      document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
+      document.getElementById('logo-credit').textContent = ' Party logos from Wikimedia Commons via Wikidata.';
+      bindFilter(); postHeight();
+    }).catch((e) => { console.warn('Logos not loaded', e); if (LOGO_DEBUG) { app.insertAdjacentHTML('beforeend', viewLogoReport([], e.message)); postHeight(); } });
+  }
+}
+
+/* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
+function postHeight() {
+  if (window.parent === window) return;
+  window.parent.postMessage({ 'datawrapper-height': { ['ee-' + ISO.toLowerCase()]: document.documentElement.scrollHeight } }, '*');
+}
+if ('ResizeObserver' in window) new ResizeObserver(postHeight).observe(document.body);
+window.addEventListener('load', postHeight);
+// Resize embedded Datawrapper charts (polling) inside this page.
+window.addEventListener('message', (e) => {
+  const d = e.data && e.data['datawrapper-height']; if (!d) return;
+  document.querySelectorAll('iframe').forEach((f) => { if (f.contentWindow === e.source) for (const k in d) f.style.height = d[k] + 'px'; });
+});
+
+main();
+</script>
+</body>
+</html>
