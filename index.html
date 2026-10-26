@@ -13,7 +13,8 @@
 html,body{margin:0;background:var(--bg)}
 body{font-family:'Advent Pro',system-ui,sans-serif;font-size:16px;color:var(--ink);line-height:1.35}
 a{color:var(--tagInk)}
-.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.wrap{max-width:1120px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
 .head{display:flex;flex-direction:column;align-items:center;gap:14px}
 .eyebrow{margin:0;font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
 h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-size:30px;line-height:1;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:2px}
@@ -64,6 +65,8 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .tile{display:flex;flex-direction:column;gap:9px;padding:11px 14px 13px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
 .tile.small{gap:6px;padding:9px 11px 10px;border-top-width:4px}
 .tile .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.nm{display:flex;align-items:center;gap:8px;min-width:0}
+.logo{display:block;flex:none;width:auto;object-fit:contain}
 .abbr{font-size:23px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .small .abbr{font-size:18px}
 .yr{font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap}
@@ -134,6 +137,13 @@ const SOURCES = {
   // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
   calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' }
 };
+
+// Party logos from Wikidata (property P154, files on Wikimedia Commons).
+// A logo is used only when the Wikidata item is a political party in the page's country.
+// LOGO_OVERRIDES: Europe Elects Entity ID -> Wikidata ID ('Q123') to force a match, or '' to hide a logo.
+// A "Wikidata ID" column in the party sheet, if added, is used the same way.
+const LOGOS = { enabled: true, cacheHours: 24 };
+const LOGO_OVERRIDES = {};
 
 const COUNTRIES = {
   AL: {
@@ -331,7 +341,7 @@ function buildParties(rows, iso, cfg) {
     return {
       status: (g(o, 'Status') || 'active').toLowerCase(), latest: !/^no$/i.test(g(o, 'Latest')),
       native: g(o, 'Name (Native)'), english: g(o, 'Name (English)') || g(o, 'Name (Native)'),
-      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'),
+      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'), wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
       abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
       european: !!currentEuroparty || !isNone(epGroup),
@@ -392,6 +402,59 @@ function buildAlliances(rows, iso, parties) {
   });
 }
 
+/* ---------- Logos (Wikidata / Wikimedia Commons) ---------- */
+async function wikiJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+async function titlesToQids(titles) {
+  const out = {};
+  for (let i = 0; i < titles.length; i += 50) {
+    const chunk = titles.slice(i, i + 50);
+    const j = await wikiJSON('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageprops&ppprop=wikibase_item|disambiguation&titles=' + encodeURIComponent(chunk.join('|')));
+    const q = j.query || {}; const map = {}; chunk.forEach((t) => { map[t] = t; });
+    [...(q.normalized || []), ...(q.redirects || [])].forEach((n) => { for (const k in map) if (map[k] === n.from) map[k] = n.to; });
+    const byTitle = {};
+    Object.values(q.pages || {}).forEach((pg) => { const pp = pg.pageprops || {}; if (pp.wikibase_item && !('disambiguation' in pp)) byTitle[pg.title] = pp.wikibase_item; });
+    for (const k in map) if (byTitle[map[k]]) out[k] = byTitle[map[k]];
+  }
+  return out;
+}
+async function wikidataEntities(qids) {
+  const out = {};
+  for (let i = 0; i < qids.length; i += 50) {
+    const j = await wikiJSON('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims&ids=' + qids.slice(i, i + 50).join('|'));
+    Object.assign(out, j.entities || {});
+  }
+  return out;
+}
+const claimVals = (e, prop) => (((e && e.claims) || {})[prop] || []).filter((c) => c.rank !== 'deprecated').map((c) => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value).filter(Boolean);
+async function loadLogos(parties, countryName) {
+  const cacheKey = `ee-logos-v1-${ISO}`;
+  try { const c = JSON.parse(localStorage.getItem(cacheKey) || 'null'); if (c && Date.now() - c.t < LOGOS.cacheHours * 3600e3) return c.logos; } catch (e) { /* storage unavailable */ }
+  const titles = [...new Set([countryName, ...parties.flatMap((p) => [p.english, p.native]).filter(Boolean)])];
+  const t2q = await titlesToQids(titles);
+  const countryQ = t2q[countryName];
+  const forced = (p) => (p.entityId in LOGO_OVERRIDES ? LOGO_OVERRIDES[p.entityId] : p.wikidata);
+  const qids = [...new Set(parties.flatMap((p) => [forced(p), t2q[p.english], t2q[p.native]]).filter(Boolean))];
+  const ents = await wikidataEntities(qids);
+  const logos = {};
+  parties.forEach((p) => {
+    if (LOGO_OVERRIDES[p.entityId] === '') return;
+    const f = forced(p);
+    for (const q of [f, t2q[p.english], t2q[p.native]].filter(Boolean)) {
+      const e = ents[q]; if (!e) continue;
+      if (q !== f) {
+        const inCountry = countryQ && claimVals(e, 'P17').some((v) => v.id === countryQ);
+        const isParty = claimVals(e, 'P31').some((v) => v.id === 'Q7278') || claimVals(e, 'P1142').length > 0;
+        if (!inCountry || !isParty) continue;
+      }
+      const file = claimVals(e, 'P154')[0];
+      if (file) { logos[p.versionId] = file; break; }
+    }
+  });
+  try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), logos })); } catch (e) { /* storage unavailable */ }
+  return logos;
+}
+const logoImg = (p, size) => (p.logo ? `<img class="logo" src="https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(p.logo)}?width=${size * 3}" alt="" loading="lazy" style="height:${size}px;max-width:${size * 2}px" onerror="this.remove()">` : '');
+
 /* ---------- Views ---------- */
 const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
 const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(label)}</span>`; };
@@ -401,7 +464,7 @@ function viewHeader(cfg) {
     ${r.pill ? pill(r.pill) : ''}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
     ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => `<span class="partyb">${esc(p)}</span>`).join('')}
     ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
-  return `<header class="head"><p class="eyebrow">EUROPE ELECTS · COUNTRY PAGE</p><h1 class="country">${esc(cfg.name)}</h1>
+  return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
     ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
 }
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -535,13 +598,13 @@ function tags(p) {
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
   if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${tags(p)}${kv(affs0)}</article>`; }
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${tags(p)}${kv(affs0)}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
   const affs = p.affs.length ? p.affs : [['Affiliation', 'None']];
   return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
-    <div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
+    <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
     <h3>${esc(p.english)}</h3>${tags(p)}${kv(affs)}
     <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
       <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
@@ -550,7 +613,7 @@ function bigTile(p, years) {
 function smallTile(p, years) {
   const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
   return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
-    <div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${esc(p.founded)}</span></div>
+    <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
     <h3>${esc(p.english)}</h3>${tags(p)}${kv(p.affs)}
     ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
 }
@@ -620,7 +683,7 @@ async function main() {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg) +
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
-      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}</p></footer>`;
+      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p></footer>`;
     bindFilter(); bindLegend(); bindParl();
     postHeight();
   };
@@ -641,6 +704,15 @@ async function main() {
     });
   };
   render();
+  if (LOGOS.enabled) {
+    loadLogos(parties, cfg.name).then((logos) => {
+      parties.forEach((p) => { p.logo = logos[p.versionId] || ''; });
+      if (!Object.keys(logos).length) return;
+      document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
+      document.getElementById('logo-credit').textContent = ' Party logos from Wikimedia Commons via Wikidata.';
+      bindFilter(); postHeight();
+    }).catch((e) => console.warn('Logos not loaded', e));
+  }
 }
 
 /* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
