@@ -72,6 +72,8 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .yr{font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap}
 .tile h3{margin:0;font-size:16px;font-weight:700;line-height:1.25}
 .small h3{font-size:15px;font-weight:600;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .native{margin:-2px 0 0;font-size:14px;font-style:italic;line-height:1.25;color:var(--muted)}
+.small .native{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tags{display:flex;flex-wrap:wrap;gap:4px;font-size:13px;font-weight:600;line-height:1}
 .small .tags{font-size:12px}
 .pchip .arrow{font-weight:500;opacity:.75}
@@ -689,12 +691,15 @@ function buildElections(rows, countryName) {
     .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
 }
 const ELECTION_LABELS = { european: 'European Parliament', parliament: 'National parliament', president: 'Presidential', regional: 'Regional', local: 'Local', referendum: 'Referendum', '': 'Other' };
+const CALENDAR_URL = 'https://europeelects.eu/calendar/'; // "Upcoming elections" link (per-country calendarUrl overrides)
 const TIMELINE_LIST_MAX = 5; // up to this many elections also get a visible list; more = pop-ups only
 let TL = [];
 function viewElections(cfg, elections) {
   let list = elections && elections.length ? elections : (cfg.elections || []).map((e) => ({ ...e, when: (parseElectionDate(e.date) || {}).date || null }));
   if (!list.length) return '';
-  const right = cfg.calendarUrl ? `<a href="${esc(cfg.calendarUrl)}" target="_blank" rel="noopener">Full calendar →</a>` : '';
+  const calUrl = cfg.calendarUrl || CALENDAR_URL;
+  const right = `<a href="${esc(calUrl)}" target="_blank" rel="noopener">Electoral calendar →</a>`;
+  const calLink = (txt) => `<a href="${esc(calUrl)}" target="_blank" rel="noopener" style="color:inherit">${txt}</a>`;
   const dated = list.filter((e) => e.when), tba = list.filter((e) => !e.when);
   const color = (e) => ELECTION_COLORS[e.kind] || '#8A9099';
   let body = '';
@@ -735,7 +740,7 @@ function viewElections(cfg, elections) {
         <div class="tl-tip" id="tl-tip" role="tooltip" hidden></div>
       </div>
       ${TL.length <= TIMELINE_LIST_MAX
-        ? `<ul class="tl-list">${TL.map((d) => `<li><span class="dot" style="background:${color(d)}"></span><span><strong>${esc(d.date)}</strong> · ${esc(d.type)}${d.spec ? ' – ' + esc(d.spec) : ''} <span class="muted">· ${esc(d.detail || '')}</span>${d.comment ? ` <em class="muted">${esc(d.comment)}</em>` : ''}</span></li>`).join('')}</ul>`
+        ? `<ul class="tl-list">${TL.map((d) => `<li><span class="dot" style="background:${color(d)}"></span><span><strong>${calLink(esc(d.date))}</strong> · ${esc(d.type)}${d.spec ? ' – ' + esc(d.spec) : ''} <span class="muted">· ${esc(d.detail || '')}</span>${d.comment ? ` <em class="muted">${esc(d.comment)}</em>` : ''}</span></li>`).join('')}</ul>`
         : `<p class="note-s" style="margin:0">${TL.length} elections · hover or tap a dot for details.</p>`}`;
   }
   if (tba.length) body += `<div><span class="label" style="font-size:12px">Date to be announced</span><ul class="tl-list">${tba.map((e) => `<li><span class="dot" style="background:${color(e)}"></span><span>${esc(e.type)}${e.spec ? ' – ' + esc(e.spec) : ''} <span class="muted">· ${esc(e.detail || '')}</span></span></li>`).join('')}</ul></div>`;
@@ -1030,12 +1035,17 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const baseAt = (t) => (epOnly ? colourAt(epOnly, t, memberColor) : memberColor);
     const thinAt = (t) => !!iCol && baseAt(t) === NONE && t >= iFrom;
     if (iCol && color === NONE) color = iCol;
-    return { key: pp.key, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
+    return { key: pp.key, party: m || null, alliance: al || null, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
       colorAt: (t) => (thinAt(t) ? iCol : baseAt(t)), thinAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
   const today = new Date();
-  const elections = (calendarRows || []).filter((o) => norm(g(o, 'Country')) === norm(countryName) && electionKind(g(o, 'Type')) === 'parliament')
+  // Election markers: national parliament general elections only. By-elections (partial, supplementary,
+  // recall or repeat votes for single seats) and upper-house-only votes are not marked.
+  const isByElection = (o) => /by[\s-]?election|partial|supplementary|nachwahl|ersatzwahl|élection partielle|elezion[ei] suppletiv|wybory uzupełniające|recall/i
+    .test([g(o, 'Type'), g(o, 'Specification'), g(o, 'Sequence'), g(o, 'Comment')].join(' '));
+  const isUpperOnly = (o) => /upper house|senate|council of states|bundesrat/i.test(g(o, 'Type'));
+  const elections = (calendarRows || []).filter((o) => norm(g(o, 'Country')) === norm(countryName) && electionKind(g(o, 'Type')) === 'parliament' && !isByElection(o) && !isUpperOnly(o))
     .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
     .filter((d) => d && d < today && d >= from);
   const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
@@ -1055,7 +1065,20 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const lastP = mine[mine.length - 1].t.getTime(); const vals = mine.filter((p) => p.t.getTime() >= lastP - span).map((p) => +p.v[sr.key]);
     return vals.reduce((a, b) => a + b, 0) / vals.length; };
   const stale = series.filter((sr) => { if (yearsAbove(sr) >= span) return false; const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
-  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
+  // Alliances and their member parties are mutually exclusive (e.g. CDU/CSU vs CDU + CSU): never both on.
+  // exclusive[key] = keys that are switched off when key is switched on. Default: the alliance wins.
+  const exclusive = {};
+  series.forEach((al) => {
+    if (!al.alliance) return;
+    const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
+    const members = series.filter((sr) => sr.party && memberParties.includes(sr.party)).map((sr) => sr.key);
+    if (!members.length) return;
+    (exclusive[al.key] = exclusive[al.key] || []).push(...members);
+    members.forEach((mk) => (exclusive[mk] = exclusive[mk] || []).push(al.key));
+  });
+  Object.keys(exclusive).forEach((k) => { const sr = series.find((x) => x.key === k);
+    if (sr && sr.alliance && !stale.includes(k)) exclusive[k].forEach((mk) => { if (!stale.includes(mk)) stale.push(mk); }); });
+  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), exclusive, updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
 function viewPolling(cfg, poll) {
@@ -1092,8 +1115,14 @@ function bindPolling() {
     drawPolling();
   }; });
   document.querySelectorAll('.poll-chip').forEach((b) => { b.onclick = () => {
-    const k = b.dataset.k; if (POLL.hidden.has(k)) POLL.hidden.delete(k); else POLL.hidden.add(k);
-    b.setAttribute('aria-pressed', String(!POLL.hidden.has(k))); drawPolling();
+    const k = b.dataset.k;
+    if (POLL.hidden.has(k)) {
+      POLL.hidden.delete(k);
+      // switching on an alliance switches off its members, and the other way round
+      (POLL.exclusive[k] || []).forEach((x) => POLL.hidden.add(x));
+    } else POLL.hidden.add(k);
+    document.querySelectorAll('.poll-chip').forEach((c) => c.setAttribute('aria-pressed', String(!POLL.hidden.has(c.dataset.k))));
+    drawPolling();
   }; });
 }
 function drawPolling() {
@@ -1241,17 +1270,19 @@ function tags(p) {
   if (p.status !== 'active') t.push(`<span class="tag warn">${esc(p.status.charAt(0).toUpperCase() + p.status.slice(1))}</span>`);
   return `<div class="tags">${t.join('')}</div>`;
 }
+// Native name under the English one, unless they're the same.
+const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english) ? `<p class="native">${esc(p.native)}</p>` : '');
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
   if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${tags(p)}${kv(affs0)}</article>`; }
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
   const affs = p.affs.length ? p.affs : [['Affiliation', 'None']];
   return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
-    <h3>${esc(p.english)}</h3>${tags(p)}${kv(affs)}
+    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs)}
     <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
       <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
       <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
@@ -1260,7 +1291,7 @@ function smallTile(p, years) {
   const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
   return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
-    <h3>${esc(p.english)}</h3>${tags(p)}${kv(p.affs)}
+    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(p.affs)}
     ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
 }
 function viewParties(parties, cfg, activeOnly) {
