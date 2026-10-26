@@ -142,6 +142,9 @@ const SOURCES = {
 // A logo is used only when the Wikidata item is a political party in the page's country.
 // LOGO_OVERRIDES: Europe Elects Entity ID -> Wikidata ID ('Q123') to force a match, or '' to hide a logo.
 // A "Wikidata ID" column in the party sheet, if added, is used the same way.
+// "Get the data" link on the polling chart (a country's polling.dataUrl overrides it).
+const DATA_ACCESS_URL = 'https://europeelects.eu/data-access-request/';
+
 const LOGOS = { enabled: true, cacheHours: 24 };
 const LOGO_OVERRIDES = {};
 
@@ -571,7 +574,7 @@ function bindParl() {
 }
 function viewPolling(cfg) {
   const p = cfg.polling; if (!p || !p.embed) return '';
-  return bar('Polling average', `<a href="${esc(p.embed)}" target="_blank" rel="noopener">Get the data →</a>`) + `<section class="card poll">
+  return bar('Polling average', `<a href="${esc(p.dataUrl || DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`) + `<section class="card poll">
     <iframe title="${esc(p.title || 'Polling average')}" aria-label="Line chart" src="${esc(p.embed)}" scrolling="no" height="${p.height || 400}" data-external="1"></iframe>
     ${p.note ? `<p>${esc(p.note)}</p>` : ''}</section>`;
 }
