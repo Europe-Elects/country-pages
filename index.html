@@ -94,6 +94,7 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .mini i{display:block;width:100%;max-width:16px;border-radius:2px}
 .yrs{display:flex;gap:3px;font-size:12px;color:var(--muted)}
 .yrs span{flex:1;text-align:center}
+.al[hidden]{display:none}
 .al{display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
 .al .members{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line2)}
 .al .mlabel{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
@@ -529,10 +530,11 @@ function parseElectionDate(raw) {
 function electionKind(type) {
   const t = norm(type);
   if (/europ/.test(t)) return 'european';
-  if (/presiden|head of state/.test(t)) return 'president';
+  // Regional first, so e.g. "single vote regional parliament and president" counts as regional (green).
+  if (/region|provinc|subnational|state (parliament|assembly|election)/.test(t)) return 'regional';
   if (/referend/.test(t)) return 'referendum';
   if (/local|municipal/.test(t)) return 'local';
-  if (/region|state|provinc|subnational/.test(t)) return 'regional';
+  if (/presiden|head of state/.test(t)) return 'president';
   if (/parliament|legislat|national/.test(t)) return 'parliament';
   return '';
 }
@@ -666,15 +668,37 @@ function viewPolling(cfg) {
 }
 function viewAlliances(alliances) {
   if (!alliances.length) return '';
-  return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a">${alliances.map((a) => `
+  return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
     <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
       <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
       <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
       <div class="kv"><div><span>Europarty</span><span>${esc(a.europarty)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
       ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
       <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
-    </article>`).join('')}</div>`;
+    </article>`).join('')}</div><div id="al-more-wrap" hidden><button type="button" class="toggle" id="al-more" aria-expanded="false" aria-controls="al-grid"></button></div>`;
 }
+// Alliances: show one row of cards, the rest behind "Show all".
+function applyAllianceRows() {
+  const grid = document.getElementById('al-grid'), wrap = document.getElementById('al-more-wrap'), btn = document.getElementById('al-more');
+  if (!grid || !wrap) return;
+  const cards = [...grid.children];
+  cards.forEach((c) => { c.hidden = false; });
+  const firstTop = cards.length ? cards[0].offsetTop : 0;
+  const extra = cards.filter((c) => c.offsetTop > firstTop + 2);
+  if (!extra.length) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  if (!state.allAlliances) extra.forEach((c) => { c.hidden = true; });
+  btn.textContent = state.allAlliances ? 'Show fewer alliances' : `Show all ${cards.length} alliances`;
+  btn.setAttribute('aria-expanded', String(!!state.allAlliances));
+}
+function bindAlliances() {
+  const btn = document.getElementById('al-more'); if (!btn) return;
+  btn.onclick = () => { state.allAlliances = !state.allAlliances; applyAllianceRows(); postHeight(); };
+  applyAllianceRows();
+}
+let alResize = null;
+window.addEventListener('resize', () => { clearTimeout(alResize); alResize = setTimeout(() => { applyAllianceRows(); postHeight(); }, 150); });
+
 function tags(p) {
   const t = [];
   if (p.gov) t.push(`<span class="tag gov">In government</span>`);
@@ -747,7 +771,7 @@ function viewLegend(parties, showAll) {
 const params = new URLSearchParams(location.search);
 const ISO = (params.get('country') || 'AL').toUpperCase();
 const app = document.getElementById('app');
-let state = { activeOnly: true, showAllIdeo: false };
+let state = { activeOnly: true, showAllIdeo: false, allAlliances: false };
 
 async function main() {
   const cfg = COUNTRIES[ISO] || {};
@@ -774,7 +798,7 @@ async function main() {
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p></footer>`;
-    bindFilter(); bindLegend(); bindParl(); bindTimeline();
+    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances();
     postHeight();
   };
   const bindLegend = () => {
