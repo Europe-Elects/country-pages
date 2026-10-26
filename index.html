@@ -120,9 +120,19 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .tl-tick{position:absolute;bottom:22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;font-size:13px;color:var(--muted)}
 .tl-tick::before{content:"";width:1px;height:10px;background:var(--navy);margin-bottom:2px}
 .tl-today{position:absolute;bottom:0;transform:translateX(-50%);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
-.tl-dot{position:absolute;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);padding:0;cursor:pointer}
+.tl-cluster{position:absolute;bottom:33px;width:0;height:0;z-index:1}
+.tl-cluster.scatter:hover,.tl-cluster.scatter:focus-within{z-index:4}
+.tl-cluster.scatter::before{content:"";position:absolute;left:calc(var(--pw) / -2);bottom:-8px;width:var(--pw);height:calc(var(--ph) + 12px);background:#fff;border:1px solid #D5D3CC;border-radius:8px;box-shadow:0 8px 24px rgba(27,42,74,.16);opacity:0;transform:scale(.9);transform-origin:50% 100%;transition:opacity .2s,transform .2s;pointer-events:none}
+.tl-cluster.scatter:hover::before,.tl-cluster.scatter:focus-within::before{pointer-events:auto}
+.tl-cluster.scatter:hover::before,.tl-cluster.scatter:focus-within::before{opacity:1;transform:none}
+.tl-count{position:absolute;left:14px;bottom:30px;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;transition:opacity .2s}
+.tl-cluster.scatter:hover .tl-count,.tl-cluster.scatter:focus-within .tl-count{opacity:0}
+.tl-dot{position:absolute;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);padding:0;cursor:pointer;transform:translate(0,0) scale(var(--s,1));transition:transform .25s ease}
+.scatter .tl-dot{width:14px;height:14px;margin-left:-7px}
+.tl-cluster.scatter:hover .tl-dot,.tl-cluster.scatter:focus-within .tl-dot{width:18px;height:18px;margin-left:-9px;transform:translate(var(--tx),var(--ty)) scale(var(--s,1))}
+@media (prefers-reduced-motion: reduce){.tl-dot,.tl-cluster.scatter::before{transition:none}}
 .tl-dot::after{content:"";position:absolute;inset:-12px}
-.tl-dot:hover,.tl-dot:focus-visible{transform:scale(1.25);outline:none;box-shadow:0 0 0 3px var(--blue)}
+.tl-dot:hover,.tl-dot:focus-visible{--s:1.25;outline:none;box-shadow:0 0 0 3px var(--blue)}
 .tl-tip{position:absolute;z-index:3;width:max-content;max-width:min(280px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);overflow:hidden;font-size:14px}
 .tl-tip-type{display:block;padding:6px 12px;color:#fff;font-weight:700}
 .tl-tip-body{padding:8px 12px 10px;display:flex;flex-direction:column;gap:2px}
@@ -134,12 +144,19 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .proj-legend span{display:inline-flex;align-items:center;gap:6px}
 .proj-chart{position:relative;width:100%}
 .proj-chart svg{display:block}
-.proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#565B66}
-.proj-chart .lab{font:600 14px 'Advent Pro',system-ui,sans-serif}
+.proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#6B707A;font-variant-numeric:tabular-nums}
+.proj-chart .lab{font:600 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .proj-tip[hidden]{display:none}
-.proj-tip{position:absolute;top:8px;z-index:3;min-width:220px;max-width:min(320px,100%);background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:8px 12px;font-size:14px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+.proj-tip{position:absolute;top:8px;z-index:3;min-width:220px;max-width:min(320px,100%);background:rgba(255,255,255,.97);border:1px solid #D5D3CC;border-radius:4px;box-shadow:0 8px 24px rgba(27,42,74,.16);padding:8px 12px 10px;font-size:14px;display:flex;flex-direction:column;gap:3px;pointer-events:none;font-variant-numeric:tabular-nums}
+.proj-tip>strong{display:block;padding-bottom:6px;margin-bottom:3px;border-bottom:1px solid #ECEAE4;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
 .proj-tip div{display:flex;align-items:center;gap:8px}
 .proj-tip div strong{margin-left:auto;padding-left:12px}
+.poll-ctl{display:flex;flex-direction:column;gap:8px}
+.poll-range,.poll-parties{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.rngbtn:focus-visible,.pchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 </style>
@@ -175,7 +192,9 @@ const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 // A country's own polling block in COUNTRIES takes priority. The latest chart version is always shown.
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
-const POLLING_YEARS = 10; // show at most this many years of polls
+const POLLING_YEARS = 10;
+// Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
+const NO_POLLING = ['RU', 'BY', 'AZ']; // show at most this many years of polls
 const POLLING_CHARTS = {
   AL: 'abGxs'
 };
@@ -225,6 +244,8 @@ const COUNTRIES = {
 /* ---------- Colours ---------- */
 const NONE = '#8A9099';
 // Europe Elects palette (adapted from the Political Party Database Codebook, Poguntke et al., 2025).
+// Display name for Europarties: Patriots.eu is always shown as PfE.
+const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
 const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79',
   'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
   'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
@@ -368,6 +389,36 @@ async function loadSheet(src) {
 }
 
 /* ---------- Model ---------- */
+// Affiliation history across all versions of a party: dated Europarty and EP-group intervals.
+// colourAt(t): the Europarty in force at t sets the colour; without one, the EP group's family; else grey.
+function boundDate(v, isEnd) {
+  const t = String(v || '').trim(); if (!t) return isEnd ? Infinity : -Infinity;
+  if (/^\d{4}$/.test(t)) return (isEnd ? new Date(+t, 11, 31) : new Date(+t, 0, 1)).getTime();
+  const r = parseElectionDate(t); return r ? r.date.getTime() : (isEnd ? Infinity : -Infinity);
+}
+function affiliationHistory(versions) {
+  const ep = [], grp = [];
+  versions.forEach((v) => {
+    const a = v.aff || {};
+    const epVal = isNone(a.ep) ? null : a.ep.split(/[|;,]/)[0].trim();
+    if (epVal || a.epS || a.epE) ep.push({ a: boundDate(a.epS), b: boundDate(a.epE, true), v: epVal, ver: v.version });
+    const gVal = isNone(a.grp) || /^NI$/i.test(String(a.grp).trim()) ? null : a.grp.split(/[;,]/)[0].trim();
+    if (gVal || a.grpS || a.grpE) grp.push({ a: boundDate(a.grpS), b: boundDate(a.grpE, true), v: gVal, ver: v.version });
+  });
+  return { ep, grp };
+}
+function colourAt(history, t, fallback) {
+  if (!history) return fallback;
+  const pick = (list) => { const hit = list.filter((i) => t >= i.a && t <= i.b).sort((p1, p2) => (p1.a - p2.a) || (p1.ver - p2.ver)); return hit.length ? hit[hit.length - 1] : undefined; };
+  const e = pick(history.ep);
+  if (e && e.v) return EUROPARTY_COLORS[e.v] || NONE;
+  const gI = pick(history.grp);
+  if (gI && gI.v) return EUROPARTY_COLORS[GROUP_TO_EUROPARTY[gI.v]] || NONE;
+  // Dated history but nothing in force at t (e.g. before the party joined): grey. No history at all: current colour.
+  if (e || gI || history.ep.length || history.grp.length) return NONE;
+  return fallback;
+}
+
 function buildParties(rows, iso, cfg) {
   const ideoColor = (i) => { const r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === norm(i).replace(/-/g, ' ')); return r ? r[1] : (/^regional/i.test(i) ? '#008080' : NONE); };
   let list = rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso).map((o) => {
@@ -376,7 +427,7 @@ function buildParties(rows, iso, cfg) {
     const epLink = gStarts(o, 'Documented Links');
     const intl = g(o, 'International Party Federation'), intlStart = g(o, 'International Affiliation Start'), intlEnd = g(o, 'International Affiliation End');
     const affs = [];
-    if (!isNone(europarty)) affs.push(['Europarty', europarty + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
+    if (!isNone(europarty)) affs.push(['Europarty', epName(europarty) + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
     if (!isNone(epGroup)) affs.push(['EP group', epGroup]);
     if (!isNone(epLink)) affs.push(['EP group link', epLink]);
     if (!isNone(intl)) affs.push(['International', intl + (intlEnd ? ` (until ${year(intlEnd)})` : '')]);
@@ -386,7 +437,8 @@ function buildParties(rows, iso, cfg) {
     return {
       status: (g(o, 'Status') || 'active').toLowerCase(), latest: !/^no$/i.test(g(o, 'Latest')),
       native: g(o, 'Name (Native)'), english: g(o, 'Name (English)') || g(o, 'Name (Native)'),
-      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'), wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
+      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'), version: +g(o, 'Europe Elects Entity Version') || 1,
+      aff: { ep: europarty, epS: g(o, 'Europarty Start'), epE: europartyEnd, grp: epGroup, grpS: g(o, 'EP Group Start'), grpE: g(o, 'EP Group End') }, wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
       abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
       european: !!currentEuroparty || !isNone(epGroup), europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
@@ -395,6 +447,9 @@ function buildParties(rows, iso, cfg) {
     };
   });
   // Earlier versions of a party that has a current (Latest = Yes) record are dropped, so each party appears once.
+  const versions = {};
+  list.forEach((p) => { if (p.entityId) (versions[p.entityId] = versions[p.entityId] || []).push(p); });
+  list.forEach((p) => { p.history = affiliationHistory(versions[p.entityId] || [p]); });
   const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
   list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
   // Merge duplicate current records with the same native name (keeps the better-documented one).
@@ -443,7 +498,7 @@ function buildAlliances(rows, iso, parties) {
     return {
       abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
       since: year(g(o, 'Political Activity Started')),
-      europarty: isNone(europarty) ? 'None' : europarty, epGroup: isNone(epGroup) ? '' : epGroup,
+      europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
       color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
       types: ALLIANCE_TYPES.filter(([h]) => /^yes$/i.test(g(o, h))).map(([, t]) => t),
       members
@@ -522,7 +577,7 @@ const logoImg = (p, size) => (p.logo ? `<img class="logo" src="https://commons.w
 
 /* ---------- Views ---------- */
 const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
-const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(label)}</span>`; };
+const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(epName(label))}</span>`; };
 
 function viewHeader(cfg) {
   const rows = (cfg.government || []).map((r) => `<div class="lead-row"><span class="label">${esc(r.label)}</span><div class="row">
@@ -595,9 +650,26 @@ function viewElections(cfg, elections) {
     const end = new Date(new Date(last).getFullYear() + 1, 0, 1).getTime(); // run to the next 1 January
     const pos = (t) => 2 + (t - start.getTime()) / (end - start.getTime()) * 94; // % with side margins
     // stack dots that would overlap
-    const placed = [];
-    TL = dated.map((e) => { const x = pos(e.when.getTime()); const stack = placed.filter((q) => Math.abs(q - x) < 2.2).length; placed.push(x); return { ...e, x, stack }; });
-    const maxStack = Math.max(0, ...TL.map((d) => d.stack));
+    // Group elections on the same or nearby dates. Up to 5: a vertical stack. More: a compact scatter
+    // (max 3 rows) that spreads out on a panel when hovered or focused.
+    TL = dated.map((e) => ({ ...e, x: pos(e.when.getTime()) })).sort((p1, p2) => p1.x - p2.x);
+    const groups = [];
+    TL.forEach((d) => { const g0 = groups[groups.length - 1]; if (g0 && d.x - g0.x0 < 2.2) g0.items.push(d); else groups.push({ x0: d.x, items: [d] }); });
+    const STACK_MAX = 5, ROWS = 3, GAP = 20, PANEL_COLS = 6, PANEL_GAP = 24;
+    groups.forEach((gr) => {
+      const n = gr.items.length; gr.x = gr.items.reduce((a, d) => a + d.x, 0) / n; gr.scatter = n > STACK_MAX;
+      const cols = Math.ceil(n / ROWS), pcols = Math.min(PANEL_COLS, n), prows = Math.ceil(n / PANEL_COLS);
+      gr.panel = { w: pcols * PANEL_GAP + 12, h: prows * PANEL_GAP + 12 };
+      gr.items.forEach((d, i) => {
+        if (!gr.scatter) { d.ox = 0; d.oy = i * GAP; d.ex = 0; d.ey = d.oy; return; }
+        const r = i % ROWS, c = Math.floor(i / ROWS);
+        d.ox = (c - (cols - 1) / 2) * 9 + (r % 2 ? 4 : 0); d.oy = r * 11; // compact scatter
+        const pr = Math.floor(i / PANEL_COLS), pc = i % PANEL_COLS, rowLen = Math.min(PANEL_COLS, n - pr * PANEL_COLS);
+        d.ex = (pc - (rowLen - 1) / 2) * PANEL_GAP; d.ey = 18 + pr * PANEL_GAP;     // spread-out panel
+      });
+    });
+    TL = groups.flatMap((gr) => gr.items);
+    const maxStack = Math.max(0, ...groups.map((gr) => (gr.scatter ? 1.2 : gr.items.length - 1)));
     const ticks = []; for (let y = start.getFullYear() + 1; ; y++) { const t = new Date(y, 0, 1).getTime(); if (t > end) break; ticks.push({ y, x: pos(t) }); }
     const kinds = [...new Set(list.map((e) => e.kind || ''))];
     body = `<div class="tl-legend">${kinds.map((k) => `<span><span class="dot" style="background:${ELECTION_COLORS[k] || '#8A9099'}"></span>${esc(ELECTION_LABELS[k] || ELECTION_LABELS[''])}</span>`).join('')}</div>
@@ -605,7 +677,7 @@ function viewElections(cfg, elections) {
         <div class="tl-axis"></div>
         <div class="tl-today" style="left:2%"><span>Today</span></div>
         ${ticks.map((t) => `<div class="tl-tick" style="left:${t.x}%"><span>${t.y}</span></div>`).join('')}
-        ${TL.map((d, i) => `<button type="button" class="tl-dot" data-i="${i}" style="left:${d.x}%;bottom:${33 + d.stack * 20}px;background:${color(d)}" aria-label="${esc(`${d.type}${d.spec ? ' – ' + d.spec : ''}: ${d.date}. ${d.detail || ''}`)}"></button>`).join('')}
+        ${groups.map((gr) => `<div class="tl-cluster${gr.scatter ? ' scatter' : ''}" style="left:${gr.x}%;--pw:${gr.panel.w}px;--ph:${gr.panel.h}px">${gr.scatter ? `<span class="tl-count" aria-hidden="true">${gr.items.length}</span>` : ''}${gr.items.map((d) => { const i = TL.indexOf(d); return `<button type="button" class="tl-dot" data-i="${i}" style="left:${d.ox}px;bottom:${d.oy}px;--tx:${d.ex - d.ox}px;--ty:${-(d.ey - d.oy)}px;background:${color(d)}" aria-label="${esc(`${d.type}${d.spec ? ' – ' + d.spec : ''}: ${d.date}. ${d.detail || ''}`)}"></button>`; }).join('')}</div>`).join('')}
         <div class="tl-tip" id="tl-tip" role="tooltip" hidden></div>
       </div>
       ${TL.length <= TIMELINE_LIST_MAX
@@ -615,6 +687,28 @@ function viewElections(cfg, elections) {
   if (tba.length) body += `<div><span class="label" style="font-size:12px">Date to be announced</span><ul class="tl-list">${tba.map((e) => `<li><span class="dot" style="background:${color(e)}"></span><span>${esc(e.type)}${e.spec ? ' – ' + esc(e.spec) : ''} <span class="muted">· ${esc(e.detail || '')}</span></span></li>`).join('')}</ul></div>`;
   return bar('Upcoming elections', right) + `<section class="card tl">${body}</section>`;
 }
+/* ---------- Chart helpers ---------- */
+// Monotone cubic path (no overshoot), for smooth averages.
+function smoothPath(pts) {
+  if (pts.length < 3) return pts.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('');
+  const n = pts.length, dx = [], dy = [], m = [], t = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0]; dy[i] = pts[i + 1][1] - pts[i][1]; m[i] = dx[i] ? dy[i] / dx[i] : 0; }
+  t[0] = m[0]; t[n - 1] = m[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i]);
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += `C${(pts[i][0] + h).toFixed(1)},${(pts[i][1] + h * t[i]).toFixed(1)} ${(pts[i + 1][0] - h).toFixed(1)},${(pts[i + 1][1] - h * t[i + 1]).toFixed(1)} ${pts[i + 1][0].toFixed(1)},${pts[i + 1][1].toFixed(1)}`;
+  }
+  return d;
+}
+const inkFor = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c === NONE ? '#565B66' : c);
+// End label with a marker on the line and a thin leader when the label had to be moved.
+const endLabel = (x0, yLine, xText, yText, color, inner, title) =>
+  `<circle cx="${x0}" cy="${yLine}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5"/>` +
+  (Math.abs(yText - yLine) > 3 ? `<polyline points="${x0 + 5},${yLine} ${xText - 4},${yText}" fill="none" stroke="${color}" stroke-width="1" opacity=".6"/>` : '') +
+  `<text x="${xText}" y="${yText + 4}" class="lab" fill="${inkFor(color)}" style="cursor:help"><title>${esc(title)}</title>${inner}</text>`;
+
 /* ---------- European Parliament projection ---------- */
 function parseMonthHeader(h) {
   const t = String(h || '').trim().toLowerCase(); let m;
@@ -640,7 +734,9 @@ function buildProjection(rows, countryName, parties) {
     const color = EUROPARTY_COLORS[ep] || NONE;
     groupCount[color] = (groupCount[color] || 0) + 1;
     const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
-    return { party, short: match ? match.abbr : party, label: g(o, 'Party Name + Group') || `${party} (${group})`, group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
+    const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
+    const tag = partyTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group);
+    return { party, short: match ? match.abbr : party, label: fullName, tag, group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
   }).filter((sr) => sr.values.some((v) => v != null));
   if (!series.length) return null;
   return { months: months.map((m) => m.d), series };
@@ -652,14 +748,13 @@ function viewProjection(proj, cfg) {
   const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
   const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
-    <div class="proj-legend">${proj.series.map((sr) => `<span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="${sr.color}" stroke-width="3" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/></svg>${esc(sr.label)}</span>`).join('')}</div>
     <div class="proj-chart" id="proj-chart"></div>
-    <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover or tap the chart for earlier months.</p></section>`;
+    <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
 }
 function drawProjection() {
   const host = document.getElementById('proj-chart'); if (!host || !PROJ) return;
   const { months, series } = PROJ;
-  const W = host.clientWidth, H = W < 560 ? 260 : 320, m = { l: 30, r: W < 560 ? 62 : 84, t: 12, b: 28 };
+  const W = host.clientWidth, small = W < 560, H = small ? 260 : 320, m = { l: 30, r: small ? 62 : 190, t: 12, b: 28 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const t0 = months[0].getTime(), t1 = months[months.length - 1].getTime();
   const x = (i) => m.l + (months.length === 1 ? iw / 2 : (months[i].getTime() - t0) / (t1 - t0) * iw);
@@ -668,41 +763,45 @@ function drawProjection() {
   const ymax = Math.ceil((vmax + (vmax <= 12 ? 1 : step)) / step) * step;
   const y = (v) => m.t + ih - v / ymax * ih;
   let svg = '';
-  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#E4E2DB'}" stroke-width="1"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
   // x ticks: January of each year (or first month)
   months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="ax">${d.toLocaleDateString('en-GB', { month: 'short' })} ’${String(d.getFullYear()).slice(2)}</text><line x1="${x(i)}" x2="${x(i)}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/>`; });
   // lines (broken at gaps)
   series.forEach((sr) => {
     let d = '', pen = false;
     sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
-    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/>`;
-    sr.values.forEach((v, i) => { const lone = v != null && sr.values[i - 1] == null && sr.values[i + 1] == null; if (lone) svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${sr.color}"/>`; });
+    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/>`;
+    sr.values.forEach((v, i) => { if (v != null) svg += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${months.length > 30 ? 1.6 : 2.2}" fill="${sr.color}"/>`; });
   });
   // end labels with simple collision avoidance
   // Parties that dropped out before the latest month get an end dot but no label (they stay in the legend and pop-up).
-  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${sr.color}"/>`; });
+  const inkOf = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c);
+  // Parties that dropped out before the latest month: dot + abbreviation at their last point.
+  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${sr.color}"/><text x="${x(i) + 6}" y="${y(sr.values[i]) - 6}" class="lab" style="font-size:12px;cursor:help" fill="${inkOf(sr.color)}"><title>${esc(sr.label)}</title>${esc(sr.short)}</text>`; });
   const lastIdx = months.length - 1;
   const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
-  ends.forEach((e) => { svg += `<circle cx="${x(e.i)}" cy="${y(e.v)}" r="4.5" fill="${e.sr.color}" stroke="#fff" stroke-width="1.5"/><text x="${x(e.i) + 9}" y="${e.yy + 4}" class="lab" fill="${e.sr.color === '#FFD700' || e.sr.color === '#90ee90' ? '#8A6D00' : e.sr.color}"><tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}</text>`; });
+  ends.forEach((e) => { svg += endLabel(x(e.i), y(e.v), x(e.i) + 14, e.yy, e.sr.color,
+    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
   const lastI = months.length - 1;
   const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
-    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#1A1D23" stroke-dasharray="3 3" visibility="hidden"/>
+    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="proj-marks"></g>
     <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="proj-hit"/></svg><div class="proj-tip" id="proj-tip" hidden></div>`;
   const hit = document.getElementById('proj-hit'), cross = document.getElementById('proj-x'), tip = document.getElementById('proj-tip');
   const show = (evt) => {
     const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
     let best = 0; months.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
     cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
+    document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${sr.color}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.label)}</span><strong>${o.v}</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.short)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v}</strong></div>`).join('');
     tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
     tip.style.left = Math.max(0, left) + 'px';
   };
-  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); document.getElementById('proj-marks').innerHTML = ''; };
   hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
   hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
 }
@@ -717,9 +816,10 @@ function bindTimeline() {
     tip.innerHTML = `<span class="tl-tip-type" style="background:${ELECTION_COLORS[d.kind] || '#8A9099'}">${esc(d.type)}</span>
       <div class="tl-tip-body">${d.spec ? `<span style="font-weight:600">${esc(d.spec)}</span>` : ''}<strong class="big" style="font-size:19px">${esc(d.date)}</strong><span class="muted">${esc(d.detail || '')}</span>${d.comment ? `<em class="muted">${esc(d.comment)}</em>` : ''}</div>`;
     tip.hidden = false;
-    const w = wrap.clientWidth, tw = tip.offsetWidth, cx = btn.offsetLeft + btn.offsetWidth / 2;
+    const wr = wrap.getBoundingClientRect(), br = btn.getBoundingClientRect();
+    const w = wrap.clientWidth, tw = tip.offsetWidth, cx = br.left - wr.left + br.width / 2;
     tip.style.left = Math.max(0, Math.min(w - tw, cx - tw / 2)) + 'px';
-    tip.style.bottom = (parseFloat(btn.style.bottom) + 24) + 'px';
+    tip.style.bottom = (wr.bottom - br.top + 8) + 'px';
   };
   const hide = () => { if (!pinned) tip.hidden = true; };
   wrap.querySelectorAll('.tl-dot').forEach((btn) => {
@@ -783,33 +883,70 @@ function bindParl() {
 const EUROPARTY_TO_GROUP = { 'EPP': 'EPP', 'PES': 'S&D', 'ECR': 'ECR', 'ALDE': 'RE', 'EDP': 'RE', 'EGP': 'G/EFA', 'EFA': 'G/EFA', 'Volt': 'G/EFA', 'PPEU': 'G/EFA',
   'PEL': 'LEFT', 'ELA': 'LEFT', 'Patriots.eu': 'PfE', 'ESN': 'ESN', 'ECPP': 'ECR', 'Animal Politics EU': 'LEFT' };
 const groupLabel = (g2) => ({ 'Greens/EFA': 'G/EFA', 'Renew': 'RE' }[g2] || g2);
+// Chart label format: ABBR (EUROPARTY–EP GROUP). Outside the EU the group follows from the Europarty.
+const partyTag = (europarty, epGroup) => {
+  const grp = groupLabel(epGroup || EUROPARTY_TO_GROUP[europarty || ''] || '');
+  const ep = epName(europarty);
+  return ep && grp ? `${ep}–${grp}` : (ep || grp);
+};
 let POLL = null;
-function buildPolling(data, parties, calendarRows, countryName) {
+const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
+function buildPolling(data, parties, calendarRows, countryName, alliances) {
   if (!data || !data.parties || !data.polls || !data.polls.length) return null;
-  const find = (pp) => parties.find((x) => [x.abbr, x.native, x.english].some((n) => n && [pp.key, pp.abbr, pp.native, pp.english].some((m) => m && norm(m) === norm(n))));
+  const names = (pp) => [pp.key, pp.abbr, pp.native, pp.english].filter(Boolean).map(normKey);
+  const findParty = (keys) => parties.find((x) => [x.abbr, x.native, x.english].some((n) => n && keys.includes(normKey(n))));
+  const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
   const lastPoll = new Date(data.polls[data.polls.length - 1].d);
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
   const series = data.parties.map((pp) => {
-    const m = find(pp);
-    const color = m && m.color !== NONE ? m.color : (m && EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]]) || NONE;
-    const tag = m ? groupLabel(m.epGroup || EUROPARTY_TO_GROUP[m.europartyShort] || '') : '';
+    const keys = names(pp);
+    let color = NONE, tag = '', abbr = pp.abbr || pp.key, name = pp.english || pp.native || pp.key;
+    const m = findParty(keys);
+    const al = m ? null : findAlliance(keys);
+    if (m) {
+      color = m.color !== NONE ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
+      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
+    } else if (al) {
+      // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
+      color = al.color; abbr = al.abbr || abbr; name = al.english || name;
+      tag = al.europarty === 'None' ? groupLabel(al.epGroup || '') : (al.europarty.includes('|') ? epName(al.europarty) : partyTag(al.europarty, al.epGroup));
+    } else {
+      // Joint lists without an alliance record ("A/B", "A–B"): use the first member party found.
+      const part = String(pp.key).split(/[\/+–—-]/).map((x) => findParty([normKey(x)])).find(Boolean);
+      if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
+    }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
-    return { key: pp.key, abbr: m ? m.abbr : (pp.abbr || pp.key), name: m ? m.english : (pp.english || pp.key), tag, color, curve };
-  });
+    const history = m ? m.history : null;
+    return { key: pp.key, abbr, name, tag, color, curve, colorAt: (t) => (history ? colourAt(history, t, color) : color) };
+  }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
-  // past national parliament elections from the electoral calendar
   const today = new Date();
   const elections = (calendarRows || []).filter((o) => norm(g(o, 'Country')) === norm(countryName) && electionKind(g(o, 'Type')) === 'parliament')
     .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
     .filter((d) => d && d < today && d >= from);
-  return { series, polls, elections, from, to: lastPoll, updated: data.updated };
+  const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
+  const t1 = lastPoll.getTime();
+  const yearAgo = t1 - 365 * 864e5;
+  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo)).map((sr) => sr.key);
+  return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
+const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
 function viewPolling(cfg, poll) {
+  if (NO_POLLING.includes(ISO)) { POLL = null; return ''; }
   POLL = poll || null;
   const right = `<a href="${esc(DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`;
   const note = `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}.`;
   if (POLL) {
+    const spanYears = (POLL.full.b - POLL.full.a) / (365.25 * 864e5);
+    const ranges = RANGES.filter(([r]) => r === 'all' || +r < spanYears);
+    const latest = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg ? seg[seg.length - 1].v : 0; };
+    const chips = [...POLL.series].sort((p1, p2) => latest(p2) - latest(p1));
     return bar('Polling average', right) + `<section class="card poll">
+      <div class="poll-ctl">
+        <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
+          <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
+        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`).join('')}</div>
+      </div>
       <div class="proj-chart" id="poll-chart"></div>
       <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
   }
@@ -820,69 +957,115 @@ function viewPolling(cfg, poll) {
     <iframe title="${esc(p.title || 'Polling average')}" aria-label="Line chart" src="${esc(p.embed)}" scrolling="no" height="${p.height || 400}" data-external="1"></iframe>
     ${p.note ? `<p>${esc(p.note)}</p>` : ''}</section>`;
 }
+function bindPolling() {
+  if (!POLL) return;
+  document.querySelectorAll('.rngbtn').forEach((b) => { b.onclick = () => {
+    const r = b.dataset.r; POLL.range = r;
+    POLL.view = r === 'all' ? { ...POLL.full } : { a: Math.max(POLL.full.a, POLL.full.b - +r * 365.25 * 864e5), b: POLL.full.b };
+    drawPolling();
+  }; });
+  document.querySelectorAll('.pchip').forEach((b) => { b.onclick = () => {
+    const k = b.dataset.k; if (POLL.hidden.has(k)) POLL.hidden.delete(k); else POLL.hidden.add(k);
+    b.setAttribute('aria-pressed', String(!POLL.hidden.has(k))); drawPolling();
+  }; });
+}
 function drawPolling() {
   const host = document.getElementById('poll-chart'); if (!host || !POLL) return;
-  const { series, polls, elections, from, to } = POLL;
+  document.querySelectorAll('.rngbtn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === POLL.range)));
+  const hint = document.getElementById('poll-hint');
+  if (hint) hint.textContent = POLL.range === 'custom' ? `${new Date(POLL.view.a).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} – ${new Date(POLL.view.b).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · choose “All” to reset` : 'or drag across the chart to zoom in';
+  const series = POLL.series.filter((sr) => !POLL.hidden.has(sr.key));
+  const { a: t0, b: t1 } = POLL.view;
+  const polls = POLL.polls.filter((p) => p.t.getTime() >= t0 && p.t.getTime() <= t1);
+  const elections = POLL.elections.filter((d) => d.getTime() >= t0 && d.getTime() <= t1);
   const W = host.clientWidth, small = W < 560;
-  const H = small ? 300 : 420, m = { l: 42, r: small ? 88 : 150, t: 14, b: 28 };
+  const H = small ? 300 : 420, m = { l: 42, r: small ? 100 : 196, t: 14, b: 28 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
-  const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime()))), t1 = to.getTime();
   const x = (t) => m.l + (t - t0) / Math.max(1, t1 - t0) * iw;
-  const vmax = Math.max(10, ...polls.flatMap((p) => Object.values(p.v)));
+  const tAt = (px) => t0 + (px - m.l) / iw * (t1 - t0);
+  const shownKeys = new Set(series.map((sr) => sr.key));
+  const vmax = Math.max(10, ...polls.flatMap((p) => Object.entries(p.v).filter(([k]) => shownKeys.has(k)).map(([, v]) => v)));
   const step = vmax > 60 ? 10 : 5;
   const ymax = Math.ceil(vmax / step) * step;
   const y = (v) => m.t + ih - v / ymax * ih;
-  const colorOf = Object.fromEntries(series.map((sr) => [sr.key, sr.color]));
-  let svg = '';
-  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#E4E2DB'}"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}${v === ymax ? '%' : ''}</text>`;
-  const y0 = new Date(t0).getFullYear() + 1, y1 = new Date(t1).getFullYear();
-  const every = Math.max(1, Math.ceil((y1 - y0 + 1) * 46 / iw));
-  for (let yr = y0; yr <= y1; yr++) { if ((yr - y0) % every) continue; const xx = x(new Date(yr, 0, 1).getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/><text x="${xx}" y="${H - 8}" text-anchor="middle" class="ax">${yr}</text>`; }
-  // past parliamentary elections
-  elections.forEach((d, i) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#D9534F" stroke-width="1" opacity=".75"/>`;
-    if (i === elections.length - 1 && !small) svg += `<text x="${xx - 6}" y="${m.t + 14}" text-anchor="end" class="ax" style="fill:#1A1D23">Parliamentary election</text>`; });
-  // LOESS lines: grey (no Europarty) first, coloured on top
-  const ordered = [...series].sort((a, b) => (a.color === NONE ? 0 : 1) - (b.color === NONE ? 0 : 1));
+  const byKey = Object.fromEntries(series.map((sr) => [sr.key, sr]));
+  let svg = `<defs><clipPath id="poll-clip"><rect x="${m.l}" y="0" width="${iw}" height="${H}"/></clipPath></defs>`;
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}${v === ymax ? '%' : ''}</text>`;
+  // x ticks: years for long spans, months for short ones
+  const spanM = (t1 - t0) / (30.44 * 864e5);
+  const stepM = [1, 2, 3, 6, 12, 24, 36].find((k) => spanM / k * 52 <= iw) || 60;
+  const d0 = new Date(t0); let tick = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+  while (tick.getMonth() % Math.min(stepM, 12)) tick = new Date(tick.getFullYear(), tick.getMonth() + 1, 1);
+  for (; tick.getTime() <= t1; tick = new Date(tick.getFullYear(), tick.getMonth() + stepM, 1)) {
+    if (stepM >= 12 && tick.getMonth() !== 0) continue;
+    const xx = x(tick.getTime());
+    const label = tick.getMonth() === 0 ? String(tick.getFullYear()) : tick.toLocaleDateString('en-GB', { month: 'short' });
+    svg += `<line x1="${xx}" x2="${xx}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/><text x="${xx}" y="${H - 8}" text-anchor="middle" class="ax"${tick.getMonth() === 0 ? ' style="font-weight:700"' : ''}>${label}</text>`;
+  }
+  let lastLab = -Infinity;
+  elections.forEach((d) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#C8202F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>`;
+    if (xx - lastLab > 120 && xx > m.l + 60) { svg += `<text x="${xx - 5}" y="${m.t + 11}" text-anchor="end" class="ax" style="font-size:12px;fill:#8A2A2A">${small ? d.getFullYear() : 'Parliamentary election ' + d.getFullYear()}</text>`; lastLab = xx; } });
+  const ordered = [...series].sort((p1, p2) => (p1.color === NONE ? 0 : 1) - (p2.color === NONE ? 0 : 1));
+  svg += '<g clip-path="url(#poll-clip)">';
   ordered.forEach((sr) => sr.curve.forEach((seg) => {
-    const d = seg.map((q, i) => `${i ? 'L' : 'M'}${x(q.t.getTime()).toFixed(1)},${y(q.v).toFixed(1)}`).join('');
-    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="${sr.color === NONE ? 1.8 : 2.6}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const pts = seg.filter((q, i) => { const t = q.t.getTime(); const nxt = seg[i + 1], prv = seg[i - 1]; return (t >= t0 && t <= t1) || (nxt && nxt.t.getTime() >= t0 && t < t0) || (prv && prv.t.getTime() <= t1 && t > t1); });
+    if (pts.length < 2) return;
+    // split the line where the party's affiliation (and so its colour) changed
+    const runs = []; let run = null;
+    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()); if (!run || run.c !== c) { if (run) run.pts.push(q); run = { c, pts: [q] }; runs.push(run); } else run.pts.push(q); });
+    runs.forEach((rn) => { if (rn.pts.length < 2) return;
+      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE ? 1.6 : 2.4}" stroke-linejoin="round" stroke-linecap="round"/>`; });
   }));
-  // end labels for parties still polled at the end
-  const lastT = t1 - 60 * 864e5;
-  const ends = series.map((sr) => { const seg = sr.curve[sr.curve.length - 1]; if (!seg) return null; const q = seg[seg.length - 1]; return q.t.getTime() >= lastT && q.v >= 0.5 ? { sr, q, yy: y(q.v) } : null; })
-    .filter(Boolean).sort((a, b) => a.yy - b.yy);
+  svg += '</g>';
+  const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
+    let best = seg[0]; for (const q of seg) if (Math.abs(q.t.getTime() - t) < Math.abs(best.t.getTime() - t)) best = q; return best.v; } return null; };
+  // end labels at the right edge of the current view
+  const ends = series.map((sr) => { const v = valueAt(sr, t1); return v != null && v >= 0.5 ? { sr, v, yy: y(v) } : null; }).filter(Boolean).sort((p1, p2) => p1.yy - p2.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 16) ends[k].yy = ends[k - 1].yy + 16;
   const over = ends.length ? ends[ends.length - 1].yy - (m.t + ih) : 0;
   if (over > 0) ends.forEach((e) => { e.yy -= over; });
-  ends.forEach((e) => { const fill = e.sr.color === '#FFD700' || e.sr.color === '#90ee90' || e.sr.color === '#F2C300' ? '#8A6D00' : e.sr.color === NONE ? '#565B66' : e.sr.color;
-    const name = small ? e.sr.abbr : `${e.sr.abbr}${e.sr.tag ? ' (' + e.sr.tag + ')' : ''}`;
-    svg += `<text x="${m.l + iw + 8}" y="${e.yy + 4}" class="lab" fill="${fill}">${esc(name.length > 18 ? name.slice(0, 17) + '…' : name)} <tspan font-weight="400">${Math.round(e.q.v)}%</tspan></text>`; });
-  const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.q.v)}%`).join(', ');
+  ends.forEach((e) => {
+    const nm = small ? e.sr.abbr : `${e.sr.abbr}${e.sr.tag ? ' (' + e.sr.tag + ')' : ''}`;
+    svg += endLabel(m.l + iw, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
+  const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.v)}%`).join(', ');
   host.innerHTML = `<canvas id="poll-dots" width="${W * (window.devicePixelRatio || 1)}" height="${H * (window.devicePixelRatio || 1)}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></canvas>
-    <svg width="${W}" height="${H}" style="position:relative" role="img" aria-label="Polling average, latest: ${esc(summary)}">${svg}
-    <line id="poll-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#1A1D23" stroke-dasharray="3 3" visibility="hidden"/>
-    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="poll-hit"/></svg><div class="proj-tip" id="poll-tip" hidden></div>`;
-  // individual polls as faint dots (canvas: thousands of points stay fast)
+    <svg width="${W}" height="${H}" style="position:relative" role="img" aria-label="Polling average: ${esc(summary)}">${svg}
+    <rect id="poll-sel" x="0" y="${m.t}" width="0" height="${ih}" fill="rgba(42,93,176,.12)" stroke="#2A5DB0" visibility="hidden"/>
+    <line id="poll-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="poll-marks"></g>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="poll-hit" style="cursor:crosshair"/></svg><div class="proj-tip" id="poll-tip" hidden></div>`;
   const cv = document.getElementById('poll-dots'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
-  ctx.scale(dpr, dpr); ctx.globalAlpha = 0.28;
-  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { ctx.fillStyle = colorOf[k] || NONE; ctx.beginPath(); ctx.arc(xx, y(p.v[k]), small ? 1.4 : 1.8, 0, 6.283); ctx.fill(); } });
-  // hover / tap
-  const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip');
-  const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
-    let best = seg[0]; for (const q of seg) if (Math.abs(q.t.getTime() - t) < Math.abs(best.t.getTime() - t)) best = q; return best.v; } return null; };
+  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip(); ctx.globalAlpha = 0.2;
+  const r = small ? 1.4 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2.4 : 1.8);
+  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); } });
+  // hover / tap pop-up, drag to zoom
+  const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip'), sel = document.getElementById('poll-sel');
+  const pxOf = (evt) => { const rc = host.getBoundingClientRect(); return Math.max(m.l, Math.min(m.l + iw, (evt.touches ? evt.touches[0].clientX : evt.clientX) - rc.left)); };
+  let dragFrom = null;
   const show = (evt) => {
-    const r = host.getBoundingClientRect(), px = Math.max(m.l, Math.min(m.l + iw, (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left));
-    const t = t0 + (px - m.l) / iw * (t1 - t0);
+    const px = pxOf(evt), t = tAt(px);
+    if (dragFrom != null) { sel.setAttribute('x', Math.min(dragFrom, px)); sel.setAttribute('width', Math.abs(px - dragFrom)); sel.setAttribute('visibility', 'visible'); tip.hidden = true; return; }
     cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
-    const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((a, b) => b.v - a.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.abbr)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+    document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
+      .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
+    const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(o.sr.abbr)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
     tip.style.left = Math.max(0, left) + 'px';
   };
-  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
-  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); document.getElementById('poll-marks').innerHTML = ''; };
+  hit.addEventListener('mousemove', show);
+  hit.addEventListener('mouseleave', () => { hide(); if (dragFrom != null) { dragFrom = null; sel.setAttribute('visibility', 'hidden'); } });
+  hit.addEventListener('mousedown', (evt) => { if (evt.button !== 0) return; evt.preventDefault(); dragFrom = pxOf(evt); hide(); });
+  hit.addEventListener('mouseup', (evt) => {
+    if (dragFrom == null) return; const px = pxOf(evt), a = Math.min(dragFrom, px), b = Math.max(dragFrom, px); dragFrom = null;
+    sel.setAttribute('visibility', 'hidden');
+    if (b - a < 12) return;
+    const ta = tAt(a), tb = tAt(b);
+    if (tb - ta < 45 * 864e5) return; // at least ~6 weeks
+    POLL.view = { a: ta, b: tb }; POLL.range = 'custom'; drawPolling();
+  });
   hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
 }
 let pollResize = null;
@@ -893,7 +1076,7 @@ function viewAlliances(alliances) {
     <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
       <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
       <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
-      <div class="kv"><div><span>Europarty</span><span>${esc(a.europarty)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
+      <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
       ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
       <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
     </article>`).join('')}</div><div id="al-more-wrap" hidden><button type="button" class="toggle" id="al-more" aria-expanded="false" aria-controls="al-grid"></button></div>`;
@@ -1014,9 +1197,9 @@ async function main() {
   const elections = buildElections(calendarRows, cfg.name);
   const projection = buildProjection(projectionRows, cfg.name, current);
   let pollData = null;
-  try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ }
-  const poll = buildPolling(pollData, parties, calendarRows, cfg.name);
+  if (!NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
   const alliances = buildAlliances(allianceRows, ISO, parties);
+  const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
   alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
 
   const render = () => {
@@ -1024,7 +1207,7 @@ async function main() {
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p></footer>`;
-    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); drawProjection(); drawPolling();
+    bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); drawProjection(); bindPolling(); drawPolling();
     postHeight();
   };
   const bindLegend = () => {
