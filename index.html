@@ -201,8 +201,7 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
-const POLL_MIN_SHOWN = 3; // parties whose mean over the past POLL_SHOWN_YEARS years (polls that include them) is below this (%) start switched off
-const POLL_SHOWN_YEARS = 5; // parties polled within this many years start switched on in the polling chart
+const POLL_MIN_SHOWN = 3; // parties whose mean across the polls that included them is below this (%) start switched off
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
 const POLLING_CHARTS = {
@@ -1044,10 +1043,9 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const t1 = nowT;
   // Parties still current: their last average point lies within 60 days of the latest poll.
   series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; sr.current = !!seg && seg[seg.length - 1].t.getTime() >= lastT - 60 * 864e5; });
-  // Shown by default: parties or alliances whose mean over the past POLL_SHOWN_YEARS years is at least POLL_MIN_SHOWN %.
-  // Only polls that include the party count (a missing value is not a zero); no polls in that window = switched off.
-  const shownSince = nowT - POLL_SHOWN_YEARS * 365.25 * 864e5;
-  const recentMean = (sr) => { const vals = data.polls.filter((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince).map((p) => +p.v[sr.key]);
+  // Shown by default: parties or alliances whose mean across all polls that included them (in the chart period)
+  // is at least POLL_MIN_SHOWN %. A missing value is not a zero: only the polls listing the party count.
+  const recentMean = (sr) => { const vals = polls.filter((p) => p.v[sr.key] != null).map((p) => +p.v[sr.key]);
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null; };
   const stale = series.filter((sr) => { const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
