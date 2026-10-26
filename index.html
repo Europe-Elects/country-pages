@@ -200,7 +200,7 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
-const POLL_MIN_SHOWN = 3; // parties below this current average (%) start hidden in the polling chart
+const POLL_SHOWN_YEARS = 5; // parties polled within this many years start switched on in the polling chart
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
 const POLLING_CHARTS = {
@@ -714,7 +714,7 @@ const inkFor = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '
 // End label with a marker on the line and a thin leader when the label had to be moved.
 const endLabel = (x0, yLine, xText, yText, color, inner, title) =>
   `<circle cx="${x0}" cy="${yLine}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5"/>` +
-  (Math.abs(yText - yLine) > 3 ? `<polyline points="${x0 + 5},${yLine} ${xText - 4},${yText}" fill="none" stroke="${color}" stroke-width="1" opacity=".6"/>` : '') +
+  (Math.abs(yText - yLine) > 3 || xText - x0 > 20 ? `<polyline points="${x0 + 5},${yLine} ${xText - 4},${yText}" fill="none" stroke="${color}" stroke-width="1" opacity=".6"/>` : '') +
   `<text x="${xText}" y="${yText + 4}" class="lab" fill="${inkFor(color)}" style="cursor:help"><title>${esc(title)}</title>${inner}</text>`;
 
 /* ---------- European Parliament projection ---------- */
@@ -958,18 +958,15 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
     .filter((d) => d && d < today && d >= from);
   const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
-  // Every current average runs to today: parties polled within 60 days of the latest poll
-  // carry their latest average forward, so all lines end on today's date.
+  // The time axis runs to today; the average lines stop at the last poll (no line is drawn
+  // for the period without polls).
   const lastT = lastPoll.getTime(), nowT = Math.max(lastT, new Date().setHours(0, 0, 0, 0));
-  series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; if (!seg) return; const q = seg[seg.length - 1];
-    if (q.t.getTime() >= lastT - 60 * 864e5 && nowT > q.t.getTime()) seg.push({ t: new Date(nowT), v: q.v }); });
   const t1 = nowT;
-  const yearAgo = t1 - 365 * 864e5;
-  // Hidden by default: parties not polled in the past year, and parties below 3% in the current average.
-  const latestPoll = (sr) => { for (let i = data.polls.length - 1; i >= 0; i--) if (data.polls[i].v[sr.key] != null) return data.polls[i].v[sr.key]; return null; };
-  // Current average; if a party has no average line (very sparse polling), use its latest poll result instead.
-  const current = (sr) => { const seg = sr.curve[sr.curve.length - 1]; if (seg && seg[seg.length - 1].t.getTime() >= t1 - 60 * 864e5) return seg[seg.length - 1].v; return sr.curve.length ? null : latestPoll(sr); };
-  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo) || (current(sr) ?? 0) < POLL_MIN_SHOWN).map((sr) => sr.key);
+  // Parties still current: their last average point lies within 60 days of the latest poll.
+  series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; sr.current = !!seg && seg[seg.length - 1].t.getTime() >= lastT - 60 * 864e5; });
+  // Shown by default: every party or alliance polled in the past POLL_SHOWN_YEARS years.
+  const shownSince = nowT - POLL_SHOWN_YEARS * 365.25 * 864e5;
+  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince)).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
@@ -1061,14 +1058,17 @@ function drawPolling() {
   svg += '</g>';
   const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
     let best = seg[0]; for (const q of seg) if (Math.abs(q.t.getTime() - t) < Math.abs(best.t.getTime() - t)) best = q; return best.v; } return null; };
-  // end labels at the right edge of the current view
-  const ends = series.map((sr) => { const v = valueAt(sr, t1); return v != null && v >= 0.5 ? { sr, v, yy: y(v) } : null; }).filter(Boolean).sort((p1, p2) => p1.yy - p2.yy);
+  // end labels: the latest average of each current party (its line may end before the right edge)
+  const ends = series.map((sr) => {
+    let v = valueAt(sr, t1), xEnd = m.l + iw;
+    if (v == null && sr.current && t1 >= POLL.full.b) { const seg = sr.curve[sr.curve.length - 1]; const q = seg[seg.length - 1]; if (q.t.getTime() >= t0) { v = q.v; xEnd = x(q.t.getTime()); } }
+    return v != null && v >= 0.5 ? { sr, v, xEnd, yy: y(v) } : null; }).filter(Boolean).sort((p1, p2) => p1.yy - p2.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 16) ends[k].yy = ends[k - 1].yy + 16;
   const over = ends.length ? ends[ends.length - 1].yy - (m.t + ih) : 0;
   if (over > 0) ends.forEach((e) => { e.yy -= over; });
   ends.forEach((e) => {
     const nm = small ? e.sr.abbr : `${e.sr.abbr}${e.sr.tag ? ' (' + e.sr.tag + ')' : ''}`;
-    svg += endLabel(m.l + iw, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
+    svg += endLabel(e.xEnd, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
   const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.v)}%`).join(', ');
   host.innerHTML = `<canvas id="poll-dots" width="${W * (window.devicePixelRatio || 1)}" height="${H * (window.devicePixelRatio || 1)}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></canvas>
     <svg width="${W}" height="${H}" style="position:relative" role="img" aria-label="Polling average: ${esc(summary)}">${svg}
