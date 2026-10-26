@@ -48,6 +48,8 @@ def parse_ropf(text):
             m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
             if fields.get('SC', 'N') != 'N':
                 continue
+            if 'A' in fields:
+                continue  # poll for one area/region only (e.g. Flanders): not part of the national average
             fs, fe = parse_date(fields.get('FS', '')), parse_date(fields.get('FE', ''), True)
             if not fs and not fe:
                 continue
@@ -62,6 +64,21 @@ def parse_ropf(text):
                 num = float(val.strip('<>')) / (2 if val.startswith('<') else 1)
                 values[key] = num
             if values:
+                # Normalise to decided valid votes = 100%:
+                # •EX = share excluded (undecided, won't vote, …) -> divide by (100 - EX);
+                # otherwise, if •O (others) is given, the parties plus others make up the decided vote.
+                # Polls listing only some parties without •O/•EX are left as published.
+                def num(x):
+                    try: return float(str(x).replace(',', '.'))
+                    except (TypeError, ValueError): return None
+                ex, other = num(fields.get('EX')), num(fields.get('O'))
+                total = None
+                if ex is not None and 0 <= ex < 100:
+                    total = 100 - ex
+                elif other is not None:
+                    total = sum(values.values()) + other
+                if total and total > 0 and abs(total - 100) > 0.01:
+                    values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 polls.append({'d': mid, 'pf': pf, 'v': values})
         else:
             m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
