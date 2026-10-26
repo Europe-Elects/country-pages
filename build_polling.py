@@ -65,18 +65,21 @@ def parse_ropf(text):
                 values[key] = num
             if values:
                 # Normalise to decided valid votes = 100%:
-                # •EX = share excluded (undecided, won't vote, …) -> divide by (100 - EX);
-                # otherwise, if •O (others) is given, the parties plus others make up the decided vote.
-                # Polls listing only some parties without •O/•EX are left as published.
+                # - •O (others) given: parties + others are the decided vote -> divide by that sum
+                #   (•EX is then not used: many files give party shares that already exclude •EX);
+                # - only •EX given (undecided, won't vote, …) and the parties add up to about 100 - EX
+                #   (shares of all respondents) -> divide by (100 - EX);
+                # - otherwise (partial lists without •O/•EX) the figures are left as published.
                 def num(x):
                     try: return float(str(x).replace(',', '.'))
                     except (TypeError, ValueError): return None
                 ex, other = num(fields.get('EX')), num(fields.get('O'))
+                parties_sum = sum(values.values())
                 total = None
-                if ex is not None and 0 <= ex < 100:
+                if other is not None:
+                    total = parties_sum + other
+                elif ex is not None and 0 <= ex < 100 and parties_sum <= 100 - ex + 3:
                     total = 100 - ex
-                elif other is not None:
-                    total = sum(values.values()) + other
                 if total and total > 0 and abs(total - 100) > 0.01:
                     values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 polls.append({'d': mid, 'pf': pf, 'v': values})
