@@ -74,6 +74,7 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .small h3{font-size:15px;font-weight:600;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tags{display:flex;flex-wrap:wrap;gap:4px;font-size:13px;font-weight:600;line-height:1}
 .small .tags{font-size:12px}
+.pchip .arrow{font-weight:500;opacity:.75}
 .tag{padding:3px 7px;border-radius:4px;background:var(--chip);color:#2B2F36}
 .tag.gov{background:#1F7A4D;color:#fff}
 .tag.eu{background:#E3F2EA;color:#14583A}
@@ -212,6 +213,9 @@ const POLLING_CHARTS = {
 // A logo is used only when the Wikidata item is a political party in the page's country.
 // LOGO_OVERRIDES: Europe Elects Entity ID -> Wikidata ID ('Q123') to force a match, or '' to hide a logo.
 // A "Wikidata ID" column in the party sheet, if added, is used the same way.
+// A "Logo" column in the party sheet overrides everything (the newest version's value counts):
+//   empty -> automatic lookup · "none" -> no logo · "Q123" -> logo of that Wikidata item
+//   "File:Name.svg" (or a Commons file URL) -> that Commons file · any other https:// URL -> that image.
 // "Get the data" link on the polling chart (a country's polling.dataUrl overrides it).
 const DATA_ACCESS_URL = 'https://europeelects.eu/data-access-request/';
 
@@ -443,13 +447,18 @@ function buildParties(rows, iso, cfg) {
     else if (intlEnd) { const nm = inParens(intlEnd) || inParens(intlStart) || 'International'; affs.push(['International', `${nm} (${year(intlStart) || '?'}–${year(intlEnd)})`]); }
     const currentEuroparty = !isNone(europarty) && !europartyEnd ? europarty.split(/[|;,]/)[0].trim() : '';
     const ideology = g(o, 'Ideological Orientation');
+    // "EP Interest to Join" / "Europarty Interest to Join", e.g. "EPP (2026)"; "*", "No" and empty mean none.
+    const interestOf = (v) => { const t = String(v || '').replace(/\([^)]*\)/g, '').trim(); return isNone(t) || /^(\*|no|-|–)$/i.test(t) ? '' : t; };
+    const epInterest = interestOf(g(o, 'EP Interest to Join')), euInterest = interestOf(g(o, 'Europarty Interest to Join'));
+    const interestNote = [['Europarty', g(o, 'Europarty Interest to Join')], ['EP group', IS_EU ? g(o, 'EP Interest to Join') : '']].filter(([, v]) => interestOf(v)).map(([k, v]) => `${k} ${v}`).join(', ');
     return {
       status: (g(o, 'Status') || 'active').toLowerCase(), latest: !/^no$/i.test(g(o, 'Latest')),
       native: g(o, 'Name (Native)'), english: g(o, 'Name (English)') || g(o, 'Name (Native)'),
       versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'), version: +g(o, 'Europe Elects Entity Version') || 1,
       aff: { ep: europarty, epS: g(o, 'Europarty Start'), epE: europartyEnd, grp: epGroup, grpS: g(o, 'EP Group Start'), grpE: g(o, 'EP Group End') }, wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
-      abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), country: g(o, 'Country'),
+      abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), logoSpec: g(o, 'Logo', 'Logo URL', 'Logo Override'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
+      epInterest, euInterest, interestNote,
       european: !!currentEuroparty || (IS_EU && !isNone(epGroup)), europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
       eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
       affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
@@ -466,6 +475,8 @@ function buildParties(rows, iso, cfg) {
     p.abbrs = [...new Set(vs.map((v) => v.ownAbbr).filter(Boolean))];
     const newest = vs.filter((v) => v.ownAbbr).sort((a, b) => b.version - a.version)[0];
     if (newest) p.abbr = newest.ownAbbr;
+    const spec = vs.filter((v) => v.logoSpec).sort((a, b) => b.version - a.version)[0];
+    p.logoSpec = spec ? spec.logoSpec.trim() : '';
   });
   const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
   list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
@@ -553,21 +564,41 @@ async function wikidataEntities(qids) {
 }
 const claimVals = (e, prop) => (((e && e.claims) || {})[prop] || []).filter((c) => c.rank !== 'deprecated').map((c) => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value).filter(Boolean);
 const LOGO_DEBUG = /(^|[?&])debug=logos/.test(location.search);
+// Reads the sheet's Logo column: returns { hide } | { src } | { qid } | null (automatic).
+function logoSpec(p) {
+  const v = String(p.logoSpec || '').trim();
+  if (!v) return null;
+  if (/^(none|no|-|–|hide|hidden)$/i.test(v)) return { hide: true };
+  if (/^Q\d+$/i.test(v)) return { qid: v.toUpperCase() };
+  const commons = v.match(/^(?:https?:\/\/commons\.wikimedia\.org\/wiki\/)?File:(.+)$/i);
+  if (commons) return { src: decodeURIComponent(commons[1]).replace(/_/g, ' ') };
+  if (/^https?:\/\//i.test(v)) return { src: v };
+  if (/\.(svg|png|jpe?g|gif|webp)$/i.test(v)) return { src: v };  // bare Commons file name
+  return null;
+}
 async function loadLogos(parties, countryName) {
-  const cacheKey = `ee-logos-v2-${ISO}`;
+  const specKey = parties.map((p) => p.logoSpec || '').join('|');
+  let h = 0; for (const c of specKey) h = (h * 31 + c.charCodeAt(0)) | 0;
+  const cacheKey = `ee-logos-v3-${ISO}-${h}`;
   if (!LOGO_DEBUG) {
     try { const c = JSON.parse(localStorage.getItem(cacheKey) || 'null'); if (c && Object.keys(c.logos).length && Date.now() - c.t < LOGOS.cacheHours * 3600e3) return { logos: c.logos, report: [] }; } catch (e) { /* storage unavailable */ }
   }
   const titles = [...new Set([countryName, ...parties.flatMap((p) => [p.english, p.native]).filter(Boolean)])];
-  const t2q = await titlesToQids(titles);
+  // Wikipedia/Wikidata unreachable -> the Logo column's own images are still used.
+  let t2q = {};
+  try { t2q = await titlesToQids(titles); } catch (e) { console.warn('Wikipedia lookup failed', e); }
   const countryQ = t2q[countryName];
-  const forced = (p) => (p.entityId in LOGO_OVERRIDES ? LOGO_OVERRIDES[p.entityId] : p.wikidata);
+  const forced = (p) => { const sp = logoSpec(p); if (sp && sp.qid) return sp.qid; return p.entityId in LOGO_OVERRIDES ? LOGO_OVERRIDES[p.entityId] : p.wikidata; };
   const qids = [...new Set(parties.flatMap((p) => [forced(p), t2q[p.english], t2q[p.native]]).filter(Boolean))];
-  const ents = qids.length ? await wikidataEntities(qids) : {};
+  let ents = {};
+  try { ents = qids.length ? await wikidataEntities(qids) : {}; } catch (e) { console.warn('Wikidata lookup failed', e); }
   const logos = {}, report = [];
   parties.forEach((p) => {
     const row = { abbr: p.abbr, name: p.english, qid: '', result: 'No Wikipedia article found for the English or native name' };
     report.push(row);
+    const sp = logoSpec(p);
+    if (sp && sp.hide) { row.result = 'Hidden by the Logo column'; return; }
+    if (sp && sp.src) { logos[p.versionId] = sp.src; row.result = 'Set by the Logo column: ' + sp.src; return; }
     if (LOGO_OVERRIDES[p.entityId] === '') { row.result = 'Hidden by LOGO_OVERRIDES'; return; }
     const f = forced(p);
     for (const [q, title] of [[f, ''], [t2q[p.english], p.english], [t2q[p.native], p.native]].filter((x) => x[0])) {
@@ -595,7 +626,8 @@ function viewLogoReport(report, err) {
     ${report.map((r) => `<tr style="border-top:1px solid #ECEAE4"><td style="padding:4px 8px"><strong>${esc(r.abbr)}</strong> ${esc(r.name)}</td><td style="padding:4px 8px">${r.qid ? `<a href="https://www.wikidata.org/wiki/${esc(r.qid)}" target="_blank" rel="noopener">${esc(r.qid)}</a>` : '–'}</td><td style="padding:4px 8px">${esc(r.result)}</td></tr>`).join('')}
     </tbody></table></div></section>`;
 }
-const logoImg = (p, size) => (p.logo ? `<img class="logo" src="https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(p.logo)}?width=${size * 3}" alt="" loading="lazy" style="height:${size}px;max-width:${size * 2}px" onerror="this.remove()">` : '');
+const logoSrc = (logo, size) => (/^https?:\/\//i.test(logo) ? logo : `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(logo)}?width=${size * 3}`);
+const logoImg = (p, size) => (p.logo ? `<img class="logo" src="${esc(logoSrc(p.logo, size))}" alt="" loading="lazy" style="height:${size}px;max-width:${size * 2}px" onerror="this.remove()">` : '');
 
 /* ---------- Views ---------- */
 const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
@@ -769,7 +801,7 @@ function buildProjection(rows, countryName, parties) {
     const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
     const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
     const tag = partyTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group);
-    return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
+    return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, interest: interestTag(match), interestNote: match ? epName(match.interestNote) : '', group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
   }).filter((sr) => sr.values.some((v) => v != null));
   if (!series.length) return null;
   return { months: months.map((m) => m.d), series, hidden: new Set() };
@@ -781,7 +813,7 @@ function viewProjection(proj, cfg) {
   const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
   const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
-    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}</button>`).join('')}</div>
+    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}${sr.interest ? ` <span class="arrow">→ ${esc(sr.interest)}</span>` : ''}</button>`).join('')}</div>
     <div class="proj-chart" id="proj-chart"></div>
     <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
 }
@@ -817,7 +849,7 @@ function drawProjection() {
   const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
   ends.forEach((e) => { svg += endLabel(x(e.i), y(e.v), x(e.i) + 14, e.yy, e.sr.color,
-    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
+    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}${!small && e.sr.interest ? ` <tspan font-weight="500">→ ${esc(e.sr.interest)}</tspan>` : ''}`, e.sr.label); });
   const lastI = months.length - 1;
   const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
@@ -830,7 +862,7 @@ function drawProjection() {
     cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
     document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${sr.color}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(o.sr.short)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v}</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag, o.sr.interest))}</span><strong>${o.v}</strong></div>`).join('');
     tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
@@ -931,6 +963,16 @@ const partyTag = (europarty, epGroup) => {
   const ep = epName(europarty);
   return ep && grp ? `${ep}–${grp}` : (ep || grp);
 };
+// Stated interest to join a Europarty / EP group, shown after the label as "→ EPP".
+const interestTag = (p) => {
+  if (!p) return '';
+  const eu = p.euInterest || '', grp = IS_EU ? p.epInterest || '' : '';
+  if (!IS_EU) return epName(eu);
+  const g2 = groupLabel(grp), e2 = epName(eu);
+  return e2 && g2 ? `${e2}–${g2}` : (e2 || g2);
+};
+const seriesLabel = (abbr, tag, interest) => `${abbr}${tag ? ' (' + tag + ')' : ''}${interest ? ' → ' + interest : ''}`;
+const interestTitle = (sr) => (sr.interest ? ` · interested in joining ${sr.interestNote || sr.interest}` : '');
 let POLL = null;
 const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
 // Every name a party goes by: multilingual records like "SP/PS" or "Die Mitte / Le Centre" count per language too.
@@ -970,7 +1012,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : null;
-    return { key: pp.key, abbr, name, tag, color, curve, colorAt: (t) => (history ? colourAt(history, t, color) : color) };
+    return { key: pp.key, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, colorAt: (t) => (history ? colourAt(history, t, color) : color) };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
   const today = new Date();
@@ -1007,7 +1049,7 @@ function viewPolling(cfg, poll) {
       <div class="poll-ctl">
         <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
           <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
-        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`).join('')}</div>
+        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}${sr.interest ? ` <span class="arrow">→ ${esc(sr.interest)}</span>` : ''}</button>`).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
       <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
@@ -1090,7 +1132,7 @@ function drawPolling() {
   const over = ends.length ? ends[ends.length - 1].yy - (m.t + ih) : 0;
   if (over > 0) ends.forEach((e) => { e.yy -= over; });
   ends.forEach((e) => {
-    const nm = small ? e.sr.abbr : `${e.sr.abbr}${e.sr.tag ? ' (' + e.sr.tag + ')' : ''}`;
+    const nm = small ? e.sr.abbr : seriesLabel(e.sr.abbr, e.sr.tag, e.sr.interest);
     svg += endLabel(e.xEnd, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
   const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.v)}%`).join(', ');
   host.innerHTML = `<canvas id="poll-dots" width="${W * (window.devicePixelRatio || 1)}" height="${H * (window.devicePixelRatio || 1)}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></canvas>
@@ -1113,7 +1155,7 @@ function drawPolling() {
     document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
       .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(o.sr.abbr)}${o.sr.tag ? ' (' + esc(o.sr.tag) + ')' : ''}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag, o.sr.interest))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
@@ -1306,7 +1348,7 @@ async function main() {
       if (LOGO_DEBUG) app.insertAdjacentHTML('beforeend', viewLogoReport(report));
       if (!Object.keys(logos).length) { postHeight(); return; }
       document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
-      document.getElementById('logo-credit').textContent = ' Party logos from Wikimedia Commons via Wikidata.';
+      document.getElementById('logo-credit').textContent = Object.values(logos).some((l) => /^https?:/i.test(l)) ? ' Party logos from Wikimedia Commons via Wikidata and from party sources.' : ' Party logos from Wikimedia Commons via Wikidata.';
       bindFilter(); postHeight();
     }).catch((e) => { console.warn('Logos not loaded', e); if (LOGO_DEBUG) { app.insertAdjacentHTML('beforeend', viewLogoReport([], e.message)); postHeight(); } });
   }
