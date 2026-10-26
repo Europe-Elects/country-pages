@@ -90,8 +90,9 @@ def parse_ropf(text):
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
                 abbr = attrs.pop('A', key)
                 en = attrs.pop('EN', '')
+                roman = attrs.pop('R', '')  # romanised abbreviation (•R), used where the abbreviation is not in Latin script
                 native = next(iter(attrs.values()), '')
-                parties[key] = {'key': key, 'id': m.group(2), 'abbr': abbr, 'native': native, 'english': en}
+                parties[key] = {'key': key, 'id': m.group(2), 'abbr': abbr, 'roman': roman, 'native': native, 'english': en}
     return polls, parties
 
 
@@ -123,7 +124,7 @@ def build_country(polls, parties):
     keys = sorted({k for p in polls for k in p['v']}, key=lambda k: -max(p['v'].get(k, 0) for p in polls))
     for key in keys:
         pts = [((p['d'] - day0).days, p['v'][key]) for p in polls if key in p['v']]
-        info = parties.get(key, {'key': key, 'abbr': key, 'native': '', 'english': '', 'id': ''})
+        info = parties.get(key, {'key': key, 'abbr': key, 'roman': '', 'native': '', 'english': '', 'id': ''})
         curve = []
         if len(pts) >= MIN_POLLS:
             xs, ys = [x for x, _ in pts], [y for _, y in pts]
