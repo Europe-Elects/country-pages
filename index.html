@@ -979,7 +979,7 @@ const fullTag = (europarty, epGroup, p) => {
 };
 const interestTag = (p) => (p && (p.euInterest || (IS_EU && p.epInterest)) ? 'y' : '');
 // colour of the Europarty a party wants to join (Europarty interest first, else the Europarty of the EP group)
-const interestColor = (p) => { if (!p) return ''; const e = p.euInterest || (IS_EU ? GROUP_TO_EUROPARTY[p.epInterest] : '');
+const interestColor = (p) => { if (!p) return ''; const e = p.euInterest;  // Europarty interest only
   return EUROPARTY_COLORS[e] || ''; };
 const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(/\b(19|20)\d{2}\b/g); return m ? Date.UTC(Math.min(...m.map(Number)), 0, 1) : -Infinity; };
 const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
@@ -1009,7 +1009,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const m = byId || findParty(keys) || findLoose(pp);
     const al = m ? null : findAlliance(keys);
     if (m) {
-      color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
+      color = m.color;  // polling lines follow the Europarty only (no EP-group fallback)
       // abbreviation strictly from the party database (most recent version)
       tag = fullTag(m.europartyShort, m.epGroup, m); abbr = m.abbr; name = m.english;
     } else if (al) {
@@ -1026,7 +1026,8 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     // Not a member but interested in joining: the target's colour (lines drawn thinner, see thinAt).
     const iCol = interestColor(m), iFrom = interestFrom(m);
     const memberColor = color;
-    const baseAt = (t) => (history ? colourAt(history, t, memberColor) : memberColor);
+    const epOnly = history ? { ep: history.ep, grp: [] } : null;  // Europarty history only
+    const baseAt = (t) => (epOnly ? colourAt(epOnly, t, memberColor) : memberColor);
     const thinAt = (t) => !!iCol && baseAt(t) === NONE && t >= iFrom;
     if (iCol && color === NONE) color = iCol;
     return { key: pp.key, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
