@@ -16,7 +16,7 @@ MIN_NEIGHBOURS = 8      # ... but at least this many
 GAP_DAYS = 150          # break a party's line where it went unpolled for longer than this
 MIN_POLLS = 4           # parties with fewer national polls get dots only, no line
 GRID_DAYS = 7           # spacing of the published curve points
-NO_POLLING = {'RU', 'BY', 'AZ'}  # countries that never get a polling average
+NO_POLLING = {'RU', 'BY', 'AZ', 'FR'}  # countries that never get a polling average
 
 FIELD = re.compile(r'•([A-Z]+):\s*(\S+)')
 RESULT = re.compile(r'(?<![•\w])([^\s•:][^\s:]*):\s*([<>]?\d+(?:[.,]\d+)?)')
