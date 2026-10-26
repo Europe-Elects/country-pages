@@ -160,6 +160,7 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
 .pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.poll .poll-key{display:flex;align-items:center;gap:6px;font-style:normal}
 .pseg{display:inline-flex}.pseg .pchip:first-child{border-radius:999px 0 0 999px}.pseg .pchip:last-child{border-radius:0 999px 999px 0;margin-left:-1px}.pseg .pchip[aria-pressed="false"]{text-decoration:none}.pseg .dot+.dot{margin-left:-3px}
 .rngbtn:focus-visible,.pchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
@@ -1174,6 +1175,7 @@ function viewPolling(cfg, poll) {
         <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map(chipHtml).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
+      ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
       <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
   }
   const id = POLLING_CHARTS[ISO];
@@ -1235,9 +1237,8 @@ function drawPolling() {
     const label = tick.getMonth() === 0 ? String(tick.getFullYear()) : tick.toLocaleDateString('en-GB', { month: 'short' });
     svg += `<line x1="${xx}" x2="${xx}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/><text x="${xx}" y="${H - 8}" text-anchor="middle" class="ax"${tick.getMonth() === 0 ? ' style="font-weight:700"' : ''}>${label}</text>`;
   }
-  let lastLab = -Infinity;
-  elections.forEach((d) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#C8202F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>`;
-    if (xx - lastLab > 120 && xx > m.l + 60) { svg += `<text x="${xx - 5}" y="${m.t + 11}" text-anchor="end" class="ax" style="font-size:12px;fill:#8A2A2A">${small ? d.getFullYear() : 'Parliamentary election ' + d.getFullYear()}</text>`; lastLab = xx; } });
+  // Election markers: dashed red lines, explained in the note under the chart (no text labels on the chart).
+  elections.forEach((d) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#C8202F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"><title>Parliamentary election, ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</title></line>`; });
   const ordered = [...series].sort((p1, p2) => (p1.color === NONE ? 0 : 1) - (p2.color === NONE ? 0 : 1));
   svg += '<g clip-path="url(#poll-clip)">';
   ordered.forEach((sr) => sr.curve.forEach((seg) => {
