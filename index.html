@@ -1018,6 +1018,22 @@ const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(
 const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
 const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.interestNote}` : '');
 let POLL = null;
+// Poll-chart abbreviations are always in Latin script, like the party database: the database abbreviation when the
+// party is matched, else the poll file's romanisation (•R), else a transliteration (Cyrillic, Greek).
+const TRANSLIT = Object.fromEntries([...'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'].map((c, i) => [c, ['a','b','v','g','d','e','yo','zh','z','i','y','k','l','m','n','o','p','r','s','t','u','f','h','ts','ch','sh','sht','a','y','','e','yu','ya','ye','i','yi','g'][i]])
+  .concat([['ј','j'],['љ','lj'],['њ','nj'],['ћ','ć'],['ђ','đ'],['џ','dž'],['ѓ','gj'],['ќ','kj'],['ѕ','dz']])
+  .concat([...'αβγδεζηθικλμνξοπρσςτυφχψωάέήίόύώ'].map((c, i) => [c, ['a','v','g','d','e','z','i','th','i','k','l','m','n','x','o','p','r','s','s','t','y','f','ch','ps','o','a','e','i','i','o','y','o'][i]])));
+const isLatin = (x) => !/[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\s]/.test(String(x));
+const latinAbbr = (x, roman) => {
+  if (isLatin(x)) return x;
+  if (roman && isLatin(roman)) return roman;
+  return [...String(x)].map((c) => { const l = c.toLowerCase(), t = TRANSLIT[l]; if (t == null) return c; return c === l ? t : (t.length > 1 && /\p{Lu}/u.test(c) ? t.toUpperCase() : t.charAt(0).toUpperCase() + t.slice(1)); }).join('');
+};
+// Whole label in Latin script: "SNS/СНС" -> "SNS"; "ЈS+SPS" -> "JS+SPS"; untouched if already Latin.
+const toLatin = (abbr, roman) => (isLatin(abbr) ? abbr : String(abbr).split('+').map((part) => {
+  const segs = part.split('/'), lat = segs.filter((x) => x && isLatin(x));
+  return lat.length ? lat.join('/') : latinAbbr(part, roman);
+}).join('+'));
 const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
 // Every name a party goes by: multilingual records like "SP/PS" or "Die Mitte / Le Centre" count per language too.
 const nameVariants = (p) => [p.abbr, ...(p.abbrs || []), p.native, p.english].filter(Boolean)
@@ -1037,7 +1053,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
   const series = data.parties.map((pp) => {
     const keys = names(pp);
-    let color = NONE, tag = '', abbr = pp.abbr || pp.key, name = pp.english || pp.native || pp.key;
+    let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
     const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
     const m = byId || findParty(keys) || findLoose(pp);
     const al = m ? null : findAlliance(keys);
@@ -1047,12 +1063,14 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       tag = fullTag(m.europartyShort, m.epGroup, m); abbr = m.abbr; name = m.english;
     } else if (al) {
       // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
-      color = al.color; abbr = al.abbr || abbr; name = al.english || name;
+      color = al.color; abbr = latinAbbr(al.abbr || abbr, pp.roman); name = al.english || name;
       tag = al.europarty === 'None' ? (IS_EU ? groupLabel(al.epGroup || '') : '') : (al.europarty.includes('|') ? epName(al.europarty) : partyTag(al.europarty, al.epGroup));
     } else {
       // Joint lists without an alliance record ("A/B", "A–B"): use the first member party found.
-      const part = String(pp.key).split(/[\/+–—-]/).map((x) => findParty([normKey(x)])).find(Boolean);
+      const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => findParty([normKey(x)]));
+      const part = parts.find(Boolean);
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
+      if (parts.length > 1 && parts.every(Boolean)) abbr = parts.map((x) => x.abbr).join('+');  // e.g. VOLYA+KB
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : (al && al.history ? al.history : null);
@@ -1063,6 +1081,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const baseAt = (t) => (epOnly ? colourAt(epOnly, t, memberColor) : memberColor);
     const thinAt = (t) => !!iCol && baseAt(t) === NONE && t >= iFrom;
     if (iCol && color === NONE) color = iCol;
+    abbr = toLatin(abbr, pp.roman);
     return { key: pp.key, party: m || null, alliance: al || null, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
       colorAt: (t) => (thinAt(t) ? iCol : baseAt(t)), thinAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
