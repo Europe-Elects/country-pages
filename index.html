@@ -201,7 +201,7 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
-const POLL_MIN_SHOWN = 3; // parties below this latest average (%) start switched off
+const POLL_MIN_SHOWN = 3; // parties whose mean over the past POLL_SHOWN_YEARS years (polls that include them) is below this (%) start switched off
 const POLL_SHOWN_YEARS = 5; // parties polled within this many years start switched on in the polling chart
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
@@ -800,7 +800,9 @@ function buildProjection(rows, countryName, parties) {
     groupCount[color] = (groupCount[color] || 0) + 1;
     const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
     const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
-    const tag = partyTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group);
+    // Members: Europarty + projected group. Non-members with a stated interest: the interest arrows (e.g. →EPP–→EPP).
+    const tag = match && !match.europartyShort && !match.epGroup && interestTag(match) ? fullTag('', '', match)
+      : fullTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group, match);
     return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, interest: interestTag(match), interestNote: match ? epName(match.interestNote) : '', group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
   }).filter((sr) => sr.values.some((v) => v != null));
   if (!series.length) return null;
@@ -813,7 +815,7 @@ function viewProjection(proj, cfg) {
   const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
   const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
-    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}${sr.interest ? ` <span class="arrow">→ ${esc(sr.interest)}</span>` : ''}</button>`).join('')}</div>
+    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}</button>`).join('')}</div>
     <div class="proj-chart" id="proj-chart"></div>
     <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
 }
@@ -849,7 +851,7 @@ function drawProjection() {
   const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
   ends.forEach((e) => { svg += endLabel(x(e.i), y(e.v), x(e.i) + 14, e.yy, e.sr.color,
-    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}${!small && e.sr.interest ? ` <tspan font-weight="500">→ ${esc(e.sr.interest)}</tspan>` : ''}`, e.sr.label); });
+    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
   const lastI = months.length - 1;
   const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
@@ -862,7 +864,7 @@ function drawProjection() {
     cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
     document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${sr.color}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag, o.sr.interest))}</span><strong>${o.v}</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag))}</span><strong>${o.v}</strong></div>`).join('');
     tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
@@ -963,16 +965,25 @@ const partyTag = (europarty, epGroup) => {
   const ep = epName(europarty);
   return ep && grp ? `${ep}–${grp}` : (ep || grp);
 };
-// Stated interest to join a Europarty / EP group, shown after the label as "→ EPP".
-const interestTag = (p) => {
-  if (!p) return '';
-  const eu = p.euInterest || '', grp = IS_EU ? p.epInterest || '' : '';
-  if (!IS_EU) return epName(eu);
-  const g2 = groupLabel(grp), e2 = epName(eu);
-  return e2 && g2 ? `${e2}–${g2}` : (e2 || g2);
+// Label tag including stated interest to join: membership as usual, interest marked with an arrow,
+// e.g. PP (→EPP–→EPP), KE (ALDE→ECR–RE). A membership always wins over the default group of a Europarty.
+const fullTag = (europarty, epGroup, p) => {
+  const euI = p ? p.euInterest || '' : '', grpI = p && IS_EU ? p.epInterest || '' : '';
+  let eu = epName(europarty || '');
+  if (euI && euI !== europarty) eu = eu ? `${eu}→${epName(euI)}` : `→${epName(euI)}`;
+  if (!IS_EU) return eu;
+  let grp = groupLabel(epGroup || '');
+  if (grpI && groupLabel(grpI) !== grp) grp = grp ? `${grp}→${groupLabel(grpI)}` : `→${groupLabel(grpI)}`;
+  if (!grp) grp = groupLabel(EUROPARTY_TO_GROUP[europarty || ''] || '');
+  return eu && grp ? `${eu}–${grp}` : (eu || grp);
 };
-const seriesLabel = (abbr, tag, interest) => `${abbr}${tag ? ' (' + tag + ')' : ''}${interest ? ' → ' + interest : ''}`;
-const interestTitle = (sr) => (sr.interest ? ` · interested in joining ${sr.interestNote || sr.interest}` : '');
+const interestTag = (p) => (p && (p.euInterest || (IS_EU && p.epInterest)) ? 'y' : '');
+// colour of the Europarty a party wants to join (Europarty interest first, else the Europarty of the EP group)
+const interestColor = (p) => { if (!p) return ''; const e = p.euInterest || (IS_EU ? GROUP_TO_EUROPARTY[p.epInterest] : '');
+  return EUROPARTY_COLORS[e] || ''; };
+const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(/\b(19|20)\d{2}\b/g); return m ? Date.UTC(Math.min(...m.map(Number)), 0, 1) : -Infinity; };
+const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
+const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.interestNote}` : '');
 let POLL = null;
 const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
 // Every name a party goes by: multilingual records like "SP/PS" or "Die Mitte / Le Centre" count per language too.
@@ -1000,7 +1011,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     if (m) {
       color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
       // abbreviation strictly from the party database (most recent version)
-      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
+      tag = fullTag(m.europartyShort, m.epGroup, m); abbr = m.abbr; name = m.english;
     } else if (al) {
       // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
       color = al.color; abbr = al.abbr || abbr; name = al.english || name;
@@ -1012,7 +1023,14 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : null;
-    return { key: pp.key, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, colorAt: (t) => (history ? colourAt(history, t, color) : color) };
+    // Not a member but interested in joining: the target's colour (lines drawn thinner, see thinAt).
+    const iCol = interestColor(m), iFrom = interestFrom(m);
+    const memberColor = color;
+    const baseAt = (t) => (history ? colourAt(history, t, memberColor) : memberColor);
+    const thinAt = (t) => !!iCol && baseAt(t) === NONE && t >= iFrom;
+    if (iCol && color === NONE) color = iCol;
+    return { key: pp.key, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
+      colorAt: (t) => (thinAt(t) ? iCol : baseAt(t)), thinAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: p.v })).filter((p) => p.t >= from);
   const today = new Date();
@@ -1026,12 +1044,12 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const t1 = nowT;
   // Parties still current: their last average point lies within 60 days of the latest poll.
   series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; sr.current = !!seg && seg[seg.length - 1].t.getTime() >= lastT - 60 * 864e5; });
-  // Shown by default: parties or alliances polled in the past POLL_SHOWN_YEARS years whose latest average
-  // (or latest poll, if there is no average line) is at least POLL_MIN_SHOWN %.
+  // Shown by default: parties or alliances whose mean over the past POLL_SHOWN_YEARS years is at least POLL_MIN_SHOWN %.
+  // Only polls that include the party count (a missing value is not a zero); no polls in that window = switched off.
   const shownSince = nowT - POLL_SHOWN_YEARS * 365.25 * 864e5;
-  const latestValue = (sr) => { const seg = sr.curve[sr.curve.length - 1]; if (seg) return seg[seg.length - 1].v;
-    for (let i = data.polls.length - 1; i >= 0; i--) if (data.polls[i].v[sr.key] != null) return data.polls[i].v[sr.key]; return 0; };
-  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince) || latestValue(sr) < POLL_MIN_SHOWN).map((sr) => sr.key);
+  const recentMean = (sr) => { const vals = data.polls.filter((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince).map((p) => +p.v[sr.key]);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null; };
+  const stale = series.filter((sr) => { const mu = recentMean(sr); return mu == null || mu < POLL_MIN_SHOWN; }).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
@@ -1049,7 +1067,7 @@ function viewPolling(cfg, poll) {
       <div class="poll-ctl">
         <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
           <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
-        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}${sr.interest ? ` <span class="arrow">→ ${esc(sr.interest)}</span>` : ''}</button>`).join('')}</div>
+        <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map((sr) => `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
       <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
@@ -1116,9 +1134,9 @@ function drawPolling() {
     if (pts.length < 2) return;
     // split the line where the party's affiliation (and so its colour) changed
     const runs = []; let run = null;
-    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()); if (!run || run.c !== c) { if (run) run.pts.push(q); run = { c, pts: [q] }; runs.push(run); } else run.pts.push(q); });
+    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()), th = sr.thinAt(q.t.getTime()); if (!run || run.c !== c || run.th !== th) { if (run) run.pts.push(q); run = { c, th, pts: [q] }; runs.push(run); } else run.pts.push(q); });
     runs.forEach((rn) => { if (rn.pts.length < 2) return;
-      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE ? 1.6 : 2.4}" stroke-linejoin="round" stroke-linecap="round"/>`; });
+      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE || rn.th ? 1.6 : 2.4}" stroke-linejoin="round" stroke-linecap="round"/>`; });
   }));
   svg += '</g>';
   const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
@@ -1132,7 +1150,7 @@ function drawPolling() {
   const over = ends.length ? ends[ends.length - 1].yy - (m.t + ih) : 0;
   if (over > 0) ends.forEach((e) => { e.yy -= over; });
   ends.forEach((e) => {
-    const nm = small ? e.sr.abbr : seriesLabel(e.sr.abbr, e.sr.tag, e.sr.interest);
+    const nm = small ? e.sr.abbr : seriesLabel(e.sr.abbr, e.sr.tag);
     svg += endLabel(e.xEnd, y(e.v), m.l + iw + 14, e.yy, e.sr.color, `${esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm)} <tspan font-weight="400">${Math.round(e.v)}%</tspan>`, e.sr.name); });
   const summary = ends.map((e) => `${e.sr.abbr} ${Math.round(e.v)}%`).join(', ');
   host.innerHTML = `<canvas id="poll-dots" width="${W * (window.devicePixelRatio || 1)}" height="${H * (window.devicePixelRatio || 1)}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></canvas>
@@ -1155,7 +1173,7 @@ function drawPolling() {
     document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
       .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag, o.sr.interest))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
