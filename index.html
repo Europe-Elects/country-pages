@@ -736,7 +736,7 @@ function buildProjection(rows, countryName, parties) {
   const byName = (...names) => {
     const keys = names.filter(Boolean).map((n) => normKey(String(n).replace(/\s*\([^)]*\)\s*$/, ''))).filter(Boolean);
     const cands = parties.filter((p) => p.status !== 'renamed');
-    return cands.find((p) => [p.abbr, p.native, p.english].some((x) => x && keys.includes(normKey(x))))
+    return cands.find((p) => nameVariants(p).some((x) => keys.includes(normKey(x))))
       || cands.find((p) => [p.native, p.english].some((x) => { const k = normKey(x); return keys.some((q) => { const [sh, lo] = q.length < k.length ? [q, k] : [k, q]; return sh.length >= 12 && sh.length / lo.length >= 0.6 && lo.includes(sh); }); }));
   };
   // Fallback abbreviation: a bracketed abbreviation in the name, else the initials of its main words.
@@ -918,10 +918,14 @@ const partyTag = (europarty, epGroup) => {
 };
 let POLL = null;
 const normKey = (x) => norm(x).replace(/[^\p{L}\p{N}]/gu, '');
+// Every name a party goes by: multilingual records like "SP/PS" or "Die Mitte / Le Centre" count per language too.
+const nameVariants = (p) => [p.abbr, p.native, p.english].filter(Boolean)
+  .flatMap((n) => [n, ...String(n).split(/\s+\/\s+|\/(?=\S)/)]).map((n) => n.trim()).filter(Boolean);
 function buildPolling(data, parties, calendarRows, countryName, alliances) {
   if (!data || !data.parties || !data.polls || !data.polls.length) return null;
   const names = (pp) => [pp.key, pp.abbr, pp.native, pp.english].filter(Boolean).map(normKey);
-  const findParty = (keys) => parties.find((x) => [x.abbr, x.native, x.english].some((n) => n && keys.includes(normKey(n))));
+  const findParty = (keys) => parties.find((x) => x.latest !== false && nameVariants(x).some((n) => keys.includes(normKey(n))))
+    || parties.find((x) => nameVariants(x).some((n) => keys.includes(normKey(n))));
   const findAlliance = (keys) => (alliances || []).find((a) => [a.abbr, a.native, a.english].some((n) => n && keys.includes(normKey(n))));
   const lastPoll = new Date(data.polls[data.polls.length - 1].d);
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
@@ -933,7 +937,8 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const al = m ? null : findAlliance(keys);
     if (m) {
       color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
-      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
+      // multilingual abbreviations ("SP/PS") are shortened to the one the poll file uses
+      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr.includes('/') && (pp.abbr || pp.key) && !String(pp.abbr || pp.key).includes('/') ? (pp.abbr || pp.key) : m.abbr; name = m.english;
     } else if (al) {
       // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
       color = al.color; abbr = al.abbr || abbr; name = al.english || name;
@@ -953,10 +958,17 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
     .filter((d) => d && d < today && d >= from);
   const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
-  const t1 = lastPoll.getTime();
+  // Every current average runs to today: parties polled within 60 days of the latest poll
+  // carry their latest average forward, so all lines end on today's date.
+  const lastT = lastPoll.getTime(), nowT = Math.max(lastT, new Date().setHours(0, 0, 0, 0));
+  series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; if (!seg) return; const q = seg[seg.length - 1];
+    if (q.t.getTime() >= lastT - 60 * 864e5 && nowT > q.t.getTime()) seg.push({ t: new Date(nowT), v: q.v }); });
+  const t1 = nowT;
   const yearAgo = t1 - 365 * 864e5;
   // Hidden by default: parties not polled in the past year, and parties below 3% in the current average.
-  const current = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg && seg[seg.length - 1].t.getTime() >= t1 - 60 * 864e5 ? seg[seg.length - 1].v : null; };
+  const latestPoll = (sr) => { for (let i = data.polls.length - 1; i >= 0; i--) if (data.polls[i].v[sr.key] != null) return data.polls[i].v[sr.key]; return null; };
+  // Current average; if a party has no average line (very sparse polling), use its latest poll result instead.
+  const current = (sr) => { const seg = sr.curve[sr.curve.length - 1]; if (seg && seg[seg.length - 1].t.getTime() >= t1 - 60 * 864e5) return seg[seg.length - 1].v; return sr.curve.length ? null : latestPoll(sr); };
   const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo) || (current(sr) ?? 0) < POLL_MIN_SHOWN).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
