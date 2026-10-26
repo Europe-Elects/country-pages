@@ -200,6 +200,7 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
+const POLL_MIN_SHOWN = 3; // parties below this current average (%) start hidden in the polling chart
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
 const POLLING_CHARTS = {
@@ -954,7 +955,9 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const t0 = Math.min(...polls.map((p) => p.t.getTime()), ...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
   const t1 = lastPoll.getTime();
   const yearAgo = t1 - 365 * 864e5;
-  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo)).map((sr) => sr.key);
+  // Hidden by default: parties not polled in the past year, and parties below 3% in the current average.
+  const current = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg && seg[seg.length - 1].t.getTime() >= t1 - 60 * 864e5 ? seg[seg.length - 1].v : null; };
+  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= yearAgo) || (current(sr) ?? 0) < POLL_MIN_SHOWN).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
