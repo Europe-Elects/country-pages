@@ -129,7 +129,10 @@ const SOURCES = {
   // Recommended: it keeps every value as text. The gviz fallback can drop
   // values in columns that mix numbers and text (e.g. "1992 (SI)").
   parties:   { gid: '0',         publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' },
-  alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' }
+  alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' },
+  // Electoral calendar (separate spreadsheet). Columns: Country, Specification, Type, Mode, Sequence,
+  // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
+  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' }
 };
 
 const COUNTRIES = {
@@ -137,12 +140,12 @@ const COUNTRIES = {
     name: 'Albania',
     government: [
       { label: 'Head of state', pill: 'Unaffiliated', name: 'Bajram Begaj', tag: 'Independent' },
-      { label: 'Head of government', pill: 'S&D', name: 'Edi Rama', tag: 'Socialist Party of Albania (PS)' },
-      { label: 'Government', pill: 'S&D', parties: ['Socialist Party of Albania (PS)'], note: 'Single-party majority · 83 of 140 seats' }
+      { label: 'Head of government', pill: 'PES–S&D', name: 'Edi Rama', tag: 'Socialist Party of Albania (PS)' },
+      { label: 'Government', pill: 'PES–S&D', parties: ['Socialist Party of Albania (PS)'], note: 'Single-party majority · 83 of 140 seats' }
     ],
     governingParties: ['PS'],               // abbreviations, as in the party sheet
     calendarUrl: '',                        // optional link for the "Electoral calendar" bar
-    elections: [
+    elections: [ // fallback only, used if the calendar sheet can't be loaded
       { kind: 'local',      type: 'Local (nationwide)',               date: '1 May 2027',  detail: 'Direct · single vote · date not confirmed' },
       { kind: 'president',  type: 'Head of state / presidential',     date: '1 May 2027',  detail: 'Indirect · first round · date not confirmed' },
       { kind: 'parliament', type: 'National parliament (unicameral)', date: '13 May 2029', detail: 'Direct · single vote · date not confirmed' }
@@ -166,102 +169,111 @@ const COUNTRIES = {
 
 /* ---------- Colours ---------- */
 const NONE = '#8A9099';
-const EUROPARTY_COLORS = { 'EPP': '#2F6BD6', 'PES': '#D3263A', 'ECR': '#19A6D8', 'ALDE': '#E5B800', 'EDP': '#F08C1C',
-  'EGP': '#3E9B45', 'Volt': '#6B2FA0', 'PEL': '#8B1A2B', 'ELA': '#B4232F', 'EFA': '#7A5BA6', 'Patriots.eu': '#1B2B5A',
-  'ESN': '#5B4636', 'ECPP': '#3A6EA5', 'PPEU': '#4B4B4B', 'Animal Politics EU': '#1E8C7E', 'APF': '#3B2A6B', 'ECA': '#4E7A2A', 'DiEM25': '#C2185B' };
-const PILL_COLORS = { 'S&D': ['#C8202F', '#fff'], 'EPP': ['#2F6BD6', '#fff'], 'ECR': ['#137FA6', '#fff'], 'RE': ['#E5B800', '#1A1D23'],
-  'Renew': ['#E5B800', '#1A1D23'], 'Greens/EFA': ['#2F7D35', '#fff'], 'PfE': ['#1B2B5A', '#fff'], 'LEFT': ['#8B1A2B', '#fff'],
-  'ESN': ['#5B4636', '#fff'], 'Unaffiliated': ['#C9CCD3', '#1A1D23'] };
+// Europe Elects palette (adapted from the Political Party Database Codebook, Poguntke et al., 2025).
+const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79',
+  'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
+  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
+// EP groups / pill labels map to the Europarty of the same family.
+const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL' };
+const textOn = (hex) => { const h = hex.replace('#', ''); const [r, g2, b2] = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * r + 0.7152 * g2 + 0.0722 * b2 > 0.25 ? '#1A1D23' : '#FFFFFF'; };
+const pillColor = (label) => {
+  if (/^unaffiliated$/i.test(label)) return ['#C9CCD3', '#1A1D23'];
+  for (const part of String(label).split(/[–|]/).map((x) => x.trim())) {
+    const c = EUROPARTY_COLORS[part] || EUROPARTY_COLORS[GROUP_TO_EUROPARTY[part]];
+    if (c) return [c, textOn(c)];
+  }
+  return ['#5B6170', '#FFFFFF'];
+};
 const ELECTION_COLORS = { local: '#A8459A', president: '#B35600', parliament: '#0F7591', european: '#2A5DB0', regional: '#4E7A2A', referendum: '#5B6170' };
 const IDEOLOGIES = [
  [
   "Agrarianism",
-  "#6E8B2A",
+  "#90ee90",
   "Agrarian parties are political movements whose primary political concern is the representation of farmers, rural communities, and agricultural producers, often advocating for stronger support for domestic food production and regional development. They tend to emphasize rural representation, decentralization, and policies aimed at protecting farmers from economic pressures, whether from global markets, urban elites, or regulation, with agricultural interests typically taking precedence over broader ideological positioning. While they can range from centre-left to conservative, they are generally united by a belief that agriculture and rural life deserve a stronger political voice and protection."
  ],
  [
   "Animal rights",
-  "#1E8C7E",
+  "#009076",
   "Animal rights parties are political movements whose primary political concern is the protection of animals, animal welfare, and the ethical relationship between humans, animals, and nature. They tend to advocate stronger animal protection laws, more sustainable environmental policies, and ethical reforms in areas such as agriculture, food production, scientific testing, and biodiversity. They overlap ideologically with Green politics and left-wing politics, but distinguish themselves by placing animal welfare and animal rights at the centre of their political agenda rather than treating them as secondary issues within broader environmental or social programmes."
  ],
  [
   "Centre-left",
-  "#E0524A",
+  "#FF0000",
   "Centre-left parties are political movements whose primary political concern is the promotion of social justice, economic equality, and strong public institutions within a democratic political framework. They tend to advocate redistributive economic policies, expansive welfare states, labour rights, public investment in healthcare and education, and protections for disadvantaged groups, while generally supporting a mixed economy that combines market mechanisms with state intervention. They distinguish themselves from more radical left-wing parties by accepting parliamentary democracy, political pluralism, and a mixed-market economy rather than seeking a fundamental transformation of capitalism, while distinguishing themselves from centre-right and centrist parties by placing greater emphasis on redistribution, public services, labour protections, and reducing social and economic inequalities."
  ],
  [
   "Centre-right",
-  "#2F6BD6",
+  "#3399FF",
   "Centre-right parties are political movements whose primary political concern is the promotion of social stability, economic responsibility, democratic institutions, and often values rooted in Christian democracy, liberal conservatism, or civic patriotism. They tend to advocate market-oriented economies, strong but limited government, support for heteronormative families and civil society, and gradual reform, while often combining economic liberalism with a commitment to social cohesion and institutional continuity. They distinguish themselves from centrist and centre-left parties by placing greater emphasis on market economics, lower taxation, individual responsibility, traditional social values, and more restrained state intervention in the economy, while distinguishing themselves from national-conservative and right-wing parties by typically supporting liberal democracy, international cooperation, political moderation, and a more inclusive or institution-oriented understanding of national identity."
  ],
  [
   "Centrism",
-  "#F08C1C",
+  "#fa8c00",
   "Centrist and liberal-centre parties are political movements whose primary political concern is the promotion of political moderation as well as economic and social policies that avoid ideological extremes. They tend to advocate institutional reform, civil liberties, pro-European or international cooperation, and mixed economic approaches that combine market mechanisms with targeted state intervention. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on political reform, social liberalism, environmental sustainability, and a more active role for the state in addressing inequality or modernisation, while distinguishing themselves from centre-left parties by generally favouring market economics, fiscal moderation, and incremental political and economic change."
  ],
  [
   "Christian fundamentalism",
-  "#8A6D3B",
+  "#a16585",
   "Christian fundamentalist parties are political movements whose primary political concern is the preservation of religiously informed public ethics and socially conservative understandings of family and community. They tend to advocate policies rooted in Christian or religious values, often viewing the Christian Bible as a foundational guide for policymaking, alongside support for traditional family structures, cultural continuity, and a cautious approach to rapid social change, frequently opposing the liberalization of issues such as abortion, euthanasia, or changes to marriage and gender norms. They distinguish themselves from national-conservative parties by placing greater emphasis on religious doctrine and biblical morality rather than national identity, sovereignty, or cultural nationalism, while distinguishing themselves from broader centre-right parties by giving moral and religious values precedence over economic liberalism, pragmatic governance, or broad ideological coalitions. They further distinguish themselves from centre-left parties by promoting a vision of social justice rooted more in charity, community responsibility, and faith-based solidarity than in redistribution, labour politics, or class-based bargaining."
  ],
  [
   "Eurofederalism",
-  "#7B4FC9",
+  "#502379",
   "European federalist parties are political movements whose primary political concern is the deepening of European integration and the strengthening of supranational democratic governance across Europe. They tend to advocate a more politically integrated or federal European Union, stronger common institutions, transnational democracy, coordinated responses to challenges such as climate change and migration, and policies that transcend traditional national politics. They distinguish themselves from mainstream centrist and pro-European parties by placing European integration itself at the centre of their political agenda, often advocating far-reaching institutional reform or federalism, while distinguishing themselves from Eurosceptic and nationalist parties by viewing shared sovereignty, cross-border cooperation, and a stronger European political identity as solutions rather than threats to democracy and prosperity."
  ],
  [
   "Far-left",
-  "#7A0F1E",
+  "#7c0000",
   "Far-left parties are political movements whose primary political concern is the transformation or replacement of capitalist economic systems in favour of socialism, communism, or other forms of collective economic organization. They tend to advocate strong public or collective ownership of key industries, extensive workers’ rights, economic planning, anti-imperialism, and a rapid or far-reaching restructuring of capitalist economies, often viewing liberal capitalism as inherently exploitative and class-based inequality as a central political problem. They distinguish themselves from broader left-wing parties by rejecting the institutions of liberal democratic capitalism as insufficient for achieving social and economic equality, often favouring revolutionary change, workers’ democracy, or alternative political models over parliamentary democracy within the capitalist system."
  ],
  [
   "Far-right",
-  "#2B2B2B",
+  "#70463A",
   "Far-right parties are political movements whose primary political concern is the protection of national identity, cultural homogeneity, sovereignty, and traditional social order, often framed as a response to perceived threats from immigration, multiculturalism, globalization, or supranational institutions. They tend to advocate restrictive immigration policies, strong law-and-order approaches, national preference in welfare and economics, social conservatism, and skepticism or rejection of international organizations, while emphasizing cultural traditionalism and national sovereignty over liberal democratic constraints and, in some cases, questioning multiparty parliamentarism in favour of stronger majoritarian, leader-centred, or ethnically defined conceptions of political representation. They distinguish themselves from mainstream right-wing and national-conservative parties by embracing more exclusionary or ethnonationalist conceptions of national identity and by displaying greater skepticism toward multiparty parliamentary democracy itself, often favouring stronger executive authority, plebiscitary leadership, or political systems that subordinate pluralism to a unified conception of the nation."
  ],
  [
   "Green politics",
-  "#3E9B45",
+  "#009900",
   "Green parties are political movements whose primary political concern is environmental sustainability, climate protection, and the ecological transformation of society and the economy, typically paired with social progressivism and centre-left economic politics. They tend to advocate ambitious climate action, renewable energy, biodiversity protection, sustainable economic development, social justice, and participatory democracy, often linking environmental concerns with progressive positions on human rights, equality, and international cooperation. They distinguish themselves from centre-left and social democratic parties by placing ecological sustainability and long-term environmental limits at the centre of policymaking rather than treating them as one priority among many, while distinguishing themselves from animal rights parties by focusing more broadly on systemic environmental transformation, climate policy, and sustainability rather than primarily on animal welfare or animal rights."
  ],
  [
   "Islamism",
-  "#127A5A",
+  "#8A9099",
   "Islamist parties are political movements whose primary political concern is the promotion of law and social order informed by Islamic values and religious principles. They tend to advocate socially conservative policies, stronger roles for religion in public life, support for heteronormative family structures, and, in some cases, the greater incorporation of Islamic legal or moral frameworks into governance, often pairing this with economic conservatism or welfare-oriented communitarianism. They distinguish themselves from mainstream conservative and centre-right parties by placing religious doctrine and faith-based morality at the centre of policymaking, while distinguishing themselves from secular nationalist or right-wing parties by prioritizing religious identity and moral order over ethnic nationalism or purely state-centred conceptions of national identity."
  ],
  [
   "Left-wing",
-  "#B3223A",
+  "#990000",
   "Left-wing and democratic socialist parties are political movements whose primary political concern is the overcoming or fundamental transformation of capitalism through liberal-democratic and parliamentary means in pursuit of greater social and economic equality. They tend to advocate progressive taxation, welfare expansion, workers’ rights, environmental sustainability, anti-discrimination policies, democratic control over economic decision-making, and stronger public intervention in the economy, often combining social progressivism with critiques of inequality and corporate power. They distinguish themselves from centre-left and social democratic parties by viewing capitalism as a system that should ultimately be transcended rather than merely regulated or reformed, while distinguishing themselves from communist and anti-capitalist parties by accepting pluralist liberal democracy and seeking systemic change through electoral, parliamentary, and democratic institutions rather than rejecting the liberal democratic state or embracing revolutionary politics."
  ],
  [
   "Liberalism",
-  "#E3B400",
+  "#FFD700",
   "Liberal parties are political movements whose primary political concern is the protection of individual liberty, political pluralism, and constitutional democracy within a capitalist economic framework. They tend to advocate civil liberties, rule of law, market-oriented economies, international cooperation, European integration, and institutional reform, often combining economic liberalism with socially progressive or moderate positions on cultural issues and a broad skepticism toward state intervention in both the economy and individuals’ private lives. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on individual freedoms, social liberalism, institutional reform, and internationalism over tradition, authority, or social conservatism, while distinguishing themselves from centre-left and social democratic parties by placing greater trust in markets, entrepreneurship, fiscal moderation, and individual choice, alongside a broader rejection of state interventionism in the economy and social private life."
  ],
  [
   "Libertarianism",
-  "#A88B00",
+  "#F2C300",
   "Libertarian and classical liberal parties are political movements whose primary political concern is the maximization of individual liberty through a broad rejection of state interventionism in both the economy and private life. They tend to advocate a minimal state primarily limited to upholding laws, policing, national defence, secure borders, and the protection of property rights and free markets, while favouring privatization or market provision of services such as healthcare, education, and welfare. They generally support low taxation, deregulation, strong civil liberties, individual responsibility, and extensive personal freedoms, often combining economically laissez-faire policies with socially liberal or anti-authoritarian positions. They distinguish themselves from mainstream liberal and centre-right parties by advocating a far smaller role for the state and stronger free-market economics, while distinguishing themselves from conservative parties by typically rejecting moral paternalism and state involvement in regulating private or social behaviour."
  ],
  [
   "Monarchism",
-  "#9C2B7A",
+  "#8A9099",
   "Monarchist and royalist parties are political movements whose primary political concern is the preservation or restoration of monarchy as a source of national unity, historical continuity, and political legitimacy. They tend to advocate traditional values, patriotism, institutional continuity, and stronger national identity, often viewing constitutional or symbolic monarchy as a stabilizing force above partisan politics. They distinguish themselves from mainstream conservative and centre-right parties by placing the monarchy or dynastic legitimacy at the centre of their political identity and constitutional vision, while distinguishing themselves from far-right parties by typically emphasizing historical continuity and constitutional order over ethnonationalism."
  ],
  [
   "National-conservatism",
-  "#1B3F8C",
+  "#0000FF",
   "National-conservative parties are political movements whose primary political concern is the protection of national sovereignty, cultural continuity, social order, and traditional values within the framework of representative democracy. They tend to advocate stronger borders, law and order, national identity, social conservatism, market-oriented or mixed economies, and skepticism toward supranational governance, often emphasizing patriotism, gradual change, and institutional stability, while many national-conservative parties combine this with Atlanticism, support for NATO, and strong transatlantic partnerships. They distinguish themselves from centre-right and liberal parties by placing greater emphasis on national identity, cultural conservatism, sovereignty, and skepticism toward immigration or supranational institutions, while distinguishing themselves from far-right parties by generally accepting pluralist liberal democracy, multiparty parliamentarism, constitutional constraints, and transatlantic cooperation rather than embracing anti-system politics, ethnonationalism, or hostility toward Western alliances."
  ],
  [
   "Pirate politics",
-  "#5E3A8C",
+  "#9c36b8",
   "Pirate parties are political movements whose primary political concern is the protection of digital rights, civil liberties, transparency, and participatory democracy in the information age. They tend to advocate internet freedom, data privacy, government transparency, open-source technologies, copyright reform, democratic innovation, and strong protections against state or corporate surveillance, often pairing these positions with socially liberal and pro-democratic values. They distinguish themselves from liberal and centrist parties by placing digital rights, democratic participation, and transparency at the centre of policymaking rather than treating them as secondary issues, while distinguishing themselves from broader progressive or left-wing parties by focusing less on traditional economic redistribution and more on civil liberties, decentralization, technological openness, and democratic reform."
  ],
  [
   "Right-wing",
-  "#3B2A6B",
+  "#000000",
   "Right-wing parties are political movements whose primary political concern is the protection of national sovereignty, traditional social order, and the perceived interests of “ordinary people” against political elites, globalization, immigration, or supranational institutions. They tend to advocate restrictive immigration policies, stronger borders, law and order, welfare chauvinism or economic protectionism, skepticism toward supranational governance, and culturally conservative positions, often combining nationalism with anti-establishment or populist rhetoric and a more skeptical stance toward transatlantic institutions or alliances. They distinguish themselves from national-conservative parties by placing greater emphasis on populist anti-elite politics, political personalization, and skepticism toward transatlanticism or Western institutional alignment, while distinguishing themselves from far-right parties by generally avoiding explicit ethnonationalism and accepting multiparty parliamentary democracy, even if they challenge liberal norms, minority protections, or judicial constraints."
  ]
 ];
@@ -294,7 +306,7 @@ const g = (o, ...keys) => { for (const k of keys) { const v = o[norm(k)]; if (v)
 const gStarts = (o, prefix) => { const p = norm(prefix); for (const k in o) if (k.startsWith(p) && o[k]) return o[k]; return ''; };
 
 async function loadSheet(src) {
-  const url = src.publishedCsv || `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${src.gid}`;
+  const url = src.publishedCsv || `https://docs.google.com/spreadsheets/d/${src.sheetId || SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${src.gid}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return toObjects(parseCSV(await res.text()));
@@ -302,7 +314,7 @@ async function loadSheet(src) {
 
 /* ---------- Model ---------- */
 function buildParties(rows, iso, cfg) {
-  const ideoColor = (i) => { const r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === norm(i).replace(/-/g, ' ')); return r ? r[1] : NONE; };
+  const ideoColor = (i) => { const r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === norm(i).replace(/-/g, ' ')); return r ? r[1] : (/^regional/i.test(i) ? '#008080' : NONE); };
   let list = rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso).map((o) => {
     const europarty = g(o, 'Europarty Affiliation'), europartyEnd = g(o, 'Europarty End');
     const epGroup = g(o, 'European Parliament Group');
@@ -382,7 +394,7 @@ function buildAlliances(rows, iso, parties) {
 
 /* ---------- Views ---------- */
 const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
-const pill = (label) => { const c = PILL_COLORS[label] || ['#5B6170', '#fff']; return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(label)}</span>`; };
+const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(label)}</span>`; };
 
 function viewHeader(cfg) {
   const rows = (cfg.government || []).map((r) => `<div class="lead-row"><span class="label">${esc(r.label)}</span><div class="row">
@@ -392,12 +404,59 @@ function viewHeader(cfg) {
   return `<header class="head"><p class="eyebrow">EUROPE ELECTS · COUNTRY PAGE</p><h1 class="country">${esc(cfg.name)}</h1>
     ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
 }
-function viewElections(cfg) {
-  if (!cfg.elections || !cfg.elections.length) return '';
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+// Parses the calendar's date text. Returns { date: last possible day, precision } or null.
+function parseElectionDate(raw) {
+  const t = String(raw || '').trim(); if (!t) return null;
+  let m;
+  const endOfMonth = (y, mo) => new Date(y, mo + 1, 0);
+  const monthIdx = (w) => MONTHS.findIndex((x) => x.startsWith(String(w).toLowerCase().slice(0, 3)));
+  if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return { date: new Date(+m[1], +m[2] - 1, +m[3]), precision: 'day' };
+  if ((m = t.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/))) {
+    let d = +m[1], mo = +m[2];
+    if (mo > 12 && d <= 12) { const x = d; d = mo; mo = x; } // m/d/yyyy
+    return { date: new Date(+m[3], mo - 1, d), precision: 'day' };
+  }
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/)) && monthIdx(m[1]) >= 0) return { date: new Date(+m[3], monthIdx(m[1]), +m[2]), precision: 'day' };
+  if ((m = t.match(/^(\d{1,2})\.?\s+([A-Za-z]+)\.?,?\s+(\d{4})$/)) && monthIdx(m[2]) >= 0) return { date: new Date(+m[3], monthIdx(m[2]), +m[1]), precision: 'day' };
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{4})$/)) && monthIdx(m[1]) >= 0) return { date: endOfMonth(+m[2], monthIdx(m[1])), precision: 'month' };
+  if ((m = t.match(/^(\d{1,2})[./](\d{4})$/))) return { date: endOfMonth(+m[2], +m[1] - 1), precision: 'month' };
+  if ((m = t.match(/^(\d{4})$/))) return { date: new Date(+m[1], 11, 31), precision: 'year' };
+  const d = new Date(t); return isNaN(d) ? null : { date: d, precision: 'day' };
+}
+function electionKind(type) {
+  const t = norm(type);
+  if (/europ/.test(t)) return 'european';
+  if (/presiden|head of state/.test(t)) return 'president';
+  if (/referend/.test(t)) return 'referendum';
+  if (/local|municipal/.test(t)) return 'local';
+  if (/region|state|provinc|subnational/.test(t)) return 'regional';
+  if (/parliament|legislat|national/.test(t)) return 'parliament';
+  return '';
+}
+function buildElections(rows, countryName) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cap = (x) => x ? x.charAt(0).toUpperCase() + x.slice(1) : '';
+  return rows.filter((o) => norm(g(o, 'Country')) === norm(countryName)).map((o) => {
+    const raw = g(o, '(Expected) Date', 'Expected Date', 'Date');
+    const parsed = parseElectionDate(raw);
+    const status = g(o, 'Date Status');
+    let dateTxt = raw;
+    if (parsed && parsed.precision === 'day') dateTxt = parsed.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    else if (parsed && parsed.precision === 'month') dateTxt = parsed.date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const detail = [cap(g(o, 'Mode')), g(o, 'Sequence'), status ? (/^not/i.test(status) ? 'date ' + status.toLowerCase() : 'date ' + status.toLowerCase().replace(/^date\s+/, '')) : ''].filter(Boolean).join(' · ');
+    return { type: cap(g(o, 'Type')), spec: g(o, 'Specification'), comment: g(o, 'Comment'), kind: electionKind(g(o, 'Type')),
+             date: dateTxt || 'Date to be announced', detail, when: parsed ? parsed.date : null };
+  }).filter((e) => !e.when || e.when >= today) // future only; rows without a readable date are kept
+    .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
+}
+function viewElections(cfg, elections) {
+  const list = elections && elections.length ? elections : (cfg.elections || []);
+  if (!list.length) return '';
   const right = cfg.calendarUrl ? `<a href="${esc(cfg.calendarUrl)}" target="_blank" rel="noopener">Full calendar →</a>` : '';
-  return bar('Upcoming elections', right) + `<div class="grid-e">${cfg.elections.map((e) => `<div class="card elec">
+  return bar('Upcoming elections', right) + `<div class="grid-e">${list.map((e) => `<div class="card elec">
     <span class="type" style="background:${ELECTION_COLORS[e.kind] || '#5B6170'}">${esc(e.type)}</span>
-    <div class="body"><span class="big">${esc(e.date)}</span><span class="muted" style="font-size:14px">${esc(e.detail || '')}</span></div></div>`).join('')}</div>`;
+    <div class="body">${e.spec ? `<span style="font-size:14px;font-weight:600">${esc(e.spec)}</span>` : ''}<span class="big">${esc(e.date)}</span><span class="muted" style="font-size:14px">${esc(e.detail || '')}</span>${e.comment ? `<span class="muted" style="font-size:13px;font-style:italic">${esc(e.comment)}</span>` : ''}</div></div>`).join('')}</div>`;
 }
 const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>';
 const PAUSE_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="currentColor"/></svg>';
@@ -542,22 +601,25 @@ async function main() {
   let partyRows, allianceRows = [];
   const loadWithFallback = async (src) => {
     try { return await loadSheet(src); }
-    catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ gid: src.gid, publishedCsv: '' }); }
+    catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ sheetId: src.sheetId, gid: src.gid, publishedCsv: '' }); }
   };
   try { partyRows = await loadWithFallback(SOURCES.parties); }
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
   try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
+  let calendarRows = [];
+  try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
   const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
   cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
   document.title = `Europe Elects – ${cfg.name}`;
   const current = parties.filter((p) => p.latest);
+  const elections = buildElections(calendarRows, cfg.name);
   const alliances = buildAlliances(allianceRows, ISO, parties);
   alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
 
   const render = () => {
-    app.innerHTML = viewHeader(cfg) + viewElections(cfg) + viewParliament(cfg, current) + viewPolling(cfg) +
+    app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg) +
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
-      `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> (loaded live); seats, government, elections and polling from Europe Elects.</p>
+      `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}</p></footer>`;
     bindFilter(); bindLegend(); bindParl();
     postHeight();
