@@ -200,6 +200,7 @@ const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], mem
 // Countries with a polling/<ISO>.json file (built from the poll database by the GitHub Action) get the
 // built-in LOESS chart; POLLING_CHARTS is only the fallback for countries without one.
 const POLLING_YEARS = 10; // show at most this many years of polls
+const POLL_MIN_SHOWN = 3; // parties below this latest average (%) start switched off
 const POLL_SHOWN_YEARS = 5; // parties polled within this many years start switched on in the polling chart
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
 const NO_POLLING = ['RU', 'BY', 'AZ', 'FR'];
@@ -747,7 +748,8 @@ function buildProjection(rows, countryName, parties) {
   const series = mine.map((o) => {
     const group = g(o, 'EU Parliament group', 'European Parliament group', 'EP group');
     const party = g(o, 'Party');
-    const match = byName(party, g(o, 'Party Name + Group'), g(o, 'Prev. Name'));
+    const eid = g(o, 'Europe Elects Entity ID');
+    const match = (eid && (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid))) || byName(party, g(o, 'Party Name + Group'), g(o, 'Prev. Name'));
     const ep = GROUP_TO_EUROPARTY[group] || group;
     const color = match && match.color !== NONE ? match.color : (EUROPARTY_COLORS[ep] || NONE);
     groupCount[color] = (groupCount[color] || 0) + 1;
@@ -938,7 +940,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     if (m) {
       color = m.color !== NONE || !IS_EU ? m.color : (EUROPARTY_COLORS[GROUP_TO_EUROPARTY[m.epGroup]] || NONE);
       // multilingual abbreviations ("SP/PS") are shortened to the one the poll file uses
-      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr.includes('/') && (pp.abbr || pp.key) && !String(pp.abbr || pp.key).includes('/') ? (pp.abbr || pp.key) : m.abbr; name = m.english;
+      tag = partyTag(m.europartyShort, m.epGroup); abbr = m.abbr; name = m.english;
     } else if (al) {
       // Alliances (e.g. CDU/CSU, PD-ASHM) take the colour and group of their Europarty affiliation.
       color = al.color; abbr = al.abbr || abbr; name = al.english || name;
@@ -964,9 +966,12 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const t1 = nowT;
   // Parties still current: their last average point lies within 60 days of the latest poll.
   series.forEach((sr) => { const seg = sr.curve[sr.curve.length - 1]; sr.current = !!seg && seg[seg.length - 1].t.getTime() >= lastT - 60 * 864e5; });
-  // Shown by default: every party or alliance polled in the past POLL_SHOWN_YEARS years.
+  // Shown by default: parties or alliances polled in the past POLL_SHOWN_YEARS years whose latest average
+  // (or latest poll, if there is no average line) is at least POLL_MIN_SHOWN %.
   const shownSince = nowT - POLL_SHOWN_YEARS * 365.25 * 864e5;
-  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince)).map((sr) => sr.key);
+  const latestValue = (sr) => { const seg = sr.curve[sr.curve.length - 1]; if (seg) return seg[seg.length - 1].v;
+    for (let i = data.polls.length - 1; i >= 0; i--) if (data.polls[i].v[sr.key] != null) return data.polls[i].v[sr.key]; return 0; };
+  const stale = series.filter((sr) => !data.polls.some((p) => p.v[sr.key] != null && new Date(p.d).getTime() >= shownSince) || latestValue(sr) < POLL_MIN_SHOWN).map((sr) => sr.key);
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), updated: data.updated };
 }
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
@@ -1255,7 +1260,7 @@ async function main() {
   const render = () => {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
-      `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> and <a href="https://docs.google.com/spreadsheets/d/${SOURCES.calendar.sheetId}/edit?gid=${SOURCES.calendar.gid}" target="_blank" rel="noopener">electoral calendar</a> (loaded live); seats, government and polling from Europe Elects.</p>
+      `<footer>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">Responsible team member${team.length > 1 ? 's' : ''}: <strong>${team.map(esc).join(', ')}</strong></p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling();
     postHeight();
