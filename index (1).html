@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Europe Elects – Country page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F7F6F2;--line:#E4E2DB;--line2:#ECEAE4;--navy:#1B2A4A;--blue:#2A5DB0;--gold:#F2B705;--ink:#1A1D23;--muted:#565B66;--chip:#EFEDE7;--tag:#E7EEF9;--tagInk:#1E4C99}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{font-family:'Advent Pro',system-ui,sans-serif;font-size:16px;color:var(--ink);line-height:1.35}
+a{color:var(--tagInk)}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 40px;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;flex-direction:column;align-items:center;gap:14px}
+.eyebrow{margin:0;font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
+h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-size:30px;line-height:1;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:2px}
+.card{background:#fff;border:1px solid var(--line);border-radius:6px}
+.lead{align-self:stretch;border-top:4px solid var(--blue);border-radius:8px;padding:4px 22px}
+.lead-row{padding:14px 0;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:6px}
+.lead-row:last-child{border-bottom:0}
+.label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;color:#fff;text-transform:uppercase}
+.tagb{padding:3px 9px;border-radius:4px;background:var(--tag);color:var(--tagInk);font-size:13px;font-weight:600}
+.partyb{padding:3px 9px;border-radius:999px;background:#fff;border:1px solid #D5D3CC;font-size:14px;font-weight:600}
+.name{font-size:21px;font-weight:700}
+.bar{background:var(--navy);color:#fff;padding:12px 18px;border-radius:4px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;margin-top:12px}
+.bar h2{margin:0;font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.bar .note{font-size:14px;color:#D6DCE8}
+.bar a{font-size:15px;font-weight:600;color:var(--gold);text-decoration:none}
+.bar a:hover{text-decoration:underline}
+.badge{padding:3px 12px;border-radius:999px;background:var(--gold);color:var(--navy);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.grid-e{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.elec{overflow:hidden;display:flex;flex-direction:column}
+.elec .type{padding:7px 14px;color:#fff;font-size:14px;font-weight:700}
+.elec .body{padding:10px 14px 12px;display:flex;flex-direction:column;gap:2px}
+.big{font-size:22px;font-weight:700}
+.muted{color:var(--muted)}
+.parl{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.parl .meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;font-size:15px}
+.seatwrap{position:relative}
+.seatbar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:#ECEAE4}
+.seatbar div{min-width:0;box-shadow:inset -1px 0 0 #fff;transition:flex-grow .9s ease}
+@media (prefers-reduced-motion: reduce){.seatbar div{transition:none}}
+.parl-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+button.play{display:inline-flex;align-items:center;gap:8px}
+.yrbtns{display:flex;flex-wrap:wrap;gap:4px}
+.yrbtn{min-height:44px;min-width:56px;padding:0 10px;border:1px solid #D5D3CC;border-radius:6px;background:#fff;color:var(--ink);font:600 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+.yrbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.yrbtn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.majline{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
+.keys{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.poll{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.poll iframe{width:0;min-width:100%;border:none}
+.poll p{margin:0;font-size:13px;font-style:italic;color:var(--muted)}
+.grid-a{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+.grid-p{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px}
+.grid-m{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,176px),1fr));gap:8px}
+.tile{display:flex;flex-direction:column;gap:9px;padding:11px 14px 13px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
+.tile.small{gap:6px;padding:9px 11px 10px;border-top-width:4px}
+.tile .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.abbr{font-size:23px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.small .abbr{font-size:18px}
+.yr{font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap}
+.tile h3{margin:0;font-size:16px;font-weight:700;line-height:1.25}
+.small h3{font-size:15px;font-weight:600;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;flex-wrap:wrap;gap:4px;font-size:13px;font-weight:600;line-height:1}
+.small .tags{font-size:12px}
+.tag{padding:3px 7px;border-radius:4px;background:var(--chip);color:#2B2F36}
+.tag.gov{background:#1F7A4D;color:#fff}
+.tag.eu{background:#E3F2EA;color:#14583A}
+.tag.warn{background:#FFF1D6;color:#6B4A00}
+.tag.type{background:var(--tag);color:var(--tagInk);padding:4px 8px}
+.kv{display:flex;flex-direction:column;gap:3px}
+.kv div{display:flex;gap:8px;font-size:14px;line-height:1.35}
+.kv span:first-child{flex:none;width:100px;color:var(--muted)}
+.kv span:last-child{font-weight:700}
+.small .kv div{font-size:13px;gap:6px}
+.small .kv span:first-child{width:92px}
+.note-s{font-size:13px;color:var(--muted)}
+.seats{display:flex;flex-direction:column;gap:4px;padding-top:10px;margin-top:auto;border-top:1px solid var(--line2)}
+.seats .lbl{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--blue)}
+.seats .num{font-size:28px;font-weight:700;line-height:1}
+.mini{display:flex;gap:3px;height:34px;margin-top:4px}
+.mini div{flex:1;display:flex;justify-content:center;align-items:flex-end}
+.mini i{display:block;width:100%;max-width:16px;border-radius:2px}
+.yrs{display:flex;gap:3px;font-size:12px;color:var(--muted)}
+.yrs span{flex:1;text-align:center}
+.al{display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
+.al .members{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line2)}
+.al .mlabel{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:#fff;border:1px solid #D5D3CC;border-radius:999px;font-size:14px;font-weight:600}
+.filter{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;padding:2px 14px}
+.filter label{display:inline-flex;align-items:center;gap:10px;min-height:44px;font-size:16px;font-weight:600;cursor:pointer}
+.filter input{width:20px;height:20px;margin:0;accent-color:var(--navy)}
+.lg{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line);border-radius:6px}
+.lg .t{display:flex;align-items:center;gap:8px}
+.lg h3{margin:0;font-size:17px;font-weight:700}
+.lg p{margin:0;font-size:14px;line-height:1.45;color:#2B2F36}
+.count{margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--navy);color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+.status{padding:28px;text-align:center;font-size:17px}
+button.toggle{min-height:44px;padding:0 18px;border:1px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font:600 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+button.toggle:hover{background:var(--navy);color:#fff}
+button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
+footer p{margin:0 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card status">Loading party data…</div></div>
+
+<script>
+/* =====================================================================
+   EUROPE ELECTS – COUNTRY PAGE TEMPLATE
+   Usage:  index.html?country=AL   (ISO-2 code; defaults to AL)
+   Party and alliance data load live from the Google Sheet below.
+   Everything that is NOT in those sheets lives in COUNTRIES (per country).
+   ===================================================================== */
+
+const SHEET_ID = '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8';
+const SOURCES = {
+  // publishedCsv: optional "File › Share › Publish to web › CSV" link for the tab.
+  // Recommended: it keeps every value as text. The gviz fallback can drop
+  // values in columns that mix numbers and text (e.g. "1992 (SI)").
+  parties:   { gid: '0',         publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' },
+  alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' }
+};
+
+const COUNTRIES = {
+  AL: {
+    name: 'Albania',
+    government: [
+      { label: 'Head of state', pill: 'Unaffiliated', name: 'Bajram Begaj', tag: 'Independent' },
+      { label: 'Head of government', pill: 'S&D', name: 'Edi Rama', tag: 'Socialist Party of Albania (PS)' },
+      { label: 'Government', pill: 'S&D', parties: ['Socialist Party of Albania (PS)'], note: 'Single-party majority · 83 of 140 seats' }
+    ],
+    governingParties: ['PS'],               // abbreviations, as in the party sheet
+    calendarUrl: '',                        // optional link for the "Electoral calendar" bar
+    elections: [
+      { kind: 'local',      type: 'Local (nationwide)',               date: '1 May 2027',  detail: 'Direct · single vote · date not confirmed' },
+      { kind: 'president',  type: 'Head of state / presidential',     date: '1 May 2027',  detail: 'Indirect · first round · date not confirmed' },
+      { kind: 'parliament', type: 'National parliament (unicameral)', date: '13 May 2029', detail: 'Direct · single vote · date not confirmed' }
+    ],
+    chamber: { name: 'Kuvendi', type: 'Unicameral', seats: 140, elected: 'May 2025' },
+    seats: {
+      years: [2009, 2013, 2017, 2021, 2025],  // null = did not contest
+      parties: {
+        'PS': [65, 65, 74, 74, 83], 'PD': [68, 50, 43, 50, 41], 'PL': [4, 16, 19, 4, 4],
+        'PSD': [0, 0, 1, 3, 3], 'MUNDËSIA': [null, null, null, null, 2], 'PDIU': [1, 4, 3, 2, 2],
+        'BASHKË': [null, null, null, null, 1], 'SHB': [null, null, null, null, 1], 'PAA': [0, 0, 0, 1, 1],
+        'PBDNJ': [1, 1, 0, 1, 1], 'PR': [1, 3, 0, 3, 1], 'NTH': [null, null, null, null, 0],
+        'KEA': [null, null, null, null, 0], 'PLL': [0, 0, 0, 1, 0], 'LZHK': [0, 0, 0, 1, 0], 'PKD': [0, 1, 0, 0, 0]
+      },
+      order: ['BASHKË', 'PS', 'SHB', 'PKD', 'PAA', 'PL', 'PLL', 'LZHK', 'MUNDËSIA', 'PSD', 'PBDNJ', 'PDIU', 'PD', 'PR'] // left → right in the seat bar
+    },
+    polling: { embed: 'https://datawrapper.dwcdn.net/abGxs/24/', title: 'Polling average of Albania', height: 409,
+               note: 'This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in Albania.' }
+  }
+};
+
+/* ---------- Colours ---------- */
+const NONE = '#8A9099';
+const EUROPARTY_COLORS = { 'EPP': '#2F6BD6', 'PES': '#D3263A', 'ECR': '#19A6D8', 'ALDE': '#E5B800', 'EDP': '#F08C1C',
+  'EGP': '#3E9B45', 'Volt': '#6B2FA0', 'PEL': '#8B1A2B', 'ELA': '#B4232F', 'EFA': '#7A5BA6', 'Patriots.eu': '#1B2B5A',
+  'ESN': '#5B4636', 'ECPP': '#3A6EA5', 'PPEU': '#4B4B4B', 'Animal Politics EU': '#1E8C7E', 'APF': '#3B2A6B', 'ECA': '#4E7A2A', 'DiEM25': '#C2185B' };
+const PILL_COLORS = { 'S&D': ['#C8202F', '#fff'], 'EPP': ['#2F6BD6', '#fff'], 'ECR': ['#137FA6', '#fff'], 'RE': ['#E5B800', '#1A1D23'],
+  'Renew': ['#E5B800', '#1A1D23'], 'Greens/EFA': ['#2F7D35', '#fff'], 'PfE': ['#1B2B5A', '#fff'], 'LEFT': ['#8B1A2B', '#fff'],
+  'ESN': ['#5B4636', '#fff'], 'Unaffiliated': ['#C9CCD3', '#1A1D23'] };
+const ELECTION_COLORS = { local: '#A8459A', president: '#B35600', parliament: '#0F7591', european: '#2A5DB0', regional: '#4E7A2A', referendum: '#5B6170' };
+const IDEOLOGIES = [
+ [
+  "Agrarianism",
+  "#6E8B2A",
+  "Agrarian parties are political movements whose primary political concern is the representation of farmers, rural communities, and agricultural producers, often advocating for stronger support for domestic food production and regional development. They tend to emphasize rural representation, decentralization, and policies aimed at protecting farmers from economic pressures, whether from global markets, urban elites, or regulation, with agricultural interests typically taking precedence over broader ideological positioning. While they can range from centre-left to conservative, they are generally united by a belief that agriculture and rural life deserve a stronger political voice and protection."
+ ],
+ [
+  "Animal rights",
+  "#1E8C7E",
+  "Animal rights parties are political movements whose primary political concern is the protection of animals, animal welfare, and the ethical relationship between humans, animals, and nature. They tend to advocate stronger animal protection laws, more sustainable environmental policies, and ethical reforms in areas such as agriculture, food production, scientific testing, and biodiversity. They overlap ideologically with Green politics and left-wing politics, but distinguish themselves by placing animal welfare and animal rights at the centre of their political agenda rather than treating them as secondary issues within broader environmental or social programmes."
+ ],
+ [
+  "Centre-left",
+  "#E0524A",
+  "Centre-left parties are political movements whose primary political concern is the promotion of social justice, economic equality, and strong public institutions within a democratic political framework. They tend to advocate redistributive economic policies, expansive welfare states, labour rights, public investment in healthcare and education, and protections for disadvantaged groups, while generally supporting a mixed economy that combines market mechanisms with state intervention. They distinguish themselves from more radical left-wing parties by accepting parliamentary democracy, political pluralism, and a mixed-market economy rather than seeking a fundamental transformation of capitalism, while distinguishing themselves from centre-right and centrist parties by placing greater emphasis on redistribution, public services, labour protections, and reducing social and economic inequalities."
+ ],
+ [
+  "Centre-right",
+  "#2F6BD6",
+  "Centre-right parties are political movements whose primary political concern is the promotion of social stability, economic responsibility, democratic institutions, and often values rooted in Christian democracy, liberal conservatism, or civic patriotism. They tend to advocate market-oriented economies, strong but limited government, support for heteronormative families and civil society, and gradual reform, while often combining economic liberalism with a commitment to social cohesion and institutional continuity. They distinguish themselves from centrist and centre-left parties by placing greater emphasis on market economics, lower taxation, individual responsibility, traditional social values, and more restrained state intervention in the economy, while distinguishing themselves from national-conservative and right-wing parties by typically supporting liberal democracy, international cooperation, political moderation, and a more inclusive or institution-oriented understanding of national identity."
+ ],
+ [
+  "Centrism",
+  "#F08C1C",
+  "Centrist and liberal-centre parties are political movements whose primary political concern is the promotion of political moderation as well as economic and social policies that avoid ideological extremes. They tend to advocate institutional reform, civil liberties, pro-European or international cooperation, and mixed economic approaches that combine market mechanisms with targeted state intervention. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on political reform, social liberalism, environmental sustainability, and a more active role for the state in addressing inequality or modernisation, while distinguishing themselves from centre-left parties by generally favouring market economics, fiscal moderation, and incremental political and economic change."
+ ],
+ [
+  "Christian fundamentalism",
+  "#8A6D3B",
+  "Christian fundamentalist parties are political movements whose primary political concern is the preservation of religiously informed public ethics and socially conservative understandings of family and community. They tend to advocate policies rooted in Christian or religious values, often viewing the Christian Bible as a foundational guide for policymaking, alongside support for traditional family structures, cultural continuity, and a cautious approach to rapid social change, frequently opposing the liberalization of issues such as abortion, euthanasia, or changes to marriage and gender norms. They distinguish themselves from national-conservative parties by placing greater emphasis on religious doctrine and biblical morality rather than national identity, sovereignty, or cultural nationalism, while distinguishing themselves from broader centre-right parties by giving moral and religious values precedence over economic liberalism, pragmatic governance, or broad ideological coalitions. They further distinguish themselves from centre-left parties by promoting a vision of social justice rooted more in charity, community responsibility, and faith-based solidarity than in redistribution, labour politics, or class-based bargaining."
+ ],
+ [
+  "Eurofederalism",
+  "#7B4FC9",
+  "European federalist parties are political movements whose primary political concern is the deepening of European integration and the strengthening of supranational democratic governance across Europe. They tend to advocate a more politically integrated or federal European Union, stronger common institutions, transnational democracy, coordinated responses to challenges such as climate change and migration, and policies that transcend traditional national politics. They distinguish themselves from mainstream centrist and pro-European parties by placing European integration itself at the centre of their political agenda, often advocating far-reaching institutional reform or federalism, while distinguishing themselves from Eurosceptic and nationalist parties by viewing shared sovereignty, cross-border cooperation, and a stronger European political identity as solutions rather than threats to democracy and prosperity."
+ ],
+ [
+  "Far-left",
+  "#7A0F1E",
+  "Far-left parties are political movements whose primary political concern is the transformation or replacement of capitalist economic systems in favour of socialism, communism, or other forms of collective economic organization. They tend to advocate strong public or collective ownership of key industries, extensive workers’ rights, economic planning, anti-imperialism, and a rapid or far-reaching restructuring of capitalist economies, often viewing liberal capitalism as inherently exploitative and class-based inequality as a central political problem. They distinguish themselves from broader left-wing parties by rejecting the institutions of liberal democratic capitalism as insufficient for achieving social and economic equality, often favouring revolutionary change, workers’ democracy, or alternative political models over parliamentary democracy within the capitalist system."
+ ],
+ [
+  "Far-right",
+  "#2B2B2B",
+  "Far-right parties are political movements whose primary political concern is the protection of national identity, cultural homogeneity, sovereignty, and traditional social order, often framed as a response to perceived threats from immigration, multiculturalism, globalization, or supranational institutions. They tend to advocate restrictive immigration policies, strong law-and-order approaches, national preference in welfare and economics, social conservatism, and skepticism or rejection of international organizations, while emphasizing cultural traditionalism and national sovereignty over liberal democratic constraints and, in some cases, questioning multiparty parliamentarism in favour of stronger majoritarian, leader-centred, or ethnically defined conceptions of political representation. They distinguish themselves from mainstream right-wing and national-conservative parties by embracing more exclusionary or ethnonationalist conceptions of national identity and by displaying greater skepticism toward multiparty parliamentary democracy itself, often favouring stronger executive authority, plebiscitary leadership, or political systems that subordinate pluralism to a unified conception of the nation."
+ ],
+ [
+  "Green politics",
+  "#3E9B45",
+  "Green parties are political movements whose primary political concern is environmental sustainability, climate protection, and the ecological transformation of society and the economy, typically paired with social progressivism and centre-left economic politics. They tend to advocate ambitious climate action, renewable energy, biodiversity protection, sustainable economic development, social justice, and participatory democracy, often linking environmental concerns with progressive positions on human rights, equality, and international cooperation. They distinguish themselves from centre-left and social democratic parties by placing ecological sustainability and long-term environmental limits at the centre of policymaking rather than treating them as one priority among many, while distinguishing themselves from animal rights parties by focusing more broadly on systemic environmental transformation, climate policy, and sustainability rather than primarily on animal welfare or animal rights."
+ ],
+ [
+  "Islamism",
+  "#127A5A",
+  "Islamist parties are political movements whose primary political concern is the promotion of law and social order informed by Islamic values and religious principles. They tend to advocate socially conservative policies, stronger roles for religion in public life, support for heteronormative family structures, and, in some cases, the greater incorporation of Islamic legal or moral frameworks into governance, often pairing this with economic conservatism or welfare-oriented communitarianism. They distinguish themselves from mainstream conservative and centre-right parties by placing religious doctrine and faith-based morality at the centre of policymaking, while distinguishing themselves from secular nationalist or right-wing parties by prioritizing religious identity and moral order over ethnic nationalism or purely state-centred conceptions of national identity."
+ ],
+ [
+  "Left-wing",
+  "#B3223A",
+  "Left-wing and democratic socialist parties are political movements whose primary political concern is the overcoming or fundamental transformation of capitalism through liberal-democratic and parliamentary means in pursuit of greater social and economic equality. They tend to advocate progressive taxation, welfare expansion, workers’ rights, environmental sustainability, anti-discrimination policies, democratic control over economic decision-making, and stronger public intervention in the economy, often combining social progressivism with critiques of inequality and corporate power. They distinguish themselves from centre-left and social democratic parties by viewing capitalism as a system that should ultimately be transcended rather than merely regulated or reformed, while distinguishing themselves from communist and anti-capitalist parties by accepting pluralist liberal democracy and seeking systemic change through electoral, parliamentary, and democratic institutions rather than rejecting the liberal democratic state or embracing revolutionary politics."
+ ],
+ [
+  "Liberalism",
+  "#E3B400",
+  "Liberal parties are political movements whose primary political concern is the protection of individual liberty, political pluralism, and constitutional democracy within a capitalist economic framework. They tend to advocate civil liberties, rule of law, market-oriented economies, international cooperation, European integration, and institutional reform, often combining economic liberalism with socially progressive or moderate positions on cultural issues and a broad skepticism toward state intervention in both the economy and individuals’ private lives. They distinguish themselves from centre-right and conservative parties by placing greater emphasis on individual freedoms, social liberalism, institutional reform, and internationalism over tradition, authority, or social conservatism, while distinguishing themselves from centre-left and social democratic parties by placing greater trust in markets, entrepreneurship, fiscal moderation, and individual choice, alongside a broader rejection of state interventionism in the economy and social private life."
+ ],
+ [
+  "Libertarianism",
+  "#A88B00",
+  "Libertarian and classical liberal parties are political movements whose primary political concern is the maximization of individual liberty through a broad rejection of state interventionism in both the economy and private life. They tend to advocate a minimal state primarily limited to upholding laws, policing, national defence, secure borders, and the protection of property rights and free markets, while favouring privatization or market provision of services such as healthcare, education, and welfare. They generally support low taxation, deregulation, strong civil liberties, individual responsibility, and extensive personal freedoms, often combining economically laissez-faire policies with socially liberal or anti-authoritarian positions. They distinguish themselves from mainstream liberal and centre-right parties by advocating a far smaller role for the state and stronger free-market economics, while distinguishing themselves from conservative parties by typically rejecting moral paternalism and state involvement in regulating private or social behaviour."
+ ],
+ [
+  "Monarchism",
+  "#9C2B7A",
+  "Monarchist and royalist parties are political movements whose primary political concern is the preservation or restoration of monarchy as a source of national unity, historical continuity, and political legitimacy. They tend to advocate traditional values, patriotism, institutional continuity, and stronger national identity, often viewing constitutional or symbolic monarchy as a stabilizing force above partisan politics. They distinguish themselves from mainstream conservative and centre-right parties by placing the monarchy or dynastic legitimacy at the centre of their political identity and constitutional vision, while distinguishing themselves from far-right parties by typically emphasizing historical continuity and constitutional order over ethnonationalism."
+ ],
+ [
+  "National-conservatism",
+  "#1B3F8C",
+  "National-conservative parties are political movements whose primary political concern is the protection of national sovereignty, cultural continuity, social order, and traditional values within the framework of representative democracy. They tend to advocate stronger borders, law and order, national identity, social conservatism, market-oriented or mixed economies, and skepticism toward supranational governance, often emphasizing patriotism, gradual change, and institutional stability, while many national-conservative parties combine this with Atlanticism, support for NATO, and strong transatlantic partnerships. They distinguish themselves from centre-right and liberal parties by placing greater emphasis on national identity, cultural conservatism, sovereignty, and skepticism toward immigration or supranational institutions, while distinguishing themselves from far-right parties by generally accepting pluralist liberal democracy, multiparty parliamentarism, constitutional constraints, and transatlantic cooperation rather than embracing anti-system politics, ethnonationalism, or hostility toward Western alliances."
+ ],
+ [
+  "Pirate politics",
+  "#5E3A8C",
+  "Pirate parties are political movements whose primary political concern is the protection of digital rights, civil liberties, transparency, and participatory democracy in the information age. They tend to advocate internet freedom, data privacy, government transparency, open-source technologies, copyright reform, democratic innovation, and strong protections against state or corporate surveillance, often pairing these positions with socially liberal and pro-democratic values. They distinguish themselves from liberal and centrist parties by placing digital rights, democratic participation, and transparency at the centre of policymaking rather than treating them as secondary issues, while distinguishing themselves from broader progressive or left-wing parties by focusing less on traditional economic redistribution and more on civil liberties, decentralization, technological openness, and democratic reform."
+ ],
+ [
+  "Right-wing",
+  "#3B2A6B",
+  "Right-wing parties are political movements whose primary political concern is the protection of national sovereignty, traditional social order, and the perceived interests of “ordinary people” against political elites, globalization, immigration, or supranational institutions. They tend to advocate restrictive immigration policies, stronger borders, law and order, welfare chauvinism or economic protectionism, skepticism toward supranational governance, and culturally conservative positions, often combining nationalism with anti-establishment or populist rhetoric and a more skeptical stance toward transatlantic institutions or alliances. They distinguish themselves from national-conservative parties by placing greater emphasis on populist anti-elite politics, political personalization, and skepticism toward transatlanticism or Western institutional alignment, while distinguishing themselves from far-right parties by generally avoiding explicit ethnonationalism and accepting multiparty parliamentary democracy, even if they challenge liberal norms, minority protections, or judicial constraints."
+ ]
+];
+
+/* ---------- Helpers ---------- */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const isNone = (v) => !v || /^(unaffiliated|\*|none|-|–|n\/a|no)$/i.test(String(v).trim());
+const year = (v) => { const m = String(v || '').match(/\d{4}/); return m ? m[0] : ''; };
+const inParens = (v) => { const m = String(v || '').match(/\(([^)]+)\)/); return m ? m[1] : ''; };
+
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+function toObjects(rows) {
+  const head = (rows[0] || []).map(norm);
+  return rows.slice(1).map((r) => { const o = {}; head.forEach((h, i) => { if (h && !(h in o)) o[h] = (r[i] || '').trim(); }); return o; });
+}
+const g = (o, ...keys) => { for (const k of keys) { const v = o[norm(k)]; if (v) return v; } return ''; };
+const gStarts = (o, prefix) => { const p = norm(prefix); for (const k in o) if (k.startsWith(p) && o[k]) return o[k]; return ''; };
+
+async function loadSheet(src) {
+  const url = src.publishedCsv || `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${src.gid}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return toObjects(parseCSV(await res.text()));
+}
+
+/* ---------- Model ---------- */
+function buildParties(rows, iso, cfg) {
+  const ideoColor = (i) => { const r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === norm(i).replace(/-/g, ' ')); return r ? r[1] : NONE; };
+  let list = rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso).map((o) => {
+    const europarty = g(o, 'Europarty Affiliation'), europartyEnd = g(o, 'Europarty End');
+    const epGroup = g(o, 'European Parliament Group');
+    const epLink = gStarts(o, 'Documented Links');
+    const intl = g(o, 'International Party Federation'), intlStart = g(o, 'International Affiliation Start'), intlEnd = g(o, 'International Affiliation End');
+    const affs = [];
+    if (!isNone(europarty)) affs.push(['Europarty', europarty + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
+    if (!isNone(epGroup)) affs.push(['EP group', epGroup]);
+    if (!isNone(epLink)) affs.push(['EP group link', epLink]);
+    if (!isNone(intl)) affs.push(['International', intl + (intlEnd ? ` (until ${year(intlEnd)})` : '')]);
+    else if (intlEnd) { const nm = inParens(intlEnd) || inParens(intlStart) || 'International'; affs.push(['International', `${nm} (${year(intlStart) || '?'}–${year(intlEnd)})`]); }
+    const currentEuroparty = !isNone(europarty) && !europartyEnd ? europarty.split(/[|;,]/)[0].trim() : '';
+    const ideology = g(o, 'Ideological Orientation');
+    return {
+      status: (g(o, 'Status') || 'active').toLowerCase(), latest: !/^no$/i.test(g(o, 'Latest')),
+      native: g(o, 'Name (Native)'), english: g(o, 'Name (English)') || g(o, 'Name (Native)'),
+      versionId: g(o, 'Entity Version ID'), entityId: g(o, 'Europe Elects Entity ID'),
+      abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), country: g(o, 'Country'),
+      ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
+      european: !!currentEuroparty || !isNone(epGroup),
+      eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
+      affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
+    };
+  });
+  // Merge duplicate current records with the same native name (keeps the better-documented one).
+  const merged = [];
+  const groups = {};
+  list.filter((p) => p.latest).forEach((p) => { (groups[norm(p.native)] = groups[norm(p.native)] || []).push(p); });
+  Object.values(groups).forEach((ps) => {
+    if (ps.length < 2) return;
+    ps.sort((a, b) => b.affs.length - a.affs.length);
+    ps.slice(1).forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
+  });
+  list = list.filter((p) => !p.duplicateOf);
+  const seatData = (cfg.seats && cfg.seats.parties) || {};
+  list.forEach((p) => {
+    p.seats = seatData[p.abbr] || null;
+    p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0;
+    p.gov = (cfg.governingParties || []).includes(p.abbr);
+  });
+  return { list, merged };
+}
+
+const ALLIANCE_TYPES = [
+  ['National parliamentary group', 'Parliamentary group'],
+  ['Formally Registered Electoral Alliance (Nationwide List)', 'Electoral alliance · nationwide list'],
+  ['Formally Registered Electoral Alliance (Subnational List)', 'Electoral alliance · subnational list'],
+  ['Subnational Parliamentary Group', 'Subnational parliamentary group'],
+  ['(Potential) Governing Coalition', 'Governing coalition'],
+  ['Alternative Party Name (Regional Adaptation)', 'Regional name variant'],
+  ['Official Nuance Labels', 'Official nuance label']
+];
+function buildAlliances(rows, iso, parties) {
+  const byId = {};
+  parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
+  return rows.filter((o) => g(o, 'ISO-2').toUpperCase() === iso && !/inactive/i.test(g(o, 'Status', 'x'))).map((o) => {
+    const members = [], seen = new Set();
+    for (let n = 1; n <= 10; n++) {
+      const id = g(o, 'Party ID ' + n), nm = g(o, 'Party ' + n), exit = g(o, 'Exit ' + n);
+      if (!id && !nm) continue;
+      const key = id || nm; if (seen.has(key)) continue; seen.add(key);
+      if (exit) continue;
+      const p = byId[id] || byId[id.replace(/\.v\d+$/, '')];
+      members.push({ abbr: p ? p.abbr : nm, english: p ? p.english : nm, color: p ? p.color : NONE, party: p });
+    }
+    const europarty = g(o, 'Europarty Affiliation'), epGroup = g(o, 'European Parliament Group');
+    return {
+      abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
+      since: year(g(o, 'Political Activity Started')),
+      europarty: isNone(europarty) ? 'None' : europarty, epGroup: isNone(epGroup) ? '' : epGroup,
+      color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
+      types: ALLIANCE_TYPES.filter(([h]) => /^yes$/i.test(g(o, h))).map(([, t]) => t),
+      members
+    };
+  });
+}
+
+/* ---------- Views ---------- */
+const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
+const pill = (label) => { const c = PILL_COLORS[label] || ['#5B6170', '#fff']; return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(label)}</span>`; };
+
+function viewHeader(cfg) {
+  const rows = (cfg.government || []).map((r) => `<div class="lead-row"><span class="label">${esc(r.label)}</span><div class="row">
+    ${r.pill ? pill(r.pill) : ''}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
+    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => `<span class="partyb">${esc(p)}</span>`).join('')}
+    ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
+  return `<header class="head"><p class="eyebrow">EUROPE ELECTS · COUNTRY PAGE</p><h1 class="country">${esc(cfg.name)}</h1>
+    ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
+}
+function viewElections(cfg) {
+  if (!cfg.elections || !cfg.elections.length) return '';
+  const right = cfg.calendarUrl ? `<a href="${esc(cfg.calendarUrl)}" target="_blank" rel="noopener">Full calendar →</a>` : '';
+  return bar('Upcoming elections', right) + `<div class="grid-e">${cfg.elections.map((e) => `<div class="card elec">
+    <span class="type" style="background:${ELECTION_COLORS[e.kind] || '#5B6170'}">${esc(e.type)}</span>
+    <div class="body"><span class="big">${esc(e.date)}</span><span class="muted" style="font-size:14px">${esc(e.detail || '')}</span></div></div>`).join('')}</div>`;
+}
+const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>';
+const PAUSE_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="currentColor"/></svg>';
+let PARL = null;
+function viewParliament(cfg, parties) {
+  const c = cfg.chamber; if (!c) { PARL = null; return ''; }
+  const S = cfg.seats || {}; const years = S.years || []; const last = years.length - 1;
+  const byAbbr = Object.fromEntries(parties.map((p) => [p.abbr, p]));
+  const order = (S.order || []).slice();
+  Object.keys(S.parties || {}).forEach((a) => { if (!order.includes(a) && (S.parties[a] || []).some((v) => v > 0)) order.push(a); });
+  const majority = Math.floor(c.seats / 2) + 1;
+  PARL = { years, elected: c.elected, segs: order.map((a) => ({ a, color: byAbbr[a] ? byAbbr[a].color : NONE, vals: ((S.parties || {})[a] || []).map((v) => v || 0) })) };
+  const controls = years.length > 1 ? `<div class="parl-ctl">
+      <button type="button" class="toggle play" id="parl-play">${PLAY_ICON}<span>Play ${years[0]}–${years[last]}</span></button>
+      <div class="yrbtns" role="group" aria-label="Election year">${years.map((y, i) => `<button type="button" class="yrbtn" data-i="${i}" aria-pressed="false">${y}</button>`).join('')}</div>
+    </div>` : '';
+  return bar('National parliament', `<span class="badge">${esc(c.type)}</span>`) + `<section class="card parl">
+    <div class="meta"><span><strong>${esc(c.name)}</strong> · ${c.seats} seats · <span id="parl-when">elected ${esc(c.elected)}</span></span><span class="muted">${majority} seats for a majority</span></div>
+    ${controls}
+    <div class="seatwrap"><div class="seatbar" id="parl-bar" role="img">${PARL.segs.map((s, i) => `<div data-i="${i}" style="flex:${s.vals[last] || 0} 0 0;background:${s.color}"></div>`).join('')}</div>
+    <div class="majline" aria-hidden="true" style="left:${(majority / c.seats * 100).toFixed(2)}%"></div></div>
+    <div class="keys" id="parl-keys" aria-live="polite"></div></section>`;
+}
+function setParlYear(i) {
+  const barEl = document.getElementById('parl-bar'); if (!PARL || !barEl) return;
+  const y = PARL.years[i];
+  barEl.querySelectorAll('div').forEach((d) => { const sg = PARL.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}: ${n}`; });
+  const live = PARL.segs.map((sg) => ({ a: sg.a, color: sg.color, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  barEl.setAttribute('aria-label', `Seats ${y || ''}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
+  document.getElementById('parl-keys').innerHTML = live.map((x) => `<span><span class="dot" style="background:${x.color}"></span><strong>${esc(x.a)}</strong> ${x.n}</span>`).join('');
+  const when = document.getElementById('parl-when');
+  if (when && y) when.textContent = i === PARL.years.length - 1 && PARL.elected ? `elected ${PARL.elected}` : `${y} election`;
+  document.querySelectorAll('.yrbtn').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
+}
+let parlTimer = null;
+function bindParl() {
+  if (!PARL) return;
+  const last = PARL.years.length - 1;
+  setParlYear(last);
+  const btn = document.getElementById('parl-play');
+  const label = (playing) => { btn.innerHTML = playing ? `${PAUSE_ICON}<span>Pause</span>` : `${PLAY_ICON}<span>Play ${PARL.years[0]}–${PARL.years[last]}</span>`; };
+  const stop = () => { clearInterval(parlTimer); parlTimer = null; label(false); };
+  if (btn) btn.onclick = () => {
+    if (parlTimer) return stop();
+    let i = 0; setParlYear(0); label(true);
+    parlTimer = setInterval(() => { i++; setParlYear(i); if (i >= last) stop(); }, 1400);
+  };
+  document.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimer) stop(); setParlYear(+b.dataset.i); }; });
+}
+function viewPolling(cfg) {
+  const p = cfg.polling; if (!p || !p.embed) return '';
+  return bar('Polling average', `<a href="${esc(p.embed)}" target="_blank" rel="noopener">Get the data →</a>`) + `<section class="card poll">
+    <iframe title="${esc(p.title || 'Polling average')}" aria-label="Line chart" src="${esc(p.embed)}" scrolling="no" height="${p.height || 400}" data-external="1"></iframe>
+    ${p.note ? `<p>${esc(p.note)}</p>` : ''}</section>`;
+}
+function viewAlliances(alliances) {
+  if (!alliances.length) return '';
+  return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a">${alliances.map((a) => `
+    <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
+      <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
+      <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
+      <div class="kv"><div><span>Europarty</span><span>${esc(a.europarty)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
+      ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
+      <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
+    </article>`).join('')}</div>`;
+}
+function tags(p) {
+  const t = [];
+  if (p.gov) t.push(`<span class="tag gov">In government</span>`);
+  p.ideologies.forEach((i) => t.push(`<span class="tag" style="border:1px solid ${i.color};background:${i.color}1F;color:#1A1D23">${esc(i.name)}</span>`));
+  if (p.eu) t.push(`<span class="tag eu">EU: ${esc(p.eu)}</span>`);
+  if (p.status !== 'active') t.push(`<span class="tag warn">${esc(p.status.charAt(0).toUpperCase() + p.status.slice(1))}</span>`);
+  if (!p.latest) t.push(`<span class="tag warn">Earlier version</span>`);
+  return `<div class="tags">${t.join('')}</div>`;
+}
+const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
+function bigTile(p, years) {
+  if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${tags(p)}${kv(affs0)}</article>`; }
+  const max = Math.max(1, ...p.seats.map((v) => v || 0));
+  const yy = years.map((y) => '’' + String(y).slice(2));
+  const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
+  const affs = p.affs.length ? p.affs : [['Affiliation', 'None']];
+  return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
+    <div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
+    <h3>${esc(p.english)}</h3>${tags(p)}${kv(affs)}
+    <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
+      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
+      <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
+}
+function smallTile(p, years) {
+  const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
+  return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
+    <div class="top"><span class="abbr">${esc(p.abbr)}</span><span class="yr">${esc(p.founded)}</span></div>
+    <h3>${esc(p.english)}</h3>${tags(p)}${kv(p.affs)}
+    ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
+}
+function viewParties(parties, cfg, activeOnly) {
+  const years = (cfg.seats && cfg.seats.years) || [];
+  const vis = parties.filter((p) => !activeOnly || (p.status === 'active' && p.latest));
+  const hidden = parties.length - parties.filter((p) => p.status === 'active' && p.latest).length;
+  const hasSeats = !!(cfg.seats && cfg.seats.parties);
+  const isMajor = (p) => (hasSeats ? p.seatsNow > 0 : p.european);
+  const major = vis.filter(isMajor).sort((a, b) => b.seatsNow - a.seatsNow || b.affs.length - a.affs.length || a.english.localeCompare(b.english));
+  const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
+  const filter = `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
+    <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive, renamed or earlier records hidden` : 'Including inactive, renamed and earlier records'}</span></div>`;
+  return bar(hasSeats ? 'In national parliament' : 'Parties with a European affiliation', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+    `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
+    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European affiliation'} · hover for the native name</span>`) +
+    `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
+}
+function viewLegend(parties, showAll) {
+  const key = (x) => norm(x).replace(/-/g, ' ');
+  const live = parties.filter((p) => p.status === 'active' && p.latest);
+  const count = (name) => live.filter((p) => p.ideologies.some((i) => key(i.name) === key(name))).length;
+  const items = IDEOLOGIES.map(([n, c, t]) => ({ n, c, t, k: count(n) }));
+  const present = items.filter((i) => i.k > 0);
+  const shown = showAll ? items : present;
+  // Ideologies used in this country that have no legend definition yet
+  const known = new Set(IDEOLOGIES.map(([n]) => key(n)));
+  const undef = {};
+  live.forEach((p) => p.ideologies.forEach((i) => { if (!known.has(key(i.name))) undef[i.name] = (undef[i.name] || 0) + 1; }));
+  const undefTxt = Object.entries(undef).map(([n, k]) => `${esc(n)} (${k})`).join(', ');
+  const hiddenCount = items.length - present.length;
+  return bar('Ideology legend', `<span class="note">${showAll ? 'All ideologies · those present in this country are marked' : 'Ideologies of the parties on this page'}</span>`) +
+    (shown.length ? `<div class="grid-a">${shown.map(({ n, c, t, k }) => `<div class="lg" style="background:${c}12">
+      <div class="t"><span class="dot" style="width:14px;height:14px;background:${c}"></span><h3>${esc(n)}</h3>${k ? `<span class="count">${k} ${k === 1 ? 'party' : 'parties'} here</span>` : ''}</div>
+      <p>${esc(t)}</p></div>`).join('')}</div>` : '') +
+    (undefTxt ? `<p class="note-s" style="margin:0">Also used here, without a legend definition yet: ${undefTxt}.</p>` : '') +
+    (hiddenCount ? `<div><button type="button" id="legend-toggle" class="toggle" aria-expanded="${showAll}">${showAll ? 'Show only ideologies in this country' : `Show all ${items.length} ideologies`}</button></div>` : '');
+}
+
+/* ---------- App ---------- */
+const params = new URLSearchParams(location.search);
+const ISO = (params.get('country') || 'AL').toUpperCase();
+const app = document.getElementById('app');
+let state = { activeOnly: true, showAllIdeo: false };
+
+async function main() {
+  const cfg = COUNTRIES[ISO] || {};
+  let partyRows, allianceRows = [];
+  const loadWithFallback = async (src) => {
+    try { return await loadSheet(src); }
+    catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ gid: src.gid, publishedCsv: '' }); }
+  };
+  try { partyRows = await loadWithFallback(SOURCES.parties); }
+  catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
+  try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
+  const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
+  cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+  document.title = `Europe Elects – ${cfg.name}`;
+  const current = parties.filter((p) => p.latest);
+  const alliances = buildAlliances(allianceRows, ISO, parties);
+  alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
+
+  const render = () => {
+    app.innerHTML = viewHeader(cfg) + viewElections(cfg) + viewParliament(cfg, current) + viewPolling(cfg) +
+      viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
+      `<footer><p>Sources: Europe Elects <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.parties.gid}" target="_blank" rel="noopener">party database</a> and <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SOURCES.alliances.gid}" target="_blank" rel="noopener">alliance sheet</a> (loaded live); seats, government, elections and polling from Europe Elects.</p>
+      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}</p></footer>`;
+    bindFilter(); bindLegend(); bindParl();
+    postHeight();
+  };
+  const bindLegend = () => {
+    const btn = document.getElementById('legend-toggle');
+    if (btn) btn.addEventListener('click', () => {
+      state.showAllIdeo = !state.showAllIdeo;
+      document.getElementById('legend').innerHTML = viewLegend(parties, state.showAllIdeo);
+      bindLegend(); postHeight();
+    });
+  };
+  const bindFilter = () => {
+    const box = document.getElementById('active-only');
+    if (box) box.addEventListener('change', () => {
+      state.activeOnly = box.checked;
+      document.getElementById('parties').innerHTML = viewParties(parties, cfg, state.activeOnly);
+      bindFilter(); postHeight();
+    });
+  };
+  render();
+}
+
+/* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
+function postHeight() {
+  if (window.parent === window) return;
+  window.parent.postMessage({ 'datawrapper-height': { ['ee-' + ISO.toLowerCase()]: document.documentElement.scrollHeight } }, '*');
+}
+if ('ResizeObserver' in window) new ResizeObserver(postHeight).observe(document.body);
+window.addEventListener('load', postHeight);
+// Resize embedded Datawrapper charts (polling) inside this page.
+window.addEventListener('message', (e) => {
+  const d = e.data && e.data['datawrapper-height']; if (!d) return;
+  document.querySelectorAll('iframe').forEach((f) => { if (f.contentWindow === e.source) for (const k in d) f.style.height = d[k] + 'px'; });
+});
+
+main();
+</script>
+</body>
+</html>
