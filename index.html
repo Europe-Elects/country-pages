@@ -1063,6 +1063,8 @@ function buildChambers(rows, cfg, parties, alliances) {
       note: totalRow ? g(totalRow, 'Note') : '' };
   }).sort((a, b) => (a.type === 'upper house') - (b.type === 'upper house'));
 }
+// Dependent / autonomous territories: their legislature is just "Parliament", not a national one.
+const DEPENDENCIES = ['AX', 'FO', 'GL', 'GG', 'JE', 'IM', 'GI'];
 let PARLS = [];
 function viewParliament(cfg, parties) {
   const chambers = (cfg.chambers || []).slice();
@@ -1081,11 +1083,12 @@ function viewParliament(cfg, parties) {
     if (!has('lower house') && !chambers.some((c) => c.type === 'unicameral')) chambers.unshift({ name: pair ? pair[1] : 'Lower house', type: 'lower house', missing: true });
     if (!has('upper house')) chambers.push({ name: pair ? pair[0] : 'Upper house', type: 'upper house', missing: true });
   }
-  if (!chambers.length) chambers.push({ name: 'National parliament', type: '', missing: true });
+  const sectionTitle = DEPENDENCIES.includes(ISO) ? 'Parliament' : 'National parliament';
+  if (!chambers.length) chambers.push({ name: sectionTitle, type: '', missing: true });
   PARLS = chambers;
   const typeLabel = (t) => ({ 'lower house': 'Lower house', 'upper house': 'Upper house', unicameral: 'Unicameral' }[t] || '');
   const badge = chambers.some((c) => c.type === 'lower house' || c.type === 'upper house') ? 'Bicameral' : (chambers[0].type === 'unicameral' ? 'Unicameral' : '');
-  return bar('National parliament', badge ? `<span class="badge">${esc(badge)}</span>` : '') + chambers.map((c, ci) => {
+  return bar(sectionTitle, badge ? `<span class="badge">${esc(badge)}</span>` : '') + chambers.map((c, ci) => {
     if (c.missing) return `<section class="card parl parl-missing"><div class="meta"><span>${typeLabel(c.type) ? `<span class="label">${esc(typeLabel(c.type))}</span> ` : ''}<strong>${esc(c.name)}</strong></span><span class="muted">Seat data not yet available</span></div></section>`;
     const last = c.elections.length - 1;
     const controls = c.elections.length > 1 ? `<div class="parl-ctl">
