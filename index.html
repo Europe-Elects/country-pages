@@ -46,6 +46,7 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .parl + .parl{margin-top:10px}
 .parl-ctl .parl-all{margin-left:auto}
 .parl-hist{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--line2)}
+.parl-hist[hidden]{display:none}
 .parl-hist .hrow{display:grid;grid-template-columns:72px 1fr 40px;align-items:center;gap:10px;font-size:14px}
 .parl-hist .hlbl{font-weight:700}.parl-hist .htot{color:var(--muted);text-align:right}
 .seatbar.sm{height:16px}
@@ -497,7 +498,7 @@ function buildParties(rows, iso, cfg) {
       aff: { ep: europarty, epS: g(o, 'Europarty Start'), epE: europartyEnd, grp: epGroup, grpS: g(o, 'EP Group Start'), grpE: g(o, 'EP Group End') }, wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
       abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), logoSpec: g(o, 'Logo', 'Logo URL', 'Logo Override'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
-      epInterest, euInterest, interestNote,
+      epInterest, euInterest, interestNote, orientation: g(o, 'Orientation'),
       european: !!currentEuroparty || (IS_EU && !isNone(epGroup)), europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
       eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
       affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
@@ -1048,10 +1049,14 @@ function buildChambers(rows, cfg, parties, alliances) {
       // Current (latest-version) affiliations from the party / alliance sheet
       const eu = ent ? (isAlliance ? (ent.europarty !== 'None' ? ent.europarty.split(/[|;,]/)[0].trim() : '') : (ent.europartyShort || '')) : '';
       const grp = ent ? (isAlliance ? ent.epGroup : ent.epGroup) || '' : '';
-      const famKey = eu || GROUP_TO_EUROPARTY[String(grp).split(/[|;,]/)[0].trim()] || '(none)';
-      const tag = ent ? partyTag(eu, IS_EU ? String(grp).split(/[|;,]/)[0].trim() : '') : '';
-      return { a: ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)')), title: ent ? ent.english : g(o, 'Party (as given)'),
-        color: ent ? ent.color : NONE, eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
+      let famKey = eu || GROUP_TO_EUROPARTY[String(grp).split(/[|;,]/)[0].trim()] || '(none)';
+      let tag = ent ? partyTag(eu, IS_EU ? String(grp).split(/[|;,]/)[0].trim() : '') : '';
+      // Soft affiliation ("Orientation", e.g. ~ALDE) for parties with no Europarty or EP group: striped segment in that colour.
+      let soft = '', color = ent ? ent.color : NONE;
+      const ori = ent && !eu && isNone(grp) ? softAffiliation(ent.orientation) : null;
+      if (ori) { famKey = ori.europarty; soft = ori.color; color = ori.color; tag = ori.label; }
+      return { a: toLatin(ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)'))), title: ent ? ent.english : g(o, 'Party (as given)'),
+        color, soft: !!soft, eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
         memberIds: ent && ent.members ? ent.members.map((m) => m.party && m.party.entityId).filter(Boolean) : [] };
     }).filter((sg) => sg.vals.some((v) => v > 0));
     const fam = (sg) => { const i = FAMILY_ORDER.indexOf(sg.eu); return i < 0 ? FAMILY_ORDER.indexOf('(none)') : i; };
@@ -1065,6 +1070,16 @@ function buildChambers(rows, cfg, parties, alliances) {
 }
 // Dependent / autonomous territories: their legislature is just "Parliament", not a national one.
 const DEPENDENCIES = ['AX', 'FO', 'GL', 'GG', 'JE', 'IM', 'GI'];
+// "Orientation" column: ~ALDE, ~EPP, ~PES, ~ECR, ~Left, ~EGP, ~PfE (~NI / unaffiliated = none).
+const ORIENTATION = { ALDE: ['ALDE', 'RE'], EPP: ['EPP', 'EPP'], PES: ['PES', 'S&D'], ECR: ['ECR', 'ECR'], LEFT: ['PEL', 'LEFT'],
+  EGP: ['EGP', 'G/EFA'], PFE: ['Patriots.eu', 'PfE'], ESN: ['ESN', 'ESN'], EFA: ['EFA', 'G/EFA'] };
+function softAffiliation(v) {
+  const k = String(v || '').replace(/^~/, '').trim().toUpperCase(); const o = ORIENTATION[k];
+  if (!o || !EUROPARTY_COLORS[o[0]]) return null;
+  return { europarty: o[0], color: EUROPARTY_COLORS[o[0]], label: '~' + (IS_EU ? o[1] : epName(o[0])) };
+}
+const stripes = (c) => `repeating-linear-gradient(135deg,${c} 0 4px,#fff 4px 7px)`;
+const segBg = (sg) => (sg.soft ? stripes(sg.color) : sg.color);
 let PARLS = [];
 function viewParliament(cfg, parties) {
   const chambers = (cfg.chambers || []).slice();
@@ -1099,11 +1114,12 @@ function viewParliament(cfg, parties) {
     return `<section class="card parl" data-c="${ci}">
     <div class="meta"><span>${typeLabel(c.type) && chambers.length > 1 ? `<span class="label">${esc(typeLabel(c.type))}</span> ` : ''}<strong>${esc(c.name)}</strong> · <span class="parl-seats">${c.totals[last]}</span> seats · <span class="parl-when"></span></span><span class="muted parl-maj"></span></div>
     ${controls}
-    <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${sg.color}"></div>`).join('')}</div>
+    <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${segBg(sg)}"></div>`).join('')}</div>
     <div class="majline" aria-hidden="true"></div></div>
     <div class="keys" aria-live="polite"></div>
+    ${c.segs.some((sg) => sg.soft) ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot" style="background:${stripes('#8A9099')}"></span>Striped: no Europarty or EP group, but leaning towards one (~)</p>` : ''}
     <div class="parl-hist" hidden>${c.elections.map((e, i) => { const tot = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0), maj = Math.floor(tot / 2) + 1;
-      return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;background:${sg.color}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
+      return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;background:${segBg(sg)}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
   }).join('');
 }
 function setParlYear(ci, i) {
@@ -1111,9 +1127,9 @@ function setParlYear(ci, i) {
   const e = c.elections[i], total = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0);
   const barEl = el.querySelector('.seatbar');
   barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}${sg.tag ? ' (' + sg.tag + ')' : ''} – ${sg.title}: ${n}`; });
-  const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, color: sg.color, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, bg: segBg(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
   barEl.setAttribute('aria-label', `Seats ${e.label}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
-  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}"><span class="dot" style="background:${x.color}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
+  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? ' · soft affiliation (orientation)' : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
   const majority = Math.floor(total / 2) + 1;
   el.querySelector('.parl-seats').textContent = total;
   el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
