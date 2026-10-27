@@ -43,6 +43,9 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .big{font-size:22px;font-weight:700}
 .muted{color:var(--muted)}
 .parl{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.parl + .parl{margin-top:10px}
+.parl-missing{background:repeating-linear-gradient(135deg,#fff 0 10px,#F6F5F1 10px 20px)}
+.parl .meta .label{margin-right:4px}
 .parl .meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;font-size:15px}
 .seatwrap{position:relative}
 .seatbar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:#ECEAE4}
@@ -198,8 +201,21 @@ const SOURCES = {
   // Government (heads of state/government and governing parties). Columns: Country, Entity / Person,
   // Entity ID, Start Date, End Date, Type ("Head of State", "Head of Government", "Government Party").
   // Rows with an End Date in the past are history and not shown. An Entity ID on a person row = their party.
-  government: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '124081312', publishedCsv: '' }
+  government: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '124081312', publishedCsv: '' },
+  // Parliament seats. Columns: Country, ISO-2, Chamber, Chamber type (unicameral / lower house / upper house),
+  // Party (as given), Abbreviation, Europe Elects Entity ID, Affiliation (as given), one column per election
+  // ("Current", "2025", "2024-10", …), Note. One "Total seats" row per chamber.
+  seats: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '902537041', publishedCsv: '' }
 };
+// Bicameral parliaments: the chamber shown as "no data yet" when the seat sheet only has the other one.
+const SECOND_CHAMBER = {
+  AT: ['Federal Council (Bundesrat)', 'National Council (Nationalrat)'], BA: ['House of Peoples', 'House of Representatives'],
+  BE: ['Senate', 'Chamber of Representatives'], BY: ['Council of the Republic', 'House of Representatives'],
+  CH: ['Council of States', 'National Council'], CZ: ['Senate', 'Chamber of Deputies'], DE: ['Bundesrat', 'Bundestag'],
+  ES: ['Senate', 'Congress of Deputies'], FR: ['Senate', 'National Assembly'], GB: ['House of Lords', 'House of Commons'],
+  IE: ['Seanad Éireann', 'Dáil Éireann'], IT: ['Senate of the Republic', 'Chamber of Deputies'], NL: ['Senate (Eerste Kamer)', 'House of Representatives'],
+  PL: ['Senate', 'Sejm'], RO: ['Senate', 'Chamber of Deputies'], RU: ['Federation Council', 'State Duma'], SI: ['National Council', 'National Assembly']
+};  // [upper, lower]
 // Country names used in other sheets that differ from the party database.
 const COUNTRY_ALIASES = { 'czech republic': 'czechia', 'russia': 'russian federation', 'turkiye': 'turkey', 'türkiye': 'turkey', 'macedonia': 'north macedonia', 'moldova, republic of': 'moldova' };
 const sameCountry = (a, b) => { const f = (x) => { const n = norm(x); return COUNTRY_ALIASES[n] || n; }; return !!a && !!b && f(a) === f(b); };
@@ -706,8 +722,13 @@ function buildGovernment(rows, cfg, parties) {
     const notes = [govParties.length === 1 ? 'Single-party government' : `Coalition of ${govParties.length} parties`];
     // Seats, where this page has seat data (cfg.seats): latest election
     const S = cfg.seats, total = cfg.chamber && cfg.chamber.seats;
-    if (S && total) { const n = govParties.reduce((a, { p }) => { const v = p && S.parties[p.abbr]; return a + (v ? v[v.length - 1] || 0 : 0); }, 0);
-      if (n) notes.push(`${n} of ${total} seats` + (n * 2 > total ? '' : ' (minority)')); }
+    const ids = new Set(govParties.map(({ p }) => p && p.entityId).filter(Boolean));
+    const main = (cfg.chambers || []).find((c) => c.type !== 'upper house' && !c.missing);
+    let n = 0;
+    if (main) { const li = main.elections.length - 1;  // parties and alliances (e.g. CDU/CSU) in government, latest column
+      main.segs.forEach((sg) => { if (ids.has(sg.entityId) || (sg.memberIds || []).some((x) => ids.has(x))) n += sg.vals[li] || 0; }); }
+    else if (S && total) n = govParties.reduce((a, { p }) => { const v = p && S.parties[p.abbr]; return a + (v ? v[v.length - 1] || 0 : 0); }, 0);
+    void n; void total;  // seat counts are not shown in the government box
     if (since > -Infinity) notes.push('since ' + new Date(since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
     out.push({ label: 'Government', pills, parties: govParties.map(({ o, p }) => ({ text: p ? `${p.english} (${p.abbr})` : g(o, 'Entity / Person'), color: p ? p.color : NONE })), note: notes.join(' · ') });
     // Single-party government: the head of government (if no party is given on that row) is from that party.
@@ -996,51 +1017,109 @@ function bindTimeline() {
 }
 const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg>';
 const PAUSE_ICON = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="currentColor"/></svg>';
-let PARL = null;
+// Seat sheet -> chambers. Each chamber: { name, type, elections: [{key,label}], segs: [{a,color,title,vals}], totals }.
+// Election columns only; "Current" (present composition) is not shown.
+const ELECTION_COL = /^\d{4}(-\d{2})?$/;
+const electionLabel = (k) => { if (k === 'current') return 'Current'; const m = k.match(/^(\d{4})-(\d{2})$/);
+  return m ? new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : k; };
+const electionSort = (k) => (k === 'current' ? 1e9 : (+k.slice(0, 4)) * 100 + (k.length > 4 ? +k.slice(5, 7) : 50));
+// Left-to-right order in the seat bar by Europarty family; unaffiliated parties and independents last.
+const FAMILY_ORDER = ['ECA', 'PEL', 'ELA', 'DiEM25', 'Animal Politics EU', 'EGP', 'EFA', 'Volt', 'PPEU', 'PES', 'ALDE', 'EDP', 'EPP', 'ECPP', 'ECR', 'Patriots.eu', 'ESN', 'APF'];
+function buildChambers(rows, cfg, parties, alliances) {
+  const mine = (rows || []).filter((o) => String(g(o, 'ISO-2')).toUpperCase() === ISO || sameCountry(g(o, 'Country'), cfg.name));
+  const byEid = (eid) => eid ? (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid)
+    || (alliances || []).find((a) => a.entityId === eid)) : null;
+  const groups = {};
+  mine.forEach((o) => { const k = g(o, 'Chamber') || 'Parliament'; (groups[k] = groups[k] || []).push(o); });
+  return Object.entries(groups).map(([name, rs]) => {
+    const keys = [...new Set(rs.flatMap((o) => Object.keys(o).filter((k) => ELECTION_COL.test(k) && String(o[k]).trim() !== '')))].sort((a, b) => electionSort(a) - electionSort(b));
+    const num = (o, k) => { const v = String(o[k] == null ? '' : o[k]).trim(); return v === '' ? null : +v.replace(',', '.'); };
+    const totalRow = rs.find((o) => /^total/i.test(g(o, 'Party (as given)')));
+    const segs = rs.filter((o) => o !== totalRow).map((o) => {
+      const ent = byEid(g(o, 'Europe Elects Entity ID'));
+      const eu = ent ? (ent.europartyShort || (ent.europarty && ent.europarty !== 'None' ? ent.europarty.split(/[|;,]/)[0].trim() : '')) : '';
+      return { a: ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)')), title: ent ? ent.english : g(o, 'Party (as given)'),
+        color: ent ? ent.color : NONE, eu, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
+        memberIds: ent && ent.members ? ent.members.map((m) => m.party && m.party.entityId).filter(Boolean) : [] };
+    }).filter((sg) => sg.vals.some((v) => v > 0));
+    const fam = (sg) => { const i = FAMILY_ORDER.indexOf(sg.eu); return i < 0 ? 999 : i; };
+    const lastI = keys.length - 1;
+    segs.sort((x, y) => fam(x) - fam(y) || (y.vals[lastI] || 0) - (x.vals[lastI] || 0));
+    const totals = keys.map((k, i) => (totalRow && num(totalRow, k)) || segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0));
+    const type = norm(g(rs[0], 'Chamber type')) || 'unicameral';
+    return { name, type, elections: keys.map((k) => ({ key: k, label: electionLabel(k) })), segs, totals,
+      note: totalRow ? g(totalRow, 'Note') : '' };
+  }).sort((a, b) => (a.type === 'upper house') - (b.type === 'upper house'));
+}
+let PARLS = [];
 function viewParliament(cfg, parties) {
-  const c = cfg.chamber; if (!c) { PARL = null; return ''; }
-  const S = cfg.seats || {}; const years = S.years || []; const last = years.length - 1;
-  const byAbbr = Object.fromEntries(parties.map((p) => [p.abbr, p]));
-  const order = (S.order || []).slice();
-  Object.keys(S.parties || {}).forEach((a) => { if (!order.includes(a) && (S.parties[a] || []).some((v) => v > 0)) order.push(a); });
-  const majority = Math.floor(c.seats / 2) + 1;
-  PARL = { years, elected: c.elected, segs: order.map((a) => ({ a, color: byAbbr[a] ? byAbbr[a].color : NONE, vals: ((S.parties || {})[a] || []).map((v) => v || 0) })) };
-  const controls = years.length > 1 ? `<div class="parl-ctl">
-      <button type="button" class="toggle play" id="parl-play">${PLAY_ICON}<span>Play ${years[0]}–${years[last]}</span></button>
-      <div class="yrbtns" role="group" aria-label="Election year">${years.map((y, i) => `<button type="button" class="yrbtn" data-i="${i}" aria-pressed="false">${y}</button>`).join('')}</div>
+  const chambers = (cfg.chambers || []).slice();
+  // Legacy per-country seat config (used only when the seat sheet has nothing for this country)
+  if (!chambers.length && cfg.chamber && cfg.seats) {
+    const S = cfg.seats, byAbbr = Object.fromEntries(parties.map((p) => [p.abbr, p]));
+    const order = (S.order || Object.keys(S.parties || {})).filter((a) => (S.parties[a] || []).some((v) => v > 0));
+    chambers.push({ name: cfg.chamber.name, type: norm(cfg.chamber.type), elections: S.years.map((y) => ({ key: String(y), label: String(y) })),
+      segs: order.map((a) => ({ a, title: byAbbr[a] ? byAbbr[a].english : a, color: byAbbr[a] ? byAbbr[a].color : NONE, vals: S.parties[a].map((v) => v || 0) })),
+      totals: S.years.map(() => cfg.chamber.seats) });
+  }
+  // Bicameral: add a placeholder for the chamber without data
+  const pair = SECOND_CHAMBER[ISO];
+  const has = (t) => chambers.some((c) => c.type === t);
+  if (pair || has('lower house') || has('upper house')) {
+    if (!has('lower house') && !chambers.some((c) => c.type === 'unicameral')) chambers.unshift({ name: pair ? pair[1] : 'Lower house', type: 'lower house', missing: true });
+    if (!has('upper house')) chambers.push({ name: pair ? pair[0] : 'Upper house', type: 'upper house', missing: true });
+  }
+  if (!chambers.length) chambers.push({ name: 'National parliament', type: '', missing: true });
+  PARLS = chambers;
+  const typeLabel = (t) => ({ 'lower house': 'Lower house', 'upper house': 'Upper house', unicameral: 'Unicameral' }[t] || '');
+  const badge = chambers.some((c) => c.type === 'lower house' || c.type === 'upper house') ? 'Bicameral' : (chambers[0].type === 'unicameral' ? 'Unicameral' : '');
+  return bar('National parliament', badge ? `<span class="badge">${esc(badge)}</span>` : '') + chambers.map((c, ci) => {
+    if (c.missing) return `<section class="card parl parl-missing"><div class="meta"><span>${typeLabel(c.type) ? `<span class="label">${esc(typeLabel(c.type))}</span> ` : ''}<strong>${esc(c.name)}</strong></span><span class="muted">Seat data not yet available</span></div></section>`;
+    const last = c.elections.length - 1;
+    const controls = c.elections.length > 1 ? `<div class="parl-ctl">
+      <button type="button" class="toggle play" data-c="${ci}">${PLAY_ICON}<span>Play ${esc(c.elections[0].label)}–${esc(c.elections[last].label)}</span></button>
+      <div class="yrbtns" role="group" aria-label="Election">${c.elections.map((e, i) => `<button type="button" class="yrbtn" data-c="${ci}" data-i="${i}" aria-pressed="false">${esc(e.label)}</button>`).join('')}</div>
     </div>` : '';
-  return bar('National parliament', `<span class="badge">${esc(c.type)}</span>`) + `<section class="card parl">
-    <div class="meta"><span><strong>${esc(c.name)}</strong> · ${c.seats} seats · <span id="parl-when">elected ${esc(c.elected)}</span></span><span class="muted">${majority} seats for a majority</span></div>
+    return `<section class="card parl" data-c="${ci}">
+    <div class="meta"><span>${typeLabel(c.type) && chambers.length > 1 ? `<span class="label">${esc(typeLabel(c.type))}</span> ` : ''}<strong>${esc(c.name)}</strong> · <span class="parl-seats">${c.totals[last]}</span> seats · <span class="parl-when"></span></span><span class="muted parl-maj"></span></div>
     ${controls}
-    <div class="seatwrap"><div class="seatbar" id="parl-bar" role="img">${PARL.segs.map((s, i) => `<div data-i="${i}" style="flex:${s.vals[last] || 0} 0 0;background:${s.color}"></div>`).join('')}</div>
-    <div class="majline" aria-hidden="true" style="left:${(majority / c.seats * 100).toFixed(2)}%"></div></div>
-    <div class="keys" id="parl-keys" aria-live="polite"></div></section>`;
+    <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${sg.color}"></div>`).join('')}</div>
+    <div class="majline" aria-hidden="true"></div></div>
+    <div class="keys" aria-live="polite"></div></section>`;
+  }).join('');
 }
-function setParlYear(i) {
-  const barEl = document.getElementById('parl-bar'); if (!PARL || !barEl) return;
-  const y = PARL.years[i];
-  barEl.querySelectorAll('div').forEach((d) => { const sg = PARL.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}: ${n}`; });
-  const live = PARL.segs.map((sg) => ({ a: sg.a, color: sg.color, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
-  barEl.setAttribute('aria-label', `Seats ${y || ''}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
-  document.getElementById('parl-keys').innerHTML = live.map((x) => `<span><span class="dot" style="background:${x.color}"></span><strong>${esc(x.a)}</strong> ${x.n}</span>`).join('');
-  const when = document.getElementById('parl-when');
-  if (when && y) when.textContent = i === PARL.years.length - 1 && PARL.elected ? `elected ${PARL.elected}` : `${y} election`;
-  document.querySelectorAll('.yrbtn').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
+function setParlYear(ci, i) {
+  const c = PARLS[ci], el = document.querySelector(`.parl[data-c="${ci}"]`); if (!c || !el || c.missing) return;
+  const e = c.elections[i], total = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0);
+  const barEl = el.querySelector('.seatbar');
+  barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a} (${sg.title}): ${n}`; });
+  const live = c.segs.map((sg) => ({ a: sg.a, title: sg.title, color: sg.color, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  barEl.setAttribute('aria-label', `Seats ${e.label}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
+  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}"><span class="dot" style="background:${x.color}"></span><strong>${esc(x.a)}</strong> ${x.n}</span>`).join('');
+  const majority = Math.floor(total / 2) + 1;
+  el.querySelector('.parl-seats').textContent = total;
+  el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
+  el.querySelector('.majline').style.left = (majority / total * 100).toFixed(2) + '%';
+  el.querySelector('.parl-when').textContent = e.key === 'current' ? 'current composition' : `${e.label} election`;
+  el.querySelectorAll('.yrbtn').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
 }
-let parlTimer = null;
+const parlTimers = {};
 function bindParl() {
-  if (!PARL) return;
-  const last = PARL.years.length - 1;
-  setParlYear(last);
-  const btn = document.getElementById('parl-play');
-  const label = (playing) => { btn.innerHTML = playing ? `${PAUSE_ICON}<span>Pause</span>` : `${PLAY_ICON}<span>Play ${PARL.years[0]}–${PARL.years[last]}</span>`; };
-  const stop = () => { clearInterval(parlTimer); parlTimer = null; label(false); };
-  if (btn) btn.onclick = () => {
-    if (parlTimer) return stop();
-    let i = 0; setParlYear(0); label(true);
-    parlTimer = setInterval(() => { i++; setParlYear(i); if (i >= last) stop(); }, 1400);
-  };
-  document.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimer) stop(); setParlYear(+b.dataset.i); }; });
+  PARLS.forEach((c, ci) => {
+    if (c.missing) return;
+    const last = c.elections.length - 1;
+    setParlYear(ci, last);
+    const el = document.querySelector(`.parl[data-c="${ci}"]`); if (!el) return;
+    const btn = el.querySelector('.play');
+    const label = (playing) => { btn.innerHTML = playing ? `${PAUSE_ICON}<span>Pause</span>` : `${PLAY_ICON}<span>Play ${esc(c.elections[0].label)}–${esc(c.elections[last].label)}</span>`; };
+    const stop = () => { clearInterval(parlTimers[ci]); parlTimers[ci] = null; label(false); };
+    if (btn) btn.onclick = () => {
+      if (parlTimers[ci]) return stop();
+      let i = 0; setParlYear(ci, 0); label(true);
+      parlTimers[ci] = setInterval(() => { i++; setParlYear(ci, i); if (i >= last) stop(); }, 1400);
+    };
+    el.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimers[ci]) stop(); setParlYear(ci, +b.dataset.i); }; });
+  });
 }
 // Short EP-group labels as used on Europe Elects charts; parties outside the EP get the group of their Europarty.
 const EUROPARTY_TO_GROUP = { 'EPP': 'EPP', 'PES': 'S&D', 'ECR': 'ECR', 'ALDE': 'RE', 'EDP': 'RE', 'EGP': 'G/EFA', 'EFA': 'G/EFA', 'Volt': 'G/EFA', 'PPEU': 'G/EFA',
@@ -1522,13 +1601,12 @@ async function main() {
   try { teamRows = await loadWithFallback(TEAM_SOURCE); } catch (e) { console.warn('Team sheet not loaded', e); }
   try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
   try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
-  let governmentRows = [];
+  let governmentRows = [], seatRows = [];
   try { governmentRows = await loadWithFallback(SOURCES.government); } catch (e) { console.warn('Government sheet not loaded', e); }
+  try { seatRows = await loadWithFallback(SOURCES.seats); } catch (e) { console.warn('Seat sheet not loaded', e); }
   const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
   cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
-  // Government box from the sheet (falls back to cfg.government if the country has no rows there)
-  const gov = buildGovernment(governmentRows, cfg, parties);
-  if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
+
   document.title = `Europe Elects – ${cfg.name}`;
   const current = parties.filter((p) => p.latest);
   const elections = buildElections(calendarRows, cfg.name);
@@ -1540,6 +1618,18 @@ async function main() {
   let pollData = null;
   if (!NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
   const alliances = buildAlliances(allianceRows, ISO, parties);
+  // Parliament from the seat sheet; the main chamber (unicameral / lower house) also feeds the seat history on party tiles.
+  cfg.chambers = buildChambers(seatRows, cfg, parties, alliances);
+  const mainCh = cfg.chambers.find((c) => c.type !== 'upper house');
+  if (mainCh) {
+    const S = { years: mainCh.elections.map((e) => (e.key === 'current' ? 'Now' : e.key.slice(0, 4))), parties: {} };
+    mainCh.segs.forEach((sg) => { if (sg.entityId) parties.filter((p) => p.entityId === sg.entityId).forEach((p) => { (p.abbrs || [p.abbr]).concat(p.abbr).forEach((a) => { S.parties[a] = sg.vals; }); }); });
+    cfg.seats = S; cfg.chamber = { name: mainCh.name, type: mainCh.type, seats: mainCh.totals[mainCh.totals.length - 1], elected: mainCh.elections[mainCh.elections.length - 1].label };
+    parties.forEach((p) => { const own = [p.abbr, ...(p.abbrs || [])]; p.seats = own.map((a) => S.parties[a]).find(Boolean) || null; p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0; });
+  }
+  // Government box from the sheet (falls back to cfg.government if the country has no rows there)
+  const gov = buildGovernment(governmentRows, cfg, parties);
+  if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
   const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
   alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
 
