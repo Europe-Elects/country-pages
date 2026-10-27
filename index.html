@@ -97,6 +97,8 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .tag.type{background:var(--tag);color:var(--tagInk);padding:4px 8px}
 .kv{display:flex;flex-direction:column;gap:3px}
 .kv div{display:flex;gap:8px;font-size:14px;line-height:1.35}
+.kv2{margin-top:2px;padding-top:6px;border-top:1px dashed var(--line);color:var(--muted)}
+.kv2 .kv2h{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .kv span:first-child{flex:none;width:100px;color:var(--muted)}
 .kv span:last-child{font-weight:700}
 .small .kv div{font-size:13px;gap:6px}
@@ -483,8 +485,15 @@ function buildParties(rows, iso, cfg) {
     if (!isNone(europarty)) affs.push(['Europarty', epName(europarty) + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
     if (IS_EU && !isNone(epGroup)) affs.push(['EP group', epGroup]);
     if (IS_EU && !isNone(epLink)) affs.push(['EP group link', epLink]);
-    if (!isNone(intl)) affs.push(['International', intl + (intlEnd ? ` (until ${year(intlEnd)})` : '')]);
-    else if (intlEnd) { const nm = inParens(intlEnd) || inParens(intlStart) || 'International'; affs.push(['International', `${nm} (${year(intlStart) || '?'}–${year(intlEnd)})`]); }
+    // Secondary affiliations (related organisations), listed separately on the cards
+    const affs2 = [];
+    const sec = (label, v, end) => { if (!isNone(v) && !/^(yes|\*)$/i.test(String(v).trim())) affs2.push([label, String(v).trim() + (end ? ` (until ${year(end)})` : '')]); };
+    sec('PACE', g(o, 'PACE Group'), g(o, 'PACE End'));
+    sec('CoR', g(o, 'CoR Membership'), g(o, 'CoR End'));
+    sec('CLRAE', g(o, 'CLaRA Membership'), g(o, 'CLaRA End'));
+    sec('Benelux', g(o, 'Benelux Affiliation'), g(o, 'Benelux End'));
+    sec('Nordic Council', g(o, 'Nordic Council Group'), g(o, 'Nordic Council End'));
+    sec('International', intl, intlEnd);
     const currentEuroparty = !isNone(europarty) && !europartyEnd ? europarty.split(/[|;,]/)[0].trim() : '';
     const ideology = g(o, 'Ideological Orientation');
     // "EP Interest to Join" / "Europarty Interest to Join", e.g. "EPP (2026)"; "*", "No" and empty mean none.
@@ -499,7 +508,7 @@ function buildParties(rows, iso, cfg) {
       abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), logoSpec: g(o, 'Logo', 'Logo URL', 'Logo Override'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
       epInterest, euInterest, interestNote, orientation: g(o, 'Orientation'),
-      european: !!currentEuroparty || (IS_EU && !isNone(epGroup)), europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
+      european: !!currentEuroparty || (IS_EU && !isNone(epGroup)) || affs2.some(([, v]) => !/\(until /.test(v)), affs2, europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
       eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
       affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
     };
@@ -1562,17 +1571,19 @@ function tags(p) {
 // Native name under the English one, unless they're the same.
 const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
   ? `<p class="native">${esc(p.native)}${isLatin(p.native) || String(p.native).split(/\s+\/\s+/).some(isLatin) ? '' : ` <span class="translit">(${esc(transliterate(p.native))})</span>`}</p>` : '');
+// Secondary affiliations (PACE, CoR, CLRAE, Benelux, Nordic Council, international federation)
+const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
-  if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}</article>`; }
+  if (!p.seats) { const affs0 = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
-  const affs = p.affs.length ? p.affs : [['Affiliation', 'None']];
+  const affs = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
   return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
-    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs)}
+    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs)}${kv2(p)}
     <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
       <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
       <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
@@ -1581,7 +1592,7 @@ function smallTile(p, years) {
   const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
   return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
-    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(p.affs)}
+    <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(p.affs)}${kv2(p)}
     ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
 }
 function viewParties(parties, cfg, activeOnly) {
@@ -1596,9 +1607,9 @@ function viewParties(parties, cfg, activeOnly) {
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
   const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
     <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
-  return bar(hasSeats ? 'In national parliament' : 'Parties with a European affiliation', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+  return bar(hasSeats ? 'In national parliament' : 'Parties with European or international affiliations', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
-    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European affiliation'} · hover for the native name</span>`) +
+    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European or international affiliation'} · hover for the native name</span>`) +
     `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
 }
 function viewLegend(parties, showAll) {
