@@ -22,6 +22,7 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .lead{align-self:stretch;border-top:4px solid var(--blue);border-radius:8px;padding:4px 22px}
 .lead-row{padding:14px 0;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:6px}
 .lead-row:last-child{border-bottom:0}
+.lead-row.cont{padding-top:0;margin-top:-6px}
 .label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .pill{padding:3px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;color:#fff;text-transform:uppercase}
@@ -72,6 +73,7 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .yr{font-size:14px;font-weight:500;color:var(--muted);white-space:nowrap}
 .tile h3{margin:0;font-size:16px;font-weight:700;line-height:1.25}
 .small h3{font-size:15px;font-weight:600;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .native .translit{font-style:normal}
 .tile .native{margin:-2px 0 0;font-size:14px;font-style:italic;line-height:1.25;color:var(--muted)}
 .small .native{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tags{display:flex;flex-wrap:wrap;gap:4px;font-size:13px;font-weight:600;line-height:1}
@@ -191,8 +193,15 @@ const SOURCES = {
   calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' },
   // European Parliament projection (Mastersheet, wide format: Country, EU Parliament group, Party,
   // Party Name + Group, then one column per month such as "Jul-26"). Rows are matched on the country name.
-  projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' }
+  projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' },
+  // Government (heads of state/government and governing parties). Columns: Country, Entity / Person,
+  // Entity ID, Start Date, End Date, Type ("Head of State", "Head of Government", "Government Party").
+  // Rows with an End Date in the past are history and not shown. An Entity ID on a person row = their party.
+  government: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '124081312', publishedCsv: '' }
 };
+// Country names used in other sheets that differ from the party database.
+const COUNTRY_ALIASES = { 'czech republic': 'czechia', 'russia': 'russian federation', 'turkiye': 'turkey', 'türkiye': 'turkey', 'macedonia': 'north macedonia', 'moldova, republic of': 'moldova' };
+const sameCountry = (a, b) => { const f = (x) => { const n = norm(x); return COUNTRY_ALIASES[n] || n; }; return !!a && !!b && f(a) === f(b); };
 const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 
 // Team members responsible for each country (shown at the bottom of the page).
@@ -664,10 +673,46 @@ const logoImg = (p, size) => (p.logo ? `<img class="logo" src="${esc(logoSrc(p.l
 const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right || ''}</div>`;
 const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(epName(label))}</span>`; };
 
+// Government box from the government sheet. Returns rows in the same shape as cfg.government, or null.
+function buildGovernment(rows, cfg, parties) {
+  const today = Date.now();
+  const mine = (rows || []).filter((o) => sameCountry(g(o, 'Country'), cfg.name) || String(g(o, 'Country')).toUpperCase() === ISO);
+  if (!mine.length) return null;
+  const current = mine.filter((o) => { const e = g(o, 'End Date'); return !e || boundDate(e, true) >= today; });
+  const byEid = (eid) => eid ? (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid)) : null;
+  const fmtDate = (v) => { const t = boundDate(v); return t > -Infinity ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  const label = (p) => (p ? (partyTag(p.europartyShort, IS_EU ? p.epGroup : '') || 'Unaffiliated') : '');
+  const kind = (o) => { const t = norm(g(o, 'Type')); return /head of state/.test(t) ? 'hos' : /head of government|prime minister/.test(t) ? 'hog' : /support/.test(t) ? 'sup' : /party|government/.test(t) ? 'gov' : ''; };
+  const person = (o) => { const p = byEid(g(o, 'Entity ID')); const since = fmtDate(g(o, 'Start Date'));
+    return { pill: p ? label(p) : '', name: g(o, 'Entity / Person'), tag: p ? `${p.english} (${p.abbr})` : '', note: since ? 'since ' + since : '' }; };
+  const out = [];
+  const hos = current.filter((o) => kind(o) === 'hos'), hog = current.filter((o) => kind(o) === 'hog');
+  hos.forEach((o, i) => out.push({ label: i ? '' : (hos.length > 1 ? 'Heads of state' : 'Head of state'), ...person(o) }));
+  hog.forEach((o, i) => out.push({ label: i ? '' : 'Head of government', hog: true, ...person(o) }));
+  const govRows = current.filter((o) => kind(o) === 'gov'), supRows = current.filter((o) => kind(o) === 'sup');
+  const govParties = govRows.map((o) => ({ o, p: byEid(g(o, 'Entity ID')) }));
+  if (govParties.length) {
+    const pills = [...new Set(govParties.map(({ p }) => (p ? label(p) : 'Unaffiliated')))];
+    const since = Math.max(...govRows.map((o) => boundDate(g(o, 'Start Date'))));
+    const notes = [govParties.length === 1 ? 'Single-party government' : `Coalition of ${govParties.length} parties`];
+    // Seats, where this page has seat data (cfg.seats): latest election
+    const S = cfg.seats, total = cfg.chamber && cfg.chamber.seats;
+    if (S && total) { const n = govParties.reduce((a, { p }) => { const v = p && S.parties[p.abbr]; return a + (v ? v[v.length - 1] || 0 : 0); }, 0);
+      if (n) notes.push(`${n} of ${total} seats` + (n * 2 > total ? '' : ' (minority)')); }
+    if (since > -Infinity) notes.push('since ' + new Date(since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+    out.push({ label: 'Government', pills, parties: govParties.map(({ o, p }) => ({ text: p ? `${p.english} (${p.abbr})` : g(o, 'Entity / Person'), color: p ? p.color : NONE })), note: notes.join(' · ') });
+    // Single-party government: the head of government (if no party is given on that row) is from that party.
+    if (govParties.length === 1 && govParties[0].p) out.filter((r) => r.hog && !r.tag).forEach((r) => { r.pill = label(govParties[0].p); r.tag = `${govParties[0].p.english} (${govParties[0].p.abbr})`; });
+  }
+  if (supRows.length) out.push({ label: 'Supported by', parties: supRows.map((o) => { const p = byEid(g(o, 'Entity ID')); return p ? `${p.english} (${p.abbr})` : g(o, 'Entity / Person'); }) });
+  // Governing parties for the "In government" tags on the party tiles
+  out.govIds = new Set(govParties.map(({ p }) => p && p.entityId).filter(Boolean));
+  return out;
+}
 function viewHeader(cfg) {
-  const rows = (cfg.government || []).map((r) => `<div class="lead-row"><span class="label">${esc(r.label)}</span><div class="row">
-    ${r.pill ? pill(r.pill) : ''}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
-    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => `<span class="partyb">${esc(p)}</span>`).join('')}
+  const rows = (cfg.government || []).map((r) => `<div class="lead-row${r.label ? '' : ' cont'}">${r.label ? `<span class="label">${esc(r.label)}</span>` : ''}<div class="row">
+    ${r.pill ? pill(r.pill) : ''}${(r.pills || []).map(pill).join('')}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
+    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;background:${p.color}"></span>${esc(p.text)}</span>`)).join('')}
     ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
   return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
     ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
@@ -1030,6 +1075,39 @@ const latinAbbr = (x, roman) => {
   if (roman && isLatin(roman)) return roman;
   return [...String(x)].map((c) => { const l = c.toLowerCase(), t = TRANSLIT[l]; if (t == null) return c; return c === l ? t : (t.length > 1 && /\p{Lu}/u.test(c) ? t.toUpperCase() : t.charAt(0).toUpperCase() + t.slice(1)); }).join('');
 };
+// Transliteration of full names (Cyrillic, Greek, Armenian, Georgian) for the native-name line on party cards.
+const ARM = { 'ա':'a','բ':'b','գ':'g','դ':'d','ե':'e','զ':'z','է':'e','ը':'ə','թ':'t','ժ':'zh','ի':'i','լ':'l','խ':'kh','ծ':'ts','կ':'k','հ':'h','ձ':'dz','ղ':'gh','ճ':'ch','մ':'m','յ':'y','ն':'n','շ':'sh','ո':'o','չ':'ch','պ':'p','ջ':'j','ռ':'rr','ս':'s','վ':'v','տ':'t','ր':'r','ց':'ts','ւ':'v','փ':'p','ք':'k','օ':'o','ֆ':'f','և':'ev' };
+const GEO = { 'ა':'a','ბ':'b','გ':'g','დ':'d','ე':'e','ვ':'v','ზ':'z','თ':'t','ი':'i','კ':'k','ლ':'l','მ':'m','ნ':'n','ო':'o','პ':'p','ჟ':'zh','რ':'r','ს':'s','ტ':'t','უ':'u','ფ':'p','ქ':'k','ღ':'gh','ყ':'q','შ':'sh','ჩ':'ch','ც':'ts','ძ':'dz','წ':'ts','ჭ':'ch','ხ':'kh','ჯ':'j','ჰ':'h' };
+// Country-specific Cyrillic rules (official/common romanisations); other letters use TRANSLIT.
+const CYR_BY_ISO = {
+  RU: { 'х': 'kh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'э': 'e', 'ь': '' },
+  BY: { 'г': 'h', 'х': 'kh', 'ў': 'w', 'і': 'i', 'ы': 'y', 'э': 'e', 'ь': '', 'щ': 'shch' },
+  UA: { 'г': 'h', 'ґ': 'g', 'х': 'kh', 'и': 'y', 'і': 'i', 'ї': 'yi', 'є': 'ye', 'щ': 'shch', 'ь': '' },
+  BG: { 'х': 'h', 'щ': 'sht', 'ъ': 'a', 'ь': 'y' },
+  RS: { 'х': 'h', 'ц': 'c', 'ч': 'č', 'ш': 'š', 'ж': 'ž', 'ј': 'j', 'љ': 'lj', 'њ': 'nj', 'ћ': 'ć', 'ђ': 'đ', 'џ': 'dž' },
+  MK: { 'х': 'h', 'ц': 'c', 'ч': 'č', 'ш': 'š', 'ж': 'ž', 'ј': 'j', 'љ': 'lj', 'њ': 'nj', 'ѓ': 'ǵ', 'ќ': 'ḱ', 'џ': 'dž', 'ѕ': 'dz' }
+};
+CYR_BY_ISO.ME = CYR_BY_ISO.BA = CYR_BY_ISO.XK = CYR_BY_ISO.RS; CYR_BY_ISO.KZ = CYR_BY_ISO.KG = CYR_BY_ISO.MD = CYR_BY_ISO.RU;
+const transliterate = (text, iso = ISO) => {
+  let src = String(text || '');
+  const cyr = CYR_BY_ISO[iso] || {};
+  // Armenian: ու = u, (classical) իւ = yu; word-initial ե = ye, ո = vo. Greek: ου = ou, αυ = av, ευ = ev.
+  src = src.replace(/իւ/g, 'yu').replace(/ու/g, 'u').replace(/ՈՒ|Ու/g, 'U')
+    .replace(/ου|ού/g, 'ou').replace(/ΟΥ|Ου|Ού/g, 'Ou').replace(/αυ|αύ/g, 'av').replace(/Αυ|Αύ/g, 'Av').replace(/ευ|εύ/g, 'ev').replace(/Ευ|Εύ/g, 'Ev');
+  let out = '', prevLetter = false, startGeo = true;
+  for (const c of src) {
+    const lower = c.toLowerCase(), upper = c !== lower;
+    let t;
+    if (ARM[lower] != null) t = !prevLetter && lower === 'ե' ? 'ye' : !prevLetter && lower === 'ո' ? 'vo' : ARM[lower];
+    else if (GEO[c] != null) { t = GEO[c]; if (!prevLetter && startGeo) { t = t.charAt(0).toUpperCase() + t.slice(1); startGeo = false; } }
+    else if (cyr[lower] != null) t = cyr[lower];
+    else if (TRANSLIT[lower] != null) t = TRANSLIT[lower];
+    else t = c === '«' || c === '»' || c === '„' || c === '“' ? '"' : c;
+    if (upper && t) t = t.charAt(0).toUpperCase() + t.slice(1);
+    out += t; prevLetter = /\p{L}/u.test(c);
+  }
+  return out;
+};
 // Whole label in Latin script: "SNS/СНС" -> "SNS"; "ЈS+SPS" -> "JS+SPS"; untouched if already Latin.
 const toLatin = (abbr, roman) => (isLatin(abbr) ? abbr : String(abbr).split('+').map((part) => {
   const segs = part.split('/'), lat = segs.filter((x) => x && isLatin(x));
@@ -1054,6 +1132,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const from = new Date(lastPoll); from.setFullYear(from.getFullYear() - POLLING_YEARS);
   const series = data.parties.map((pp) => {
     const keys = names(pp);
+    let joint = null;  // joint list not in the alliance sheet ("DK+MSZP+P"): its member parties
     let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
     const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
     const m = byId || findParty(keys) || findLoose(pp);
@@ -1071,7 +1150,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => findParty([normKey(x)]));
       const part = parts.find(Boolean);
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
-      if (parts.length > 1 && parts.every(Boolean)) abbr = parts.map((x) => x.abbr).join('+');  // e.g. VOLYA+KB
+      if (parts.length > 1 && parts.every(Boolean)) { abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }  // e.g. VOLYA+KB
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : (al && al.history ? al.history : null);
@@ -1083,20 +1162,20 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const thinAt = (t) => !!iCol && baseAt(t) === NONE && t >= iFrom;
     if (iCol && color === NONE) color = iCol;
     abbr = toLatin(abbr, pp.roman);
-    return { key: pp.key, party: m || null, alliance: al || null, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
+    return { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve,
       colorAt: (t) => (thinAt(t) ? iCol : baseAt(t)), thinAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: { ...p.v } })).filter((p) => p.t >= from);
   // Member parties do not run on their own while an alliance they belong to is polled: their line and poll
   // dots are cut for the alliance's polled period(s), even if separate figures exist. Exception: ALLIANCE_TOGGLE.
   const isToggle = (al) => ALLIANCE_TOGGLE.includes(al.entityId) || ALLIANCE_TOGGLE.includes(al.abbr);
-  series.filter((sr) => sr.alliance && !isToggle(sr.alliance)).forEach((al) => {
+  series.filter((sr) => (sr.alliance && !isToggle(sr.alliance)) || sr.joint).forEach((al) => {
     const spans = al.curve.map((seg) => [seg[0].t.getTime(), seg[seg.length - 1].t.getTime()]);
     const pt = polls.filter((p) => p.v[al.key] != null).map((p) => p.t.getTime());
     if (!spans.length && pt.length) spans.push([Math.min(...pt), Math.max(...pt)]);
     if (!spans.length) return;
     const inside = (t) => spans.some(([a, b]) => t >= a && t <= b);
-    const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
+    const memberParties = al.alliance ? al.alliance.members.map((x) => x.party).filter(Boolean) : al.joint;
     series.filter((sr) => sr !== al && sr.party && memberParties.includes(sr.party)).forEach((sr) => {
       sr.curve = sr.curve.flatMap((seg) => { const out = []; let cur = [];
         seg.forEach((q) => { if (inside(q.t.getTime())) { if (cur.length) out.push(cur); cur = []; } else cur.push(q); });
@@ -1176,7 +1255,7 @@ function viewPolling(cfg, poll) {
       </div>
       <div class="proj-chart" id="poll-chart"></div>
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
-      <p>${esc(note)} Source: Europe Elects poll database${POLL.updated ? ' · updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : ''}.</p></section>`;
+      <p>${esc(note)}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
   }
   const id = POLLING_CHARTS[ISO];
   const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
@@ -1349,7 +1428,8 @@ function tags(p) {
   return `<div class="tags">${t.join('')}</div>`;
 }
 // Native name under the English one, unless they're the same.
-const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english) ? `<p class="native">${esc(p.native)}</p>` : '');
+const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
+  ? `<p class="native">${esc(p.native)}${isLatin(p.native) || String(p.native).split(/\s+\/\s+/).some(isLatin) ? '' : ` <span class="translit">(${esc(transliterate(p.native))})</span>`}</p>` : '');
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
   if (!p.seats) { const affs0 = p.affs.length ? p.affs : [['Affiliation', 'None']];
@@ -1433,8 +1513,13 @@ async function main() {
   try { teamRows = await loadWithFallback(TEAM_SOURCE); } catch (e) { console.warn('Team sheet not loaded', e); }
   try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
   try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
+  let governmentRows = [];
+  try { governmentRows = await loadWithFallback(SOURCES.government); } catch (e) { console.warn('Government sheet not loaded', e); }
   const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
   cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+  // Government box from the sheet (falls back to cfg.government if the country has no rows there)
+  const gov = buildGovernment(governmentRows, cfg, parties);
+  if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
   document.title = `Europe Elects – ${cfg.name}`;
   const current = parties.filter((p) => p.latest);
   const elections = buildElections(calendarRows, cfg.name);
