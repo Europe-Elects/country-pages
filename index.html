@@ -22,6 +22,7 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .lead{align-self:stretch;border-top:4px solid var(--blue);border-radius:8px;padding:4px 22px}
 .lead-row{padding:14px 0;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:6px}
 .lead-row:last-child{border-bottom:0}
+.euco{padding:3px 10px;border-radius:999px;background:#003399;color:#FFCC00;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 .lead-row.cont{padding-top:0;margin-top:-6px}
 .label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -683,12 +684,20 @@ function buildGovernment(rows, cfg, parties) {
   const fmtDate = (v) => { const t = boundDate(v); return t > -Infinity ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
   const label = (p) => (p ? (partyTag(p.europartyShort, IS_EU ? p.epGroup : '') || 'Unaffiliated') : '');
   const kind = (o) => { const t = norm(g(o, 'Type')); return /head of state/.test(t) ? 'hos' : /head of government|prime minister/.test(t) ? 'hog' : /support/.test(t) ? 'sup' : /party|government/.test(t) ? 'gov' : ''; };
-  const person = (o) => { const p = byEid(g(o, 'Entity ID')); const since = fmtDate(g(o, 'Start Date'));
-    return { pill: p ? label(p) : '', name: g(o, 'Entity / Person'), tag: p ? `${p.english} (${p.abbr})` : '', note: since ? 'since ' + since : '' }; };
+  // Person rows: Entity ID = the person's party (or "Independent").
+  const person = (o) => { const eid = g(o, 'Entity ID'), p = byEid(eid); const since = fmtDate(g(o, 'Start Date'));
+    const indep = !p && /^(independent|non-?partisan|none|-)$/i.test(eid);
+    return { pill: p ? label(p) : indep ? 'Unaffiliated' : '', name: g(o, 'Entity / Person'), tag: p ? `${p.english} (${p.abbr})` : indep ? 'Independent' : '', note: since ? 'since ' + since : '' }; };
   const out = [];
   const hos = current.filter((o) => kind(o) === 'hos'), hog = current.filter((o) => kind(o) === 'hog');
-  hos.forEach((o, i) => out.push({ label: i ? '' : (hos.length > 1 ? 'Heads of state' : 'Head of state'), ...person(o) }));
+  hos.forEach((o, i) => out.push({ label: i ? '' : (hos.length > 1 ? 'Heads of state' : 'Head of state'), hos: true, ...person(o) }));
   hog.forEach((o, i) => out.push({ label: i ? '' : 'Head of government', hog: true, ...person(o) }));
+  // European Council member: the head of government, except where the head of state attends (FR, CY, LT, RO).
+  if (IS_EU && ISO !== 'EU') {
+    const byHos = ['FR', 'CY', 'LT', 'RO'].includes(ISO);
+    const seat = out.find((r) => (byHos ? r.hos : r.hog)) || out.find((r) => r.hog || r.hos);
+    if (seat) out.filter((r) => (r.hos || r.hog) && r.name === seat.name).forEach((r) => { r.sticker = 'European Council'; });
+  }
   const govRows = current.filter((o) => kind(o) === 'gov'), supRows = current.filter((o) => kind(o) === 'sup');
   const govParties = govRows.map((o) => ({ o, p: byEid(g(o, 'Entity ID')) }));
   if (govParties.length) {
@@ -712,7 +721,7 @@ function buildGovernment(rows, cfg, parties) {
 function viewHeader(cfg) {
   const rows = (cfg.government || []).map((r) => `<div class="lead-row${r.label ? '' : ' cont'}">${r.label ? `<span class="label">${esc(r.label)}</span>` : ''}<div class="row">
     ${r.pill ? pill(r.pill) : ''}${(r.pills || []).map(pill).join('')}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
-    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;background:${p.color}"></span>${esc(p.text)}</span>`)).join('')}
+    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${r.sticker ? `<span class="euco" title="Member of the European Council">★ ${esc(r.sticker)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;background:${p.color}"></span>${esc(p.text)}</span>`)).join('')}
     ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
   return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
     ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
