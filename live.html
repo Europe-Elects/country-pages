@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Feed – Europe Elects</title>
+<base target="_top">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700;800&family=Noto+Color+Emoji&display=swap">
+<style>
+:root{--bg:#f7f6f2;--surface:#fff;--ink:#001936;--muted:#5f5e5a;--faint:#8a8a86;--line:#e4e3de;--soft:#f6f5f1;--navy:#1a2b4a;--navy2:#0d1830;--gold:#ffcc00;--link:#1E4C99;--sky:#0085ff;
+  --f:"Advent Pro",system-ui,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{font-family:var(--f);color:var(--ink);font-size:17px;line-height:1.42}
+a{color:var(--link)}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 40px}
+
+/* title bar */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 18px;background:var(--navy);border-bottom:2px solid var(--gold);border-radius:6px;padding:11px 18px 9px}
+.top h1{margin:0;display:flex;align-items:center;gap:10px;color:#fff;font-size:clamp(1.25rem,3vw,1.6rem);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.top h1::before{content:"";width:10px;height:10px;border-radius:50%;background:#ff3b30;box-shadow:0 0 0 4px rgba(255,59,48,.25);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+@media (prefers-reduced-motion:reduce){.top h1::before{animation:none}}
+.top a{color:var(--gold);font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.top a:hover{text-decoration:underline}
+
+/* layout: feed left, about + filters right */
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:18px;align-items:start;margin-top:12px}
+.side{display:grid;gap:14px;position:sticky;top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px 14px}
+.card h2{margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--gold);color:var(--navy);font-size:1rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.about p{margin:0 0 8px;font-size:.98rem;color:var(--muted)}
+.about p:last-child{margin:0}
+.about .links{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.about .links a{font-weight:700;text-decoration:none}
+.about .links a:hover{text-decoration:underline}
+
+/* filters */
+#q{width:100%;border:1px solid #d5d3cc;border-radius:4px;padding:8px 11px;font:inherit;font-size:1rem;color:var(--ink);background:#fff}
+#q:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--navy)}
+.lbl{margin:12px 0 6px;font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 11px;border:1px solid #d5d3cc;border-radius:999px;background:#fff;color:var(--ink);font:600 .9rem var(--f);cursor:pointer}
+.chip .n{color:var(--faint);font-weight:500}
+.chip:hover{border-color:var(--navy)}
+.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.chip[aria-pressed="true"] .n{color:var(--gold)}
+.chip:focus-visible,#more:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.status{margin-top:10px;font-size:.9rem;color:var(--faint)}
+
+/* posts */
+.feed{display:grid;gap:10px}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px 10px;border-left:3px solid var(--navy)}
+.post.pinned{border-left-color:var(--gold)}
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--navy) center/cover no-repeat;flex:none}
+.who{min-width:0;line-height:1.15}
+.who b{display:block;font-size:1rem}
+.who span{font-size:.85rem;color:var(--faint)}
+.when{margin-left:auto;font-size:.88rem;color:var(--faint);white-space:nowrap;text-decoration:none}
+.when:hover{color:var(--link);text-decoration:underline}
+.rp{font-size:.82rem;color:var(--faint);margin:-2px 0 6px;font-weight:600}
+.txt{white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.02rem}
+.txt a{color:var(--link);font-weight:600;text-decoration:none}
+.txt a:hover{text-decoration:underline}
+.txt mark{background:#fff3a8;color:inherit;border-radius:2px;padding:0 1px}
+.imgs{display:grid;gap:4px;margin-top:8px;border-radius:6px;overflow:hidden}
+.imgs.n1{grid-template-columns:1fr}
+.imgs.n2,.imgs.n4{grid-template-columns:1fr 1fr}
+.imgs.n3{grid-template-columns:1fr 1fr 1fr}
+.imgs a{display:block;background:var(--soft)}
+.imgs img{display:block;width:100%;height:100%;max-height:520px;object-fit:contain;background:#fff}
+.imgs.n2 img,.imgs.n3 img,.imgs.n4 img{aspect-ratio:1;object-fit:cover}
+.ext{display:flex;gap:12px;margin-top:8px;border:1px solid var(--line);border-radius:6px;overflow:hidden;text-decoration:none;color:inherit}
+.ext:hover{border-color:var(--navy)}
+.ext img{width:120px;object-fit:cover;flex:none;background:var(--soft)}
+.ext div{padding:8px 12px 8px 0;min-width:0}
+.ext b{display:block;font-size:.98rem;line-height:1.25}
+.ext span{display:block;font-size:.9rem;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ext small{display:block;font-size:.8rem;color:var(--faint);margin-top:2px}
+.quote{margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:.95rem;color:var(--muted)}
+.quote b{color:var(--ink)}
+.pf{display:flex;gap:16px;margin-top:8px;font-size:.88rem;color:var(--faint)}
+.pf a{color:var(--faint);text-decoration:none;margin-left:auto}
+.pf a:hover{color:var(--link);text-decoration:underline}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:24px;text-align:center;color:var(--muted)}
+#more{justify-self:center;margin-top:6px;padding:9px 18px;border:1px solid var(--navy);border-radius:4px;background:#fff;color:var(--navy);font:700 1rem var(--f);cursor:pointer}
+#more:hover{background:var(--soft)}
+#more[disabled]{opacity:.5;cursor:default}
+.fallback{background:#f0f7ff;border:2px solid var(--sky);border-radius:6px;padding:12px}
+
+@media (max-width:860px){
+  .cols{grid-template-columns:1fr}
+  .side{position:static;order:-1}
+}
+@media (max-width:520px){.ext img{width:84px}.post{padding:10px 12px 8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Live Feed</h1>
+    <a href="https://bsky.app/profile/europeelects.bsky.social" target="_blank" rel="noopener">
+      <svg width="17" height="15" viewBox="0 0 600 530" aria-hidden="true"><path fill="currentColor" d="M136 44c66 50 138 151 164 205 26-54 98-155 164-205 48-36 126-63 126 25 0 17-10 147-16 168-20 73-95 92-162 80 117 20 147 86 82 152-122 126-176-32-189-72l-5-15-5 15c-13 40-67 198-189 72-65-66-35-132 82-152-67 12-142-7-162-80C20 216 10 86 10 69c0-88 78-61 126-25z"/></svg>
+      Follow on Bluesky</a>
+  </header>
+
+  <div class="cols">
+    <main>
+      <div class="feed" id="feed"><div class="empty">Loading the latest posts…</div></div>
+      <div style="display:grid"><button type="button" id="more" hidden>Load older posts</button></div>
+    </main>
+
+    <aside class="side">
+      <section class="card about">
+        <h2>About this feed</h2>
+        <p>A live record of new polling, election and political data entering the Europe Elects database.</p>
+        <p>Everything shown here feeds into our database, analyses, seat projections and research.</p>
+        <div class="links">
+          <a href="https://europeelects.eu/ep2029/">EP projection →</a>
+          <a href="https://europeelects.eu/calendar/">Electoral calendar →</a>
+          <a href="https://europeelects.eu/data/">Data access →</a>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Filter posts</h2>
+        <input id="q" type="search" placeholder="Search posts, e.g. Ipsos, Germany, SPD…" aria-label="Search posts">
+        <p class="lbl">Type</p>
+        <div class="chips" id="types"></div>
+        <p class="lbl">Countries in the loaded posts</p>
+        <div class="chips" id="countries"></div>
+        <p class="status" id="status"></p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ---------- Settings ---------- */
+const HANDLE = "europeelects.bsky.social";
+const API = "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed";
+const PAGE = 50;            // posts per request (Bluesky allows up to 100)
+const SHOW = 20;            // posts shown at first and per "Load older posts"
+const SEARCH_PAGES = 6;     // when filtering, load up to this many extra pages to find matches
+// Post types: a post belongs to a type when its text matches.
+const TYPES = [
+  { id: "poll", name: "Polls", re: /\bpoll\b|\bpolls\b|\bsurvey\b|fieldwork|sample size/i },
+  { id: "proj", name: "Projections", re: /projection|seat projection|nowcast/i },
+  { id: "result", name: "Results", re: /\bresults?\b|exit poll|turnout|preliminary|final count|elected/i },
+  { id: "gov", name: "Government", re: /\bgovernment\b|\bcoalition\b|prime minister|cabinet|resign|appointed|sworn in/i }
+];
+const COUNTRIES = ["Albania","Andorra","Armenia","Austria","Azerbaijan","Belarus","Belgium","Bosnia and Herzegovina","Bulgaria","Croatia","Cyprus","Czechia","Denmark","Estonia","Faroe Islands","Finland","France","Georgia","Germany","Greece","Greenland","Hungary","Iceland","Ireland","Italy","Kosovo","Latvia","Liechtenstein","Lithuania","Luxembourg","Malta","Moldova","Monaco","Montenegro","Netherlands","North Macedonia","Norway","Poland","Portugal","Romania","Russia","San Marino","Serbia","Slovakia","Slovenia","Spain","Sweden","Switzerland","Türkiye","Turkey","Ukraine","United Kingdom","UK","European Union","EU"];
+const COUNTRY_ALIAS = { "UK": "United Kingdom", "Turkey": "Türkiye", "EU": "European Union" };
+
+/* ---------- State ---------- */
+const S = { posts: [], cursor: null, done: false, shown: SHOW, q: "", type: null, country: null, loading: false, failed: false };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fold = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const countryRes = COUNTRIES.map((n) => [COUNTRY_ALIAS[n] || n, new RegExp("(^|[^\\p{L}])" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^\\p{L}])", "u")]);
+
+async function fetchPage() {
+  if (S.done || S.loading) return;
+  S.loading = true; status();
+  try {
+    const url = `${API}?actor=${encodeURIComponent(HANDLE)}&limit=${PAGE}&filter=posts_no_replies${S.cursor ? "&cursor=" + encodeURIComponent(S.cursor) : ""}`;
+    const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    (j.feed || []).forEach((item) => { const p = prep(item); if (p && !S.posts.some((x) => x.uri === p.uri)) S.posts.push(p); });
+    S.cursor = j.cursor || null; if (!S.cursor || !(j.feed || []).length) S.done = true;
+  } catch (e) {
+    if (!S.posts.length) { S.failed = true; fallback(); }
+    S.done = true;
+  }
+  S.loading = false;
+}
+function prep(item) {
+  const p = item.post; if (!p || !p.record) return null;
+  const text = p.record.text || "";
+  const countries = [...new Set(countryRes.filter(([, re]) => re.test(text.slice(0, 400))).map(([n]) => n))];
+  return { uri: p.uri, url: `https://bsky.app/profile/${p.author.handle}/post/${p.uri.split("/").pop()}`, author: p.author, text, facets: p.record.facets || [],
+    date: new Date(p.record.createdAt || p.indexedAt), embed: p.embed, likes: p.likeCount || 0, reposts: p.repostCount || 0, replies: p.replyCount || 0,
+    repost: item.reason && item.reason.$type === "app.bsky.feed.defs#reasonRepost" ? item.reason.by : null,
+    pinned: !!(item.reason && item.reason.$type === "app.bsky.feed.defs#reasonPin"),
+    types: TYPES.filter((t) => t.re.test(text)).map((t) => t.id), countries, hay: fold(text + " " + embedText(p.embed)) };
+}
+function embedText(e) {
+  if (!e) return "";
+  if (e.external) return [e.external.title, e.external.description].join(" ");
+  if (e.media) return embedText(e.media);
+  if (e.images) return e.images.map((i) => i.alt || "").join(" ");
+  return "";
+}
+
+/* ---------- Rendering ---------- */
+// Post text with links and mentions (facets use UTF-8 byte offsets).
+function richText(p, q) {
+  const enc = new TextEncoder(), dec = new TextDecoder(), bytes = enc.encode(p.text);
+  const facets = [...p.facets].filter((f) => f.index).sort((a, b) => a.index.byteStart - b.index.byteStart);
+  let out = "", pos = 0;
+  const plain = (s) => hl(esc(s), q);
+  facets.forEach((f) => {
+    const { byteStart: a, byteEnd: b } = f.index; if (a < pos) return;
+    out += plain(dec.decode(bytes.slice(pos, a)));
+    const seg = dec.decode(bytes.slice(a, b)), feat = (f.features || [])[0] || {};
+    if (feat.uri) { const own = /^https?:\/\/(www\.)?europeelects\.eu/i.test(feat.uri); out += `<a href="${esc(feat.uri)}"${own ? "" : ' target="_blank" rel="noopener"'}>${plain(seg)}</a>`; }
+    else if (feat.did) out += `<a href="https://bsky.app/profile/${esc(feat.did)}" target="_blank" rel="noopener">${plain(seg)}</a>`;
+    else if (feat.tag) out += `<a href="https://bsky.app/hashtag/${encodeURIComponent(feat.tag)}" target="_blank" rel="noopener">${plain(seg)}</a>`;
+    else out += plain(seg);
+    pos = b;
+  });
+  return out + plain(dec.decode(bytes.slice(pos)));
+}
+function hl(html, q) {
+  if (!q) return html;
+  const words = q.split(/\s+/).filter((w) => w.length > 1).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!words.length) return html;
+  return html.replace(new RegExp("(" + words.join("|") + ")", "gi"), "<mark>$1</mark>");
+}
+function embedHtml(e) {
+  if (!e) return "";
+  if (e.$type === "app.bsky.embed.recordWithMedia#view") return embedHtml(e.media) + embedHtml(e.record);
+  if (e.images) {
+    const n = Math.min(e.images.length, 4);
+    return `<div class="imgs n${n}">${e.images.slice(0, 4).map((i) => `<a href="${esc(i.fullsize)}" target="_blank" rel="noopener"><img src="${esc(i.thumb)}" alt="${esc(i.alt || "")}" loading="lazy"></a>`).join("")}</div>`;
+  }
+  if (e.external) {
+    const x = e.external, own = /europeelects\.eu/i.test(x.uri || "");
+    let host = ""; try { host = new URL(x.uri).hostname.replace(/^www\./, ""); } catch (_) {}
+    return `<a class="ext" href="${esc(x.uri)}"${own ? "" : ' target="_blank" rel="noopener"'}>${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ""}<div><b>${esc(x.title || host)}</b>${x.description ? `<span>${esc(x.description)}</span>` : ""}<small>${esc(host)}</small></div></a>`;
+  }
+  if (e.record) {
+    const r = e.record.record || e.record; const v = r.value || {};
+    if (!r.author || !v.text) return "";
+    return `<div class="quote"><b>${esc(r.author.displayName || r.author.handle)}</b> · ${esc(v.text.slice(0, 280))}${v.text.length > 280 ? "…" : ""}</div>`;
+  }
+  if (e.$type === "app.bsky.embed.video#view" && e.thumbnail) return `<div class="imgs n1"><img src="${esc(e.thumbnail)}" alt="Video" loading="lazy"></div>`;
+  return "";
+}
+const ago = (d) => {
+  const s = (Date.now() - d) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  if (s < 7 * 86400) return Math.round(s / 86400) + " d ago";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+};
+function post(p, q) {
+  const a = p.author;
+  return `<article class="post${p.pinned ? " pinned" : ""}">
+    ${p.pinned ? '<div class="rp">📌 Pinned</div>' : p.repost ? `<div class="rp">↻ Reposted by ${esc(p.repost.displayName || p.repost.handle)}</div>` : ""}
+    <div class="ph"><span class="av" style="${a.avatar ? `background-image:url('${esc(a.avatar)}')` : ""}"></span>
+      <span class="who"><b>${esc(a.displayName || a.handle)}</b><span>@${esc(a.handle)}</span></span>
+      <a class="when" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.date.toLocaleString("en-GB"))}">${esc(ago(p.date))}</a></div>
+    <div class="txt">${richText(p, q)}</div>
+    ${embedHtml(p.embed)}
+    <div class="pf"><span>💬 ${p.replies}</span><span>↻ ${p.reposts}</span><span>♥ ${p.likes}</span><a href="${esc(p.url)}" target="_blank" rel="noopener">Open on Bluesky →</a></div>
+  </article>`;
+}
+const matches = () => {
+  const q = fold(S.q.trim());
+  return S.posts.filter((p) => (!q || q.split(/\s+/).every((w) => p.hay.includes(w))) && (!S.type || p.types.includes(S.type)) && (!S.country || p.countries.includes(S.country)));
+};
+function render() {
+  if (S.failed) return;
+  const list = matches(), feed = $("feed");
+  feed.innerHTML = list.length ? list.slice(0, S.shown).map((p) => post(p, S.q.trim())).join("")
+    : `<div class="empty">${S.loading ? "Searching older posts…" : "No posts match these filters."}</div>`;
+  const more = $("more");
+  more.hidden = S.done && list.length <= S.shown; more.disabled = S.loading;
+  more.textContent = S.loading ? "Loading…" : "Load older posts";
+  // Chips: types and the most-mentioned countries in the loaded posts.
+  const tc = {}; S.posts.forEach((p) => p.types.forEach((t) => { tc[t] = (tc[t] || 0) + 1; }));
+  $("types").innerHTML = `<button class="chip" data-t="" aria-pressed="${!S.type}">All</button>` + TYPES.map((t) => `<button class="chip" data-t="${t.id}" aria-pressed="${S.type === t.id}">${t.name}<span class="n">${tc[t.id] || 0}</span></button>`).join("");
+  const cc = {}; S.posts.forEach((p) => p.countries.forEach((c) => { cc[c] = (cc[c] || 0) + 1; }));
+  const top = Object.entries(cc).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 16);
+  if (S.country && !top.some(([c]) => c === S.country)) top.push([S.country, cc[S.country] || 0]);
+  $("countries").innerHTML = top.map(([c, n]) => `<button class="chip" data-c="${esc(c)}" aria-pressed="${S.country === c}">${esc(c)}<span class="n">${n}</span></button>`).join("") || '<span class="status">–</span>';
+  status(list.length);
+  postHeight();
+}
+function status(n) {
+  const filtered = S.q.trim() || S.type || S.country;
+  $("status").textContent = S.loading ? "Loading posts…" : `${S.posts.length} posts loaded${filtered ? ` · ${n} match${n === 1 ? "" : "es"}` : ""}${S.done ? "" : " · older posts load on demand"}`;
+}
+// When filters find too few posts, keep loading older pages (up to SEARCH_PAGES).
+async function fill() {
+  let pages = 0;
+  while (!S.done && matches().length < S.shown && pages < SEARCH_PAGES) { pages++; render(); await fetchPage(); }
+  render();
+}
+
+/* ---------- Events ---------- */
+let t0;
+$("q").addEventListener("input", (e) => { S.q = e.target.value; S.shown = SHOW; clearTimeout(t0); t0 = setTimeout(fill, 250); render(); });
+$("types").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; S.type = b.dataset.t || null; S.shown = SHOW; fill(); });
+$("countries").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; S.country = S.country === b.dataset.c ? null : b.dataset.c; S.shown = SHOW; fill(); });
+$("more").addEventListener("click", async () => { S.shown += SHOW; if (matches().length < S.shown) await fill(); else render(); });
+
+/* ---------- Fallback: the standard Bluesky widget, in Advent Pro ---------- */
+function fallback() {
+  $("feed").innerHTML = `<div class="fallback"><bsky-embed username="${HANDLE}" limit="20" custom-styles="*, *::before, *::after { font-family: 'Advent Pro', system-ui, sans-serif !important; }"></bsky-embed></div>`;
+  const s = document.createElement("script"); s.type = "module"; s.src = "https://cdn.jsdelivr.net/npm/bsky-embed/dist/bsky-embed.es.js"; document.head.appendChild(s);
+  $("status").textContent = "Showing the standard Bluesky feed (filters unavailable).";
+  document.querySelectorAll(".side .chips, #q").forEach((el) => { el.style.display = "none"; });
+}
+
+/* ---------- iframe height (works with the standard Datawrapper resize snippet) ---------- */
+function postHeight() {
+  if (window.parent === window) return;
+  const w = document.querySelector(".wrap");
+  window.parent.postMessage({ "datawrapper-height": { "ee-live": Math.ceil(w.getBoundingClientRect().bottom + window.scrollY) } }, "*");
+}
+if ("ResizeObserver" in window) new ResizeObserver(postHeight).observe(document.body);
+
+/* ---------- Start; refresh new posts every 5 minutes ---------- */
+(async () => { await fetchPage(); render(); })();
+setInterval(async () => {
+  if (S.failed || document.hidden) return;
+  try {
+    const r = await fetch(`${API}?actor=${encodeURIComponent(HANDLE)}&limit=20&filter=posts_no_replies`); if (!r.ok) return;
+    const fresh = ((await r.json()).feed || []).map(prep).filter((p) => p && !S.posts.some((x) => x.uri === p.uri));
+    if (fresh.length) { S.posts = fresh.concat(S.posts).sort((a, b) => (b.pinned - a.pinned) || (b.date - a.date)); render(); }
+  } catch (_) {}
+}, 5 * 60000);
+</script>
+</body>
+</html>
