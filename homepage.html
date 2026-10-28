@@ -8,6 +8,11 @@
 #ee-home{--navy:#1a2b4a;--navy2:#0d1830;--gold:#ffcc00;--ink:#001936;--muted:#5f5e5a;--line:#e4e3de;--soft:#f6f5f1;--sky:#0085ff;
   font-family:'Advent Pro',system-ui,sans-serif;color:var(--ink);line-height:1.35;max-width:1180px;margin:0 auto;padding:24px 0 32px}
 #ee-home *,#ee-home *::before,#ee-home *::after{box-sizing:border-box}
+#ee-home section,#ee-home aside,#ee-home header,#ee-home footer,#ee-home nav,#ee-home form{margin:0;padding:0;max-width:none;width:auto}
+#ee-home h1,#ee-home h2,#ee-home h3,#ee-home ul,#ee-home li{font-family:inherit;letter-spacing:normal}
+#ee-home li{margin:0}
+#ee-home a{text-decoration:none}
+#ee-home button,#ee-home input,#ee-home select,#ee-home textarea{font-family:inherit;text-transform:none;letter-spacing:normal;box-shadow:none}
 #ee-home p{margin:0}
 #ee-home a{color:inherit}
 
@@ -149,12 +154,14 @@
 
 /* ---------- latest analysis ---------- */
 #ee-home .eeh-posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-#ee-home .eeh-post{display:flex;flex-direction:column;text-decoration:none;color:var(--ink);min-width:0}
-#ee-home .eeh-post .im{aspect-ratio:16/9;background:#eceae4 center/cover no-repeat;border-radius:4px;margin-bottom:10px}
-#ee-home .eeh-post .dt{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d00}
-#ee-home .eeh-post h3{margin:3px 0 5px;font-size:17px;line-height:1.25;font-weight:700}
+#ee-home .eeh-post{display:flex;flex-direction:column;gap:8px;min-width:0;padding:14px 16px 13px;background:var(--soft);border-radius:4px;border-top:3px solid var(--navy);text-decoration:none;color:var(--ink);transition:border-color .15s,background .15s}
+#ee-home .eeh-post:hover{border-top-color:var(--gold);background:#efeee8}
+#ee-home .eeh-post .kk{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy)}
+#ee-home .eeh-post .kk .iso{font-size:12px;letter-spacing:0;color:#fff;background:var(--navy);border-radius:3px;padding:2px 5px}
+#ee-home .eeh-post h3{margin:0;font-size:20px;line-height:1.2;font-weight:700}
 #ee-home .eeh-post:hover h3{text-decoration:underline}
-#ee-home .eeh-post p{font-size:15.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#ee-home .eeh-post p{margin:0;font-size:15.5px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#ee-home .eeh-post .dt{margin-top:auto;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d00}
 
 /* ---------- countries ---------- */
 #ee-home .eeh-find{width:100%;max-width:none;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:16.5px;margin-bottom:14px}
@@ -300,7 +307,7 @@
     <section class="eeh-panel eeh-poll">
       <div class="eeh-bar"><span class="t">Polling in Upcoming Elections</span></div>
       <div class="eeh-body">
-        <iframe id="eeh-poll-frame" title="Polling average for the next national parliament election" aria-label="Line chart" scrolling="no" height="760" data-external="1"></iframe>
+        <iframe id="eeh-poll-frame" title="Polling average for the next national parliament election" aria-label="Line chart" scrolling="no" height="640" data-external="1"></iframe>
       </div>
     </section>
     <aside class="eeh-panel">
@@ -405,7 +412,7 @@ const PROJ_URL = 'https://opensheet.elk.sh/1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43Hbt
 const HEADLINE_URL = 'https://opensheet.elk.sh/1sO807T0QFc9Lp4u-m2ZdZSu7dAuWjh1Xa1j0DAIdI6Q/1';
 const EP_SEATS = 720;
 // Latest articles: WordPress REST API of the site (hidden if it can't be reached).
-const POSTS_API = 'https://europeelects.eu/wp-json/wp/v2/posts?per_page=3&_embed=wp:featuredmedia';
+const POSTS_API = 'https://europeelects.eu/wp-json/wp/v2/posts?per_page=6&_embed=wp:term';
 // Country links. {iso} = ISO-2 code, {slug} = country name in lower case with dashes (e.g. bosnia-and-herzegovina).
 const COUNTRY_URL = 'https://europe-elects.github.io/country-pages/?country={iso}';
 const COUNTRIES = [["Albania", "AL"], ["Andorra", "AD"], ["Armenia", "AM"], ["Austria", "AT"], ["Azerbaijan", "AZ"], ["Belarus", "BY"], ["Belgium", "BE"], ["Bosnia and Herzegovina", "BA"], ["Bulgaria", "BG"], ["Croatia", "HR"], ["Cyprus", "CY"], ["Czechia", "CZ"], ["Denmark", "DK"], ["Estonia", "EE"], ["Faroe Islands", "FO"], ["Finland", "FI"], ["France", "FR"], ["Georgia", "GE"], ["Germany", "DE"], ["Greece", "GR"], ["Greenland", "GL"], ["Guernsey", "GG"], ["Hungary", "HU"], ["Iceland", "IS"], ["Ireland", "IE"], ["Isle of Man", "IM"], ["Italy", "IT"], ["Jersey", "JE"], ["Kosovo", "XK"], ["Latvia", "LV"], ["Liechtenstein", "LI"], ["Lithuania", "LT"], ["Luxembourg", "LU"], ["Malta", "MT"], ["Moldova", "MD"], ["Monaco", "MC"], ["Montenegro", "ME"], ["Netherlands", "NL"], ["North Macedonia", "MK"], ["Norway", "NO"], ["Poland", "PL"], ["Portugal", "PT"], ["Romania", "RO"], ["Russian Federation", "RU"], ["San Marino", "SM"], ["Serbia", "RS"], ["Slovakia", "SK"], ["Slovenia", "SI"], ["Spain", "ES"], ["Sweden", "SE"], ["Switzerland", "CH"], ["Turkey", "TR"], ["Ukraine", "UA"], ["United Kingdom", "GB"], ["Åland Islands", "AX"]];
@@ -483,7 +490,7 @@ async function loadCalendar() {
     rows.forEach((x) => {
       const k = [x.o['country'], kindOf(x.o['type']), x.when.d.getTime()].join('|');
       const hit = merged.find((m) => m.k === k);
-      if (hit) { if (x.o['specification']) hit.specs.push(x.o['specification']); return; }
+      if (hit) { if (x.o['specification'] && !hit.specs.includes(x.o['specification'])) hit.specs.push(x.o['specification']); return; }
       merged.push({ k, ...x, specs: x.o['specification'] ? [x.o['specification']] : [] });
     });
     let shown = CALENDAR_ROWS;
@@ -765,12 +772,17 @@ async function loadPosts() {
     const res = await fetch(POSTS_API); if (!res.ok) return;
     const posts = await res.json(); if (!Array.isArray(posts) || !posts.length) return;
     const txt = (h) => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.trim(); };
+    // No header photos: a typographic card with the country (from the title, else the first category).
+    const clean = (t) => t.replace(/\s+/g, ' ').replace(/([a-z0-9)])([A-Z][a-z])/g, '$1 $2').trim();
+    const byLen = [...COUNTRIES].sort((a, b) => b[0].length - a[0].length);
     document.getElementById('eeh-posts').innerHTML = posts.map((p) => {
-      const m = p._embedded && p._embedded['wp:featuredmedia'] && p._embedded['wp:featuredmedia'][0];
-      const img = m && ((m.media_details && m.media_details.sizes && (m.media_details.sizes.medium_large || m.media_details.sizes.large || {}).source_url) || m.source_url);
-      return `<a class="eeh-post" href="${esc(p.link)}"><span class="im" style="${img ? `background-image:url('${esc(img)}')` : ''}"></span>
-        <span class="dt">${esc(new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}</span>
-        <h3>${esc(txt(p.title && p.title.rendered))}</h3><p>${esc(txt(p.excerpt && p.excerpt.rendered))}</p></a>`;
+      const title = txt(p.title && p.title.rendered);
+      const hit = byLen.find(([n]) => new RegExp('(^|[^\\p{L}])' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^\\p{L}])', 'u').test(title));
+      const cats = ((p._embedded && p._embedded['wp:term']) || []).flat().filter((t) => t && t.taxonomy === 'category' && !/uncategori[sz]ed/i.test(t.name));
+      const kicker = hit ? `<span class="iso">${esc(hit[1])}</span>${esc(hit[0])}` : (cats[0] ? esc(txt(cats[0].name)) : 'Analysis');
+      return `<a class="eeh-post" href="${esc(p.link)}"><span class="kk">${kicker}</span>
+        <h3>${esc(title)}</h3><p>${esc(clean(txt(p.excerpt && p.excerpt.rendered)))}</p>
+        <span class="dt">${esc(new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))} · Read →</span></a>`;
     }).join('');
     document.getElementById('eeh-posts-panel').hidden = false;
   } catch (e) { /* section stays hidden */ }

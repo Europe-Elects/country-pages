@@ -1813,7 +1813,9 @@ async function main() {
 /* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
 function postHeight() {
   if (window.parent === window) return;
-  window.parent.postMessage({ 'datawrapper-height': { ['ee-' + ISO.toLowerCase()]: document.documentElement.scrollHeight } }, '*');
+  // Height of the content itself (documentElement.scrollHeight never drops below the frame's current height, so frames could only grow).
+  const box = document.getElementById('app'), h = box ? Math.ceil(box.getBoundingClientRect().bottom + window.scrollY) : document.documentElement.scrollHeight;
+  window.parent.postMessage({ 'datawrapper-height': { ['ee-' + ISO.toLowerCase()]: h } }, '*');
 }
 if ('ResizeObserver' in window) new ResizeObserver(postHeight).observe(document.body);
 window.addEventListener('load', postHeight);
