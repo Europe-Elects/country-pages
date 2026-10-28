@@ -456,3 +456,14 @@ Countries: 56
 <iframe id="ee-ax" src="https://europe-elects.github.io/country-pages/?country=AX" title="Europe Elects – Åland Islands" scrolling="no" frameborder="0" style="width:0;min-width:100%;border:none" height="4000"></iframe>
 <script type="text/javascript">!function(){"use strict";window.addEventListener("message",function(a){if(void 0!==a.data["datawrapper-height"]){var e=document.querySelectorAll("iframe");for(var t in a.data["datawrapper-height"])for(var r=0;r<e.length;r++)if(e[r].contentWindow===a.source){var i=a.data["datawrapper-height"][t]+"px";e[r].style.height=i}}})}();</script>
 ```
+
+## Home page
+
+Paste this into one **Custom HTML** block on the WordPress home page:
+
+```html
+<div id="ee-home-root"></div>
+<script src="https://europe-elects.github.io/country-pages/home.js" defer></script>
+```
+
+Edit `homepage.src.html` (layout, texts, settings) and commit. The Action runs `scripts/build_home.py`, which rebuilds `home.js`, the `home.html` preview (https://europe-elects.github.io/country-pages/home.html) and `homepage.html`, a single block you can paste if GitHub is down. Change the featured dashboard in `FEATURED` at the top of `scripts/build_home.py`, with its image in `home/`.

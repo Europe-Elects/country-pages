@@ -178,6 +178,16 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .poll .poll-key{display:flex;align-items:center;gap:6px;font-style:normal}
 .pseg{display:inline-flex}.pseg .pchip:first-child{border-radius:999px 0 0 999px}.pseg .pchip:last-child{border-radius:0 999px 999px 0;margin-left:-1px}.pseg .pchip[aria-pressed="false"]{text-decoration:none}.pseg .dot+.dot{margin-left:-3px}
 .rngbtn:focus-visible,.pchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.v-polling,.v-polling body{background:transparent}
+.v-polling .only-on .pchip[aria-pressed="false"]:not(.more-chips),.v-polling .only-on .pseg:not(:has([aria-pressed="true"])){display:none}
+.v-polling .more-chips{border-style:dashed;color:var(--muted)}
+.v-polling .card{border:0;border-radius:0;padding-left:0;padding-right:0}
+.v-polling .wrap{padding:0 0 4px;gap:10px}
+.next-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 16px}
+.next-c{display:block;font-size:24px;font-weight:700;line-height:1.1;color:var(--navy);text-transform:uppercase;letter-spacing:.06em}
+.next-m{display:block;font-size:15px;color:var(--muted);margin-top:2px}
+.next-m strong{color:var(--ink)}
+.next-head a{font-weight:600;font-size:15px;white-space:nowrap}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 footer .team{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
@@ -203,7 +213,7 @@ const SOURCES = {
   alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' },
   // Electoral calendar (separate spreadsheet). Columns: Country, Specification, Type, Mode, Sequence,
   // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
-  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' },
+  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '1530371858', publishedCsv: '' },
   // European Parliament projection (Mastersheet, wide format: Country, EU Parliament group, Party,
   // Party Name + Group, then one column per month such as "Jul-26"). Rows are matched on the country name.
   projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' },
@@ -783,6 +793,10 @@ function parseElectionDate(raw) {
   if ((m = t.match(/^(\d{4})$/))) return { date: new Date(+m[1], 11, 31), precision: 'year' };
   const d = new Date(t); return isNaN(d) ? null : { date: d, precision: 'day' };
 }
+// By-elections (partial, supplementary, recall or repeat votes for single seats) and upper-house-only votes.
+function isByElectionRow(o) { return /by[\s-]?election|partial|supplementary|nachwahl|ersatzwahl|élection partielle|elezion[ei] suppletiv|wybory uzupełniające|recall/i
+  .test([g(o, 'Type'), g(o, 'Specification'), g(o, 'Sequence'), g(o, 'Comment')].join(' ')); }
+function isUpperOnlyRow(o) { return /upper house|senate|council of states|bundesrat/i.test(g(o, 'Type')); }
 function electionKind(type) {
   const t = norm(type);
   if (/europ/.test(t)) return 'european';
@@ -1335,9 +1349,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   const today = new Date();
   // Election markers: national parliament general elections only. By-elections (partial, supplementary,
   // recall or repeat votes for single seats) and upper-house-only votes are not marked.
-  const isByElection = (o) => /by[\s-]?election|partial|supplementary|nachwahl|ersatzwahl|élection partielle|elezion[ei] suppletiv|wybory uzupełniające|recall/i
-    .test([g(o, 'Type'), g(o, 'Specification'), g(o, 'Sequence'), g(o, 'Comment')].join(' '));
-  const isUpperOnly = (o) => /upper house|senate|council of states|bundesrat/i.test(g(o, 'Type'));
+  const isByElection = isByElectionRow, isUpperOnly = isUpperOnlyRow;
   const elections = (calendarRows || []).filter((o) => norm(g(o, 'Country')) === norm(countryName) && electionKind(g(o, 'Type')) === 'parliament' && !isByElection(o) && !isUpperOnly(o))
     .map((o) => { const r = parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')); return r && r.precision === 'day' ? r.date : null; })
     .filter((d) => d && d < today && d >= from);
@@ -1373,6 +1385,42 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   });
   return { series, polls, elections, full: { a: t0, b: t1 }, view: { a: t0, b: t1 }, range: 'all', hidden: new Set(stale), groups, updated: data.updated };
 }
+// Heading for the chart-only view (?view=polling), e.g. on the home page.
+let NEXT = null; // { iso, row, parsed } when ?country=next
+function nextHead(cfg) {
+  const link = `<a href="${esc(CALENDAR_URL)}" target="_blank" rel="noopener">Electoral calendar →</a>`;
+  if (!NEXT) return `<div class="next-head"><div><span class="next-c">${esc(cfg.name)}</span></div>${link}</div>`;
+  const { row, parsed } = NEXT;
+  const d = parsed.precision === 'day' ? parsed.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : parsed.precision === 'month' ? parsed.date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : String(parsed.date.getFullYear());
+  const days = Math.round((parsed.date - new Date().setHours(0, 0, 0, 0)) / 864e5);
+  const when = parsed.precision !== 'day' ? '' : days === 0 ? 'today' : days === 1 ? 'tomorrow' : days < 60 ? `in ${days} days` : `in ${Math.round(days / 30.4)} months`;
+  const status = g(row, 'Date Status');
+  const type = 'National parliament election' + (g(row, 'Specification') ? ' (' + g(row, 'Specification') + ')' : '');
+  return `<div class="next-head"><div><span class="next-c">${esc(cfg.name)}</span>
+    <span class="next-m">${esc(type)} · <strong>${esc(d)}</strong>${when ? ` · ${when}` : ''}${status && /^not/i.test(status) ? ' · date not confirmed' : ''}</span></div>${link}</div>`;
+}
+// Next national parliament (general) election, from today, in a country with a recent polling average.
+async function pickNext(calRows, partyRows) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const isoOf = (name) => { const r = partyRows.find((o) => g(o, 'ISO-2') && sameCountry(g(o, 'Country'), name)); return r ? g(r, 'ISO-2').toUpperCase() : ''; };
+  const cands = calRows.filter((o) => electionKind(g(o, 'Type')) === 'parliament' && !isByElectionRow(o) && !isUpperOnlyRow(o))
+    .map((o) => ({ row: o, parsed: parseElectionDate(g(o, '(Expected) Date', 'Expected Date', 'Date')) }))
+    .filter((x) => x.parsed && x.parsed.date >= today).sort((a, b) => a.parsed.date - b.parsed.date);
+  for (const x of cands) {
+    const iso = isoOf(g(x.row, 'Country'));
+    if (!iso || iso === 'EU' || NO_POLLING.includes(iso)) continue;
+    try {
+      const r = await fetch(`polling/${iso}.json`, { cache: 'no-cache' }); if (!r.ok) continue;
+      const data = await r.json();
+      const last = Math.max(...(data.polls || []).map((p) => new Date(p.d).getTime()));
+      if (!isFinite(last) || today - last > NEXT_MAX_POLL_AGE * 864e5) continue; // skip countries without recent polls
+      return { iso, data, ...x };
+    } catch (e) { /* try the next election */ }
+  }
+  return null;
+}
+const NEXT_MAX_POLL_AGE = 365; // days: ?country=next skips countries whose latest poll is older than this
 const RANGES = [['1', '1 year'], ['2', '2 years'], ['5', '5 years'], ['all', 'All']];
 function viewPolling(cfg, poll) {
   if (NO_POLLING.includes(ISO)) { POLL = null; return ''; }
@@ -1395,7 +1443,7 @@ function viewPolling(cfg, poll) {
         + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="a" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`
         + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="m" aria-pressed="${mem.some((m) => !POLL.hidden.has(m.key))}" title="${esc(mem.map((m) => m.name).join(' · '))}">${mem.map((m) => `<span class="dot" style="background:${m.color}"></span>`).join('')}${esc(mem.map((m) => m.abbr).join(' + '))}</button></span>`;
     };
-    return bar('Polling average', right) + `<section class="card poll">
+    return (VIEW === 'polling' ? nextHead(cfg) : bar('Polling average', right)) + `<section class="card poll">
       <div class="poll-ctl">
         <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
           <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
@@ -1643,10 +1691,12 @@ function viewLegend(parties, showAll) {
 
 /* ---------- App ---------- */
 const params = new URLSearchParams(location.search);
-const ISO = (params.get('country') || 'AL').toUpperCase();
+let ISO = (params.get('country') || 'AL').toUpperCase(); // 'NEXT' = next national parliament election with polls
+const VIEW = (params.get('view') || '').toLowerCase();  // 'polling' = polling chart only (for the home page)
+if (VIEW) document.documentElement.classList.add('v-' + VIEW);
 // Outside the EU, parties are labelled and coloured strictly by Europarty; EP groups are not shown.
 const EU_MEMBERS = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'AX', 'EU'];
-const IS_EU = EU_MEMBERS.includes(ISO);
+let IS_EU = EU_MEMBERS.includes(ISO);
 const app = document.getElementById('app');
 let state = { activeOnly: true, showAllIdeo: false, allAlliances: false };
 
@@ -1661,9 +1711,37 @@ async function main() {
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
   try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
   let calendarRows = [], projectionRows = [], teamRows = [];
+  let pollData = null;
+  if (ISO === 'NEXT') {
+    try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
+    NEXT = await pickNext(calendarRows, partyRows);
+    if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
+    ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
+  }
+  if (VIEW === 'polling') {
+    if (!calendarRows.length) try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
+    if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
+    const { list: parties } = buildParties(partyRows, ISO, cfg);
+    cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+    document.title = `Europe Elects – Polling average, ${cfg.name}`;
+    const alliances = buildAlliances(allianceRows, ISO, parties);
+    const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
+    app.innerHTML = viewPolling(cfg, poll) || `<div class="card status">No polling average for ${esc(cfg.name)}.</div>`;
+    bindPolling(); drawPolling();
+    // Home page: start on the last 5 years and only list the parties that are switched on.
+    const r5 = document.querySelector('.rngbtn[data-r="5"]'); if (r5) r5.click();
+    const box = document.querySelector('.poll-parties'), off = box ? box.querySelectorAll('.pchip[aria-pressed="false"]').length : 0;
+    if (off) {
+      box.classList.add('only-on');
+      box.insertAdjacentHTML('beforeend', `<button type="button" class="pchip more-chips" aria-expanded="false">+ ${off} more</button>`);
+      box.querySelector('.more-chips').onclick = (e) => { const open = box.classList.toggle('only-on') === false; e.currentTarget.setAttribute('aria-expanded', open); e.currentTarget.textContent = open ? 'Fewer' : `+ ${off} more`; postHeight(); };
+    }
+    postHeight();
+    return;
+  }
   try { teamRows = await loadWithFallback(TEAM_SOURCE); } catch (e) { console.warn('Team sheet not loaded', e); }
   try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
-  try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
+  if (!calendarRows.length) try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
   let governmentRows = [], seatRows = [];
   try { governmentRows = await loadWithFallback(SOURCES.government); } catch (e) { console.warn('Government sheet not loaded', e); }
   try { seatRows = await loadWithFallback(SOURCES.seats); } catch (e) { console.warn('Seat sheet not loaded', e); }
@@ -1678,8 +1756,7 @@ async function main() {
     .flatMap((v) => v.split(/\s*[,;\n]\s*/)).map((v) => v.trim())
     .filter((v) => v && !/active team member/i.test(v)))];
   const projection = buildProjection(projectionRows, cfg.name, current);
-  let pollData = null;
-  if (!NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
+  if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
   const alliances = buildAlliances(allianceRows, ISO, parties);
   // Parliament from the seat sheet; the main chamber (unicameral / lower house) also feeds the seat history on party tiles.
   cfg.chambers = buildChambers(seatRows, cfg, parties, alliances);
