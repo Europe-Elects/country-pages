@@ -1,0 +1,61 @@
+# Builds the polling averages from the private poll database (Europe-Elects/apopod)
+# and publishes the country pages to GitHub Pages.
+# Runs on every change to this repository, every 6 hours, and on demand (Actions › Build and deploy › Run workflow).
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the country pages
+        uses: actions/checkout@v4
+
+      - name: Check out the poll database (private)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: Europe-Elects/apopod
+          token: ${{ secrets.APOPOD_TOKEN }}
+          path: apopod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Assemble the site
+        run: |
+          mkdir -p site
+          python3 scripts/build_home.py
+          cp index.html site/
+          for f in home.js home.html live.html; do [ -f "$f" ] && cp "$f" site/ || true; done
+          [ -d home ] && cp -r home site/ || true
+          [ -f EMBED-CODES.md ] && cp EMBED-CODES.md site/ || true
+          python3 scripts/build_polling.py apopod site/polling
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
