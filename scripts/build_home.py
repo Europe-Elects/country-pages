@@ -36,8 +36,9 @@ loader = f"""/* Europe Elects home page – built by scripts/build_home.py from 
   var host = document.getElementById('ee-home-root');
   if (!host) {{ host = document.createElement('div'); (document.currentScript || document.body.lastChild).insertAdjacentElement('beforebegin', host); }}
   if (!document.querySelector('link[href*="family=Advent+Pro"]')) {{ var fl = document.createElement('link'); fl.rel = 'stylesheet'; fl.href = 'https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700;800&display=swap'; document.head.appendChild(fl); }}
-  var st = document.createElement('style'); st.textContent = {json.dumps(css)}; document.head.appendChild(st);
-  host.innerHTML = {json.dumps(js_body)};
+  // Shadow root: the WordPress theme's styles can't reach in, so the page looks the same as on GitHub.
+  var root = host.attachShadow ? host.attachShadow({{ mode: 'open' }}) : host;
+  root.innerHTML = '<style>' + {json.dumps(css)} + '</style>' + {json.dumps(js_body)};
   var bs = document.createElement('script'); bs.type = 'module'; bs.async = true; bs.src = 'https://cdn.jsdelivr.net/npm/bsky-embed/dist/bsky-embed.es.js'; document.head.appendChild(bs);
   function load(src) {{ return new Promise(function (ok) {{ if (src.test()) return ok(); var s = document.createElement('script'); s.src = src.url; s.onload = s.onerror = function () {{ ok(); }}; document.head.appendChild(s); }}); }}
   load({{ url: 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', test: function () {{ return !!window.d3; }} }})
@@ -46,7 +47,20 @@ loader = f"""/* Europe Elects home page – built by scripts/build_home.py from 
   // Inside an iframe (home.html embedded elsewhere): report the height so the frame can resize.
   if (window.parent !== window && 'ResizeObserver' in window) new ResizeObserver(function () {{ window.parent.postMessage({{ 'datawrapper-height': {{ 'ee-home': document.documentElement.scrollHeight }} }}, '*'); }}).observe(document.body);
   function run() {{
+    // The page code looks elements up through "document"; point those lookups at the shadow root.
+    var D = window.document;
+    var document = root === host ? D : {{
+      getElementById: function (id) {{ return root.getElementById(id); }},
+      querySelector: function (s) {{ return root.querySelector(s); }},
+      querySelectorAll: function (s) {{ return root.querySelectorAll(s); }},
+      createElement: function (t) {{ return D.createElement(t); }},
+      get documentElement() {{ return D.documentElement; }}, get body() {{ return D.body; }}, get head() {{ return D.head; }}
+    }};
 {app}
+    // Links such as europeelects.eu/#eeh-data-access: scroll to the section inside the shadow root.
+    function jump() {{ var id = (location.hash || '').slice(1); var el = id && root.getElementById && root.getElementById(id); if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'start' }}); }}
+    window.addEventListener('hashchange', jump); setTimeout(jump, 600);
+    root.addEventListener('click', function (e) {{ var a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return; e.preventDefault(); history.pushState(null, '', a.getAttribute('href')); jump(); }});
   }}
 }})();
 """
