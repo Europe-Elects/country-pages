@@ -253,7 +253,8 @@ const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 // Team members responsible for each country (shown at the bottom of the page).
 // Paste the tab's "Publish to web" CSV link into publishedCsv. Entries reading "active team member" are skipped.
 const TEAM_SOURCE = { sheetId: '1GaBoIAmC0q_zr3sT__ZlkyWS0SffGogxIubIkteJ3wI', gid: '1332653481', publishedCsv: '' };
-const TEAM_COLUMNS = { country: ['ISO-2', 'ISO', 'Country code', 'Country'], member: ['Team member', 'Responsible', 'Responsible team member', 'Country coordinator', 'Coordinator', 'Editor', 'Name', 'Member'] };
+// Columns: Area of Designated Responsibility (country name or ISO code), Assignment (name), Start Date.
+const TEAM_COLUMNS = { country: ['Area of Designated Responsibility', 'ISO-2', 'ISO', 'Country code', 'Country'], since: ['Start Date', 'Since'], member: ['Assignment', 'Team member', 'Responsible', 'Responsible team member', 'Country coordinator', 'Coordinator', 'Editor', 'Name', 'Member'] };
 
 // Polling-average charts (Datawrapper chart IDs) per country, e.g. AL: 'abGxs'.
 // A country's own polling block in COUNTRIES takes priority. The latest chart version is always shown.
@@ -663,6 +664,11 @@ function logoSpec(p) {
   if (!v) return null;
   if (/^(none|no|-|–|hide|hidden)$/i.test(v)) return { hide: true };
   if (/^Q\d+$/i.test(v)) return { qid: v.toUpperCase() };
+  // Any Wikipedia / Wikimedia Commons file link, incl. "…/wiki/Article#/media/File:Logo.svg" and local
+  // namespaces such as "Datei:" or "Fichier:". Served through that wiki's Special:FilePath, which also finds
+  // logos uploaded only to that language's Wikipedia (common for non-free logos).
+  const wiki = v.match(/^https?:\/\/([\w.-]+\.(?:wikipedia|wikimedia)\.org)\/wiki\/(?:[^#]*#\/media\/)?[^:/#]+:([^?#]+\.(?:svg|png|jpe?g|gif|webp|tiff?))(?:[?#].*)?$/i);
+  if (wiki) return { src: `https://${wiki[1].replace('.m.', '.')}/wiki/Special:FilePath/${encodeURIComponent(decodeURIComponent(wiki[2]).replace(/ /g, '_'))}?width=240` };
   const commons = v.match(/^(?:https?:\/\/commons\.wikimedia\.org\/wiki\/)?File:(.+)$/i);
   if (commons) return { src: decodeURIComponent(commons[1]).replace(/_/g, ' ') };
   if (/^https?:\/\//i.test(v)) return { src: v };
@@ -1808,10 +1814,14 @@ async function main() {
   document.title = `Europe Elects – ${cfg.name}`;
   const current = parties.filter((p) => p.latest);
   const elections = buildElections(calendarRows, cfg.name);
-  const team = [...new Set(teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country); return c.toUpperCase() === ISO || norm(c) === norm(cfg.name); })
-    .flatMap((o) => TEAM_COLUMNS.member.map((k) => g(o, k)).filter(Boolean).slice(0, 1))
-    .flatMap((v) => v.split(/\s*[,;\n]\s*/)).map((v) => v.trim())
-    .filter((v) => v && !/active team member/i.test(v)))];
+  // Team members: one entry per name, with the earliest start date given for this country.
+  const teamMap = new Map();
+  teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country).trim(); return c.toUpperCase() === ISO || sameCountry(c, cfg.name); })
+    .forEach((o) => { const since = boundDate(g(o, ...TEAM_COLUMNS.since));
+      String(TEAM_COLUMNS.member.map((k) => g(o, k)).find(Boolean) || '').split(/\s*[,;\n]\s*/).map((v) => v.trim())
+        .filter((v) => v && !/active team member/i.test(v))
+        .forEach((v) => { const prev = teamMap.get(v); if (prev === undefined || since < prev) teamMap.set(v, since); }); });
+  const team = [...teamMap].sort((a, b) => a[1] - b[1]).map(([name, since]) => ({ name, since: since > -Infinity ? new Date(since).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '' }));
   const projection = buildProjection(projectionRows, cfg.name, current);
   if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* no polling file for this country */ } }
   const alliances = buildAlliances(allianceRows, ISO, parties);
@@ -1842,7 +1852,7 @@ async function main() {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
       viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer>
-      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">Responsible team member${team.length > 1 ? 's' : ''}: <strong>${team.map(esc).join(', ')}</strong></p>` : ''}</footer>`;
+      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
     postHeight();
   };
