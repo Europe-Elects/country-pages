@@ -252,6 +252,8 @@ const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 
 // Team members responsible for each country (shown at the bottom of the page).
 // Paste the tab's "Publish to web" CSV link into publishedCsv. Entries reading "active team member" are skipped.
+// Team credits (hard-coded copy of the assignment sheet: area, name(s), start date). Update by replacing this list.
+const TEAM_DATA = [["Åland Islands", "Julius Lehtinen", "1 August 2018"], ["Albania", "Julius Lehtinen", "25 October 2025"], ["Andorra", "Tomos Stokes", "1 January 2025"], ["Austria", "Mingo Garscha", "29 September 2022"], ["Belarus", "Roman Broszkowski", "1 November 2022"], ["Bosnia and Herzegovina", "Roman Broszkowski", "1 November 2022"], ["Bulgaria", "Kostadin Kostov", "12 November 2025"], ["Canada - 1", "Šárka Neumannová", "1 April 2025"], ["China - 2", "Edwin Shiu", "10 November 2025"], ["Czechia", "Mikuláš Králíček", "1 April 2026"], ["Denmark", "Tristan Løve", "1 July 2022"], ["El Salvador", "Rithwik Narendra", "11 November 2023"], ["Estonia", "Gert Armand Valgerist", "1 February 2023"], ["Finland", "Julius Lehtinen", "1 August 2018"], ["France - 1", "Matthias Troude", "1 September 2023"], ["France - 2", "Rayane S", "14 November 2025"], ["Georgia", "Jan Jakob Langer", "28 April 2023"], ["Ghana", "David Montoto Salas", "30 March 2026"], ["Gibraltar", "Tomos Stokes", "1 January 2025"], ["Greece", "Vasilis Karatzoglou", "24 March 2026"], ["Greenland", "Julius Lehtinen", "1 August 2018"], ["Holy See", "Antonio F. Modeo", "21 December 2018"], ["Hungary", "I. Telegdi", "21 November 2025"], ["Iceland", "Rithwik Narendra", "11 November 2023"], ["Iraq", "Mohammed Majeed", "1 October 2021"], ["Ireland", "Dylan Simpson", "24 October 2024"], ["Italy - 1", "Francesca Giosuè", "1 March 2025"], ["Kiribati", "Rithwik Narendra", "11 November 2023"], ["Kosovo", "James J-B", "1 April 2025"], ["Latvia", "Linus Folke Jensen", "22 August 2020"], ["Liechtenstein", "Nasha Gagnebin", "20 December 2020"], ["Malta", "Liam Meade", "11 November 2025"], ["Monaco", "Matthias Troude", "1 September 2023"], ["Nigeria - 1", "Adrian Elimian", "1 May 2021"], ["Republic of Korea", "Sturmovik", "22 August 2022"], ["Russian Federation - 2", "Murasaki Helimsky", "1 August 2023"], ["Slovakia", "Andrej Černek", "6 January 2024"], ["South Africa - 1", "Dylan Simpson", "12 January 2024"], ["Spain 2", "Teo García Prado", "1 September 2025"], ["Switzerland - 1", "Nasha Gagnebin", "20 December 2020"], ["Switzerland - 2", "Simone Sessolo", "9 April 2024"], ["Thailand - 1", "Tinnakorn Wantae", "10 January 2020"], ["Türkiye -2", "Arhan Özturan", "14 November 2025"], ["Tuvalu", "Rithwik Narendra", "11 November 2023"], ["United Kingdom - 2", "Emanuele Vaudano", "30 March 2026"], ["United States of America - 4", "Y. Lowitz", "1 May 2025"]];
 const TEAM_SOURCE = { sheetId: '1GaBoIAmC0q_zr3sT__ZlkyWS0SffGogxIubIkteJ3wI', gid: '1332653481', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQN8eCtgoyqV7jtGDoOlkoGvoaetL6hLF6Ppk2PMGHhzklNTSdcis3NSwbTXGIo3KxMRc_SuSddtHJw/pub?gid=1173701697&single=true&output=csv' };
 // Columns: Area of Designated Responsibility (country name or ISO code), Assignment (name), Start Date.
 const TEAM_COLUMNS = { country: ['Area of Designated Responsibility', 'ISO-2', 'ISO', 'Country code', 'Country'], since: ['Start Date', 'Since'], member: ['Assignment', 'Team member', 'Responsible', 'Responsible team member', 'Country coordinator', 'Coordinator', 'Editor', 'Name', 'Member'] };
@@ -1802,7 +1804,7 @@ async function main() {
     postHeight();
     return;
   }
-  try { teamRows = await loadWithFallback(TEAM_SOURCE); } catch (e) { console.warn('Team sheet not loaded', e); }
+  teamRows = TEAM_DATA.map(([area, name, since]) => ({ 'area of designated responsibility': area, assignment: name, 'start date': since }));
   try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
   if (!calendarRows.length) try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
   let governmentRows = [], seatRows = [];
@@ -1816,10 +1818,10 @@ async function main() {
   const elections = buildElections(calendarRows, cfg.name);
   // Team members: one entry per name, with the earliest start date given for this country.
   const teamMap = new Map();
-  teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country).trim(); return c.toUpperCase() === ISO || sameCountry(c, cfg.name); })
+  teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country).trim().replace(/\s*-?\s*\d+$/, ''); return c.toUpperCase() === ISO || sameCountry(c, cfg.name); })
     .forEach((o) => { const since = boundDate(g(o, ...TEAM_COLUMNS.since));
       String(TEAM_COLUMNS.member.map((k) => g(o, k)).find(Boolean) || '').split(/\s*[,;\n]\s*/).map((v) => v.trim())
-        .filter((v) => v && !/active team member|apply now|vacant|^tbd$|^-$/i.test(v))
+        .filter((v) => v && !/active team member|apply now|vacant|^tbd$|^-$|^#/i.test(v))
         .forEach((v) => { const prev = teamMap.get(v); if (prev === undefined || since < prev) teamMap.set(v, since); }); });
   const team = [...teamMap].sort((a, b) => a[1] - b[1]).map(([name, since]) => ({ name, since: since > -Infinity ? new Date(since).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '' }));
   const projection = buildProjection(projectionRows, cfg.name, current);
