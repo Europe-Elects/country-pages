@@ -44,7 +44,10 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p site
+          python3 scripts/build_home.py
           cp index.html site/
+          for f in home.js home.html; do [ -f "$f" ] && cp "$f" site/ || true; done
+          [ -d home ] && cp -r home site/ || true
           [ -f EMBED-CODES.md ] && cp EMBED-CODES.md site/ || true
           python3 scripts/build_polling.py apopod site/polling
 
