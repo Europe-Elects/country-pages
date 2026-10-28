@@ -607,12 +607,28 @@ let colourMap = () => {};
 const SPECTRUM = ['LEFT', 'G/EFA', 'S&D', 'RE', 'EPP', 'ECR', 'PfE', 'ESN', 'NI', 'unaffiliated'];
 const SMALL_STATES = { 'Malta': [14.4, 35.9], 'Luxembourg': [6.1, 49.8], 'Cyprus': [33.2, 35.0] };
 const DOT_R = 3.3, DOT_GAP = 7.6; // dot radius and spacing in map units (map is 960 wide)
+// The base map (Natural Earth) draws Crimea as part of Russia. Move it to Ukraine and dissolve the border.
+function ukraineWithCrimea(world) {
+  try {
+    const geos = world.objects.countries.geometries;
+    const ru = geos.find((g) => String(g.id) === '643'), ua = geos.find((g) => String(g.id) === '804');
+    if (!ru || !ua || ru.type !== 'MultiPolygon') return;
+    const point = [34.1, 45.3]; // central Crimea
+    const i = ru.arcs.findIndex((poly) => d3.geoContains(topojson.feature(world, { type: 'Polygon', arcs: poly }), point));
+    if (i < 0) return;
+    const crimea = { type: 'Polygon', arcs: ru.arcs[i] };
+    ru.arcs.splice(i, 1);
+    const merged = topojson.mergeArcs(world, [ua, crimea]);
+    ua.type = merged.type; ua.arcs = merged.arcs;
+  } catch (e) { /* keep the map as it is */ }
+}
 function drawMap() {
   if (!window.d3 || !window.topojson) return;
   const wrap = document.getElementById('eeh-map'); wrap.hidden = false;
   const W = 960, H = 640;
   const svg = d3.select(wrap).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Map: projected European Parliament seats per country, one dot per seat');
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then((r) => r.json()).then((world) => {
+    ukraineWithCrimea(world);
     const feats = topojson.feature(world, world.objects.countries).features;
     // Mainland polygon only (no overseas territories or remote islands) for centring.
     const mainland = (f) => {
