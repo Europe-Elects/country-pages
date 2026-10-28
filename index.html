@@ -36,11 +36,15 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .bar a{font-size:15px;font-weight:600;color:var(--gold);text-decoration:none}
 .bar a:hover{text-decoration:underline}
 .bar-r{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
-.cmode{display:inline-flex;align-items:center;gap:0;border:1px solid rgba(255,255,255,.35);border-radius:999px;overflow:hidden;font-size:14px}
-.cmode .cm-l{padding:0 8px 0 11px;color:#D6DCE8;font-weight:600}
-.cmode button{border:0;border-left:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font:600 14px 'Advent Pro',system-ui,sans-serif;padding:4px 11px;cursor:pointer}
-.cmode button[aria-pressed="true"]{background:var(--gold);color:var(--navy)}
-.cmode button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.cmode{display:inline-flex;align-items:center;gap:8px;font-size:14px}
+.cmode .cm-l{color:#D6DCE8;font-weight:600}
+.cmode button{min-height:32px;padding:0 14px;border:2px solid #fff;background:#fff;color:var(--navy);font:700 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.cmode button:first-of-type{border-radius:6px 0 0 6px}
+.cmode button:last-of-type{border-radius:0 6px 6px 0;margin-left:-8px}
+.cmode button:hover{background:#FFF6D6}
+.cmode button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--navy);box-shadow:inset 0 2px 3px rgba(0,0,0,.18)}
+.cmode button[aria-pressed="true"]::before{content:"✓ ";font-weight:800}
+.cmode button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .badge{padding:3px 12px;border-radius:999px;background:var(--gold);color:var(--navy);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .grid-e{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
 .elec{overflow:hidden;display:flex;flex-direction:column}
@@ -1091,10 +1095,10 @@ function buildChambers(rows, cfg, parties, alliances) {
         color, soft: !!soft, eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
         memberIds: ent && ent.members ? ent.members.map((m) => m.party && m.party.entityId).filter(Boolean) : [] };
     }).filter((sg) => sg.vals.some((v) => v > 0));
-    applyColorMode(segs, 'seat');
     const fam = (sg) => { const i = FAMILY_ORDER.indexOf(sg.eu); return i < 0 ? FAMILY_ORDER.indexOf('(none)') : i; };
     const lastI = keys.length - 1;
     segs.sort((x, y) => fam(x) - fam(y) || (y.vals[lastI] || 0) - (x.vals[lastI] || 0));
+    applyColorMode(segs, 'seat');
     const totals = keys.map((k, i) => (totalRow && num(totalRow, k)) || segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0));
     const type = norm(g(rs[0], 'Chamber type')) || 'unicameral';
     return { name, type, elections: keys.map((k) => ({ key: k, label: electionLabel(k) })), segs, totals,
@@ -1139,7 +1143,18 @@ function applyColorMode(list, kind) {
       if (kind === 'poll') { x.colorAt = () => ide.color; x.thinAt = () => false; x.dashAt = () => false; x.interest = ''; }
     } else Object.assign(x, x.aff);
   });
+  // Seats: ideology order in Ideology mode (largest party first within an ideology), affiliation order otherwise.
+  if (kind === 'seat' && list) {
+    list.forEach((x, i) => { if (x._ord == null) x._ord = i; });
+    const last = (x) => x.vals[x.vals.length - 1] || 0;
+    list.sort(COLOR_MODE === 'ideo' ? (a, b) => ideoRank(a.ide && a.ide.name) - ideoRank(b.ide && b.ide.name) || last(b) - last(a) : (a, b) => a._ord - b._ord);
+  }
 }
+// Seat order in Ideology mode, left to right. Ideologies not listed here go to the end, in this order of appearance.
+const IDEOLOGY_ORDER = ['Far-left', 'Left-wing', 'Animal rights', 'Green politics', 'Pirate politics', 'Centre-left', 'Regionalism', 'Eurofederalism',
+  'Liberalism', 'Centrism', 'Agrarianism', 'Libertarianism', 'Centre-right', 'Christian fundamentalism', 'National conservatism', 'Monarchism',
+  'Right-wing', 'Far-right', 'Islamism', 'Diverse'];
+const ideoRank = (name) => { const k = norm(name).replace(/-/g, ' '); const i = IDEOLOGY_ORDER.findIndex((x) => norm(x).replace(/-/g, ' ') === k); return i < 0 ? IDEOLOGY_ORDER.length : i; };
 const modeToggle = () => `<span class="cmode" role="group" aria-label="Colour parties by"><span class="cm-l">Colour by</span><button type="button" data-m="aff" aria-pressed="${COLOR_MODE === 'aff'}">Affiliation</button><button type="button" data-m="ideo" aria-pressed="${COLOR_MODE === 'ideo'}">Ideology</button></span>`;
 const modeNote = () => (COLOR_MODE === 'ideo' ? `<p class="note-s" style="margin:0">Colours show each party's main ideology (first entry in our party database); alliances take the most common ideology of their members. See the ideology legend below.</p>` : '');
 const segBg = (sg) => (sg.soft ? stripes(sg.color) : sg.color);
