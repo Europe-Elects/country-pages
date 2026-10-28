@@ -174,7 +174,7 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .proj-chart{position:relative;width:100%}
 .proj-chart svg{display:block}
 .proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#6B707A;font-variant-numeric:tabular-nums}
-.proj-chart .lab{font:600 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.proj-chart .lab{font:500 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .proj-tip[hidden]{display:none}
 .proj-tip{position:absolute;top:8px;z-index:3;min-width:220px;max-width:min(320px,100%);background:rgba(255,255,255,.97);border:1px solid #D5D3CC;border-radius:4px;box-shadow:0 8px 24px rgba(27,42,74,.16);padding:8px 12px 10px;font-size:14px;display:flex;flex-direction:column;gap:3px;pointer-events:none;font-variant-numeric:tabular-nums}
 .proj-tip>strong{display:block;padding-bottom:6px;margin-bottom:3px;border-bottom:1px solid #ECEAE4;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
@@ -908,7 +908,7 @@ function smoothPath(pts) {
 const inkFor = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c === NONE ? '#565B66' : c);
 // End label with a marker on the line and a thin leader when the label had to be moved.
 const endLabel = (x0, yLine, xText, yText, color, inner, title) =>
-  `<circle cx="${x0}" cy="${yLine}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5"/>` +
+  `<circle cx="${x0}" cy="${yLine}" r="3.5" fill="${color}" stroke="#fff" stroke-width="1.5"/>` +
   (Math.abs(yText - yLine) > 3 || xText - x0 > 20 ? `<polyline points="${x0 + 5},${yLine} ${xText - 4},${yText}" fill="none" stroke="${color}" stroke-width="1" opacity=".6"/>` : '') +
   `<text x="${xText}" y="${yText + 4}" class="lab" fill="${inkFor(color)}" style="cursor:help"><title>${esc(title)}</title>${inner}</text>`;
 
@@ -1581,7 +1581,7 @@ function drawPolling() {
     const runs = []; let run = null;
     pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()), th = sr.thinAt(q.t.getTime()), da = sr.dashAt(q.t.getTime()); if (!run || run.c !== c || run.th !== th || run.da !== da) { if (run) run.pts.push(q); run = { c, th, da, pts: [q] }; runs.push(run); } else run.pts.push(q); });
     runs.forEach((rn) => { if (rn.pts.length < 2) return;
-      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE || rn.th ? 1.6 : 2.4}"${rn.da ? ' stroke-dasharray="6 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`; });
+      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE || rn.th ? 1.4 : 2}"${rn.da ? ' stroke-dasharray="6 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`; });
   }));
   svg += '</g>';
   const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
@@ -1604,8 +1604,8 @@ function drawPolling() {
     <line id="poll-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="poll-marks"></g>
     <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="poll-hit" style="cursor:crosshair"/></svg><div class="proj-tip" id="poll-tip" hidden></div>`;
   const cv = document.getElementById('poll-dots'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
-  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip(); ctx.globalAlpha = 0.2;
-  const r = small ? 1.4 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2.4 : 1.8);
+  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip(); ctx.globalAlpha = 0.14;
+  const r = small ? 1.2 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2 : 1.5);
   polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); } });
   // hover / tap pop-up, drag to zoom
   const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip'), sel = document.getElementById('poll-sel');
