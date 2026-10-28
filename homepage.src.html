@@ -174,6 +174,11 @@
 /* ---------- data access form ---------- */
 #ee-home .eeh-data{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:26px}
 #ee-home .eeh-data h3{margin:0 0 8px;font-size:20px;line-height:1.2}
+#ee-home .eeh-path{margin-top:14px;padding:12px 14px;background:var(--soft);border-left:3px solid var(--gold);border-radius:3px;display:flex;flex-direction:column;gap:4px}
+#ee-home .eeh-path b{font-size:17px;color:var(--navy)}
+#ee-home .eeh-path span{font-size:16px;color:var(--muted);line-height:1.4}
+#ee-home .eeh-path a{font-weight:700;color:#1E4C99}
+#ee-home .eeh-hint{margin:0;padding:9px 12px;background:#fff8d6;border-radius:3px;font-size:15.5px;color:var(--ink)}
 #ee-home .eeh-data ul{margin:12px 0 0;padding:0;list-style:none;font-size:16px}
 #ee-home .eeh-data li{padding:7px 0 7px 22px;border-bottom:1px solid #f0efea;position:relative}
 #ee-home .eeh-data li::before{content:"";position:absolute;left:4px;top:13px;width:8px;height:8px;border-radius:2px;background:var(--gold)}
@@ -343,31 +348,35 @@ __FEATURE__
 
   <!-- ===== Data access ===== -->
   <section class="eeh-panel eeh-wide" id="eeh-data-access">
-    <div class="eeh-bar"><span class="t">Data Access</span></div>
+    <a class="eeh-bar" href="https://europeelects.eu/data/"><span class="t">Data Access</span><span class="m">Terms &amp; details →</span></a>
     <div class="eeh-body">
       <div class="eeh-data">
         <div>
           <h3>Need our data?</h3>
-          <p style="font-size:15px;color:var(--muted)">Journalists, researchers and organisations can request access to the Europe Elects datasets. Requests are subject to an administrative fee; commercial use is licensed separately. Tell us what you need and we will get back to you with the terms.</p>
-          <ul>
-            <li>National polls and polling averages</li>
-            <li>European Parliament seat projections</li>
-            <li>Party database (affiliations, versions, IDs)</li>
-            <li>Election results and the electoral calendar</li>
-          </ul>
+          <p style="font-size:16px;color:var(--muted)">Our polling database covers national polls since January 2018, with pollster, commissioner, fieldwork dates, sample size and results for every poll.</p>
+          <div class="eeh-path">
+            <b>Students and academic researchers</b>
+            <span>Polling data as a CSV file per country, for non-commercial academic use. A processing fee per country applies, and any use must credit Europe Elects.</span>
+            <a href="https://europeelects.eu/data/">How to request academic access →</a>
+          </div>
+          <div class="eeh-path">
+            <b>Commercial users, media and bulk access</b>
+            <span>For commercial use, bulk access or recurring data deliveries, contact us with the form or at <a href="mailto:contact@europeelects.eu">contact@europeelects.eu</a>.</span>
+          </div>
         </div>
         <form class="eeh-form" id="eeh-form" novalidate>
           <label>Name<input name="name" autocomplete="name" required></label>
           <label>Email<input name="email" type="email" autocomplete="email" required></label>
           <label>Organisation<input name="organisation" autocomplete="organization"></label>
-          <label>Type of use<select name="use"><option>Academic / research</option><option>Media / journalism</option><option>Non-profit</option><option>Commercial</option></select></label>
+          <label>Type of use<select name="use"><option>Commercial</option><option>Media / journalism</option><option>Non-profit</option><option>Academic / student</option></select></label>
+          <p class="full eeh-hint" id="eeh-acad" hidden>Academic requests are handled through the processing fee. The steps are on our <a href="https://europeelects.eu/data/">data page</a>; use this form only if you have a question.</p>
           <label>Data needed<select name="dataset">
-            <option>Polling data</option><option>EP seat projection</option><option>Party database</option><option>Election results</option><option>Other</option></select></label>
+            <option>Polling data</option><option>Bulk access / recurring deliveries</option><option>Other data</option></select></label>
           <label>Countries and time period<input name="scope" placeholder="e.g. Germany and Austria, 2020–today"></label>
-          <label class="full">What will you use it for?<textarea name="purpose" required></textarea></label>
+          <label class="full">What will you use the data for?<textarea name="purpose" required></textarea></label>
           <input class="eeh-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <label class="full chk"><input type="checkbox" name="consent" required> I agree that Europe Elects may use these details to answer my request (see the <a href="https://europeelects.eu/privacy-policy" target="_blank" rel="noopener">privacy policy</a>).</label>
-          <button type="submit">Send request</button><span class="msg" id="eeh-form-msg" role="status"></span>
+          <label class="full chk"><input type="checkbox" name="consent" required> I agree that Europe Elects may use these details to answer my request (see the <a href="https://europeelects.eu/wpautoterms/gdpr-privacy-policy/" target="_blank" rel="noopener">privacy policy</a>).</label>
+          <button type="submit">Send enquiry</button><span class="msg" id="eeh-form-msg" role="status"></span>
         </form>
       </div>
     </div>
@@ -399,8 +408,8 @@ const COUNTRY_URL = 'https://europe-elects.github.io/country-pages/?country={iso
 const COUNTRIES = [["Albania", "AL"], ["Andorra", "AD"], ["Armenia", "AM"], ["Austria", "AT"], ["Azerbaijan", "AZ"], ["Belarus", "BY"], ["Belgium", "BE"], ["Bosnia and Herzegovina", "BA"], ["Bulgaria", "BG"], ["Croatia", "HR"], ["Cyprus", "CY"], ["Czechia", "CZ"], ["Denmark", "DK"], ["Estonia", "EE"], ["Faroe Islands", "FO"], ["Finland", "FI"], ["France", "FR"], ["Georgia", "GE"], ["Germany", "DE"], ["Greece", "GR"], ["Greenland", "GL"], ["Guernsey", "GG"], ["Hungary", "HU"], ["Iceland", "IS"], ["Ireland", "IE"], ["Isle of Man", "IM"], ["Italy", "IT"], ["Jersey", "JE"], ["Kosovo", "XK"], ["Latvia", "LV"], ["Liechtenstein", "LI"], ["Lithuania", "LT"], ["Luxembourg", "LU"], ["Malta", "MT"], ["Moldova", "MD"], ["Monaco", "MC"], ["Montenegro", "ME"], ["Netherlands", "NL"], ["North Macedonia", "MK"], ["Norway", "NO"], ["Poland", "PL"], ["Portugal", "PT"], ["Romania", "RO"], ["Russian Federation", "RU"], ["San Marino", "SM"], ["Serbia", "RS"], ["Slovakia", "SK"], ["Slovenia", "SI"], ["Spain", "ES"], ["Sweden", "SE"], ["Switzerland", "CH"], ["Turkey", "TR"], ["Ukraine", "UA"], ["United Kingdom", "GB"], ["Åland Islands", "AX"]];
 // Data access form. Set ONE of these: endpoint = a form service URL (e.g. Formspree) that accepts POST,
 // or email = address the visitor's mail program opens a pre-filled message to. With neither, the form opens DATA_ACCESS_URL.
-const DATA_FORM = { endpoint: '', email: '' };
-const DATA_ACCESS_URL = 'https://europeelects.eu/data-access-request/';
+const DATA_FORM = { endpoint: '', email: 'contact@europeelects.eu' };
+const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
 // Party database (full sheet). Falls back to the published CSV if the sheet can't be read directly.
 const PARTY_DB = { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '959052694',
   publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' };
@@ -778,6 +787,8 @@ function renderCountries() {
 /* ================= Data access form ================= */
 function bindForm() {
   const f = document.getElementById('eeh-form'), msg = document.getElementById('eeh-form-msg');
+  const acad = document.getElementById('eeh-acad');
+  f.use.addEventListener('change', () => { acad.hidden = !/academic/i.test(f.use.value); });
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (f.website.value) return; // spam trap
@@ -794,7 +805,7 @@ function bindForm() {
     }
     if (DATA_FORM.email) {
       const body = `Name: ${data.name}\nEmail: ${data.email}\nOrganisation: ${data.organisation || '–'}\nType of use: ${data.use}\nData needed: ${data.dataset}\nCountries / period: ${data.scope || '–'}\n\nPurpose:\n${data.purpose}`;
-      location.href = `mailto:${DATA_FORM.email}?subject=${encodeURIComponent('Data request: ' + data.dataset)}&body=${encodeURIComponent(body)}`;
+      location.href = `mailto:${DATA_FORM.email}?subject=${encodeURIComponent('Data enquiry (' + data.use + '): ' + data.dataset)}&body=${encodeURIComponent(body)}`;
       msg.textContent = 'Your email program should open with the request.'; return;
     }
     window.open(DATA_ACCESS_URL, '_blank', 'noopener');

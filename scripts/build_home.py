@@ -43,6 +43,8 @@ loader = f"""/* Europe Elects home page – built by scripts/build_home.py from 
   load({{ url: 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', test: function () {{ return !!window.d3; }} }})
     .then(function () {{ return load({{ url: 'https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js', test: function () {{ return !!window.topojson; }} }}); }})
     .then(run);
+  // Inside an iframe (home.html embedded elsewhere): report the height so the frame can resize.
+  if (window.parent !== window && 'ResizeObserver' in window) new ResizeObserver(function () {{ window.parent.postMessage({{ 'datawrapper-height': {{ 'ee-home': document.documentElement.scrollHeight }} }}, '*'); }}).observe(document.body);
   function run() {{
 {app}
   }}
@@ -54,7 +56,8 @@ open(os.path.join(ROOT, 'home.js'), 'w', encoding='utf-8').write(loader)
 open(os.path.join(ROOT, 'home.html'), 'w', encoding='utf-8').write('''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Europe Elects – Home</title>
-<style>body{margin:0;background:#fff;padding:24px 16px}</style></head>
+<base target="_top">
+<style>html,body{margin:0;background:transparent}body{padding:0 2px}</style></head>
 <body><div id="ee-home-root"></div><script src="home.js"></script></body></html>
 ''')
 
