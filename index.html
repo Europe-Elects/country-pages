@@ -312,7 +312,7 @@ const COUNTRIES = {
       order: ['BASHKË', 'PS', 'SHB', 'PKD', 'PAA', 'PL', 'PLL', 'LZHK', 'MUNDËSIA', 'PSD', 'PBDNJ', 'PDIU', 'PD', 'PR'] // left → right in the seat bar
     },
     polling: { embed: 'https://datawrapper.dwcdn.net/abGxs/24/', title: 'Polling average of Albania', height: 409,
-               note: 'This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in Albania.' }
+               note: 'This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in Albania. If data is too sparse, no average is produced.' }
   }
 };
 
@@ -781,7 +781,7 @@ function viewHeader(cfg) {
     ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${r.sticker ? `<span class="euco" title="Member of the European Council">★ ${esc(r.sticker)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;background:${p.color}"></span>${esc(p.text)}</span>`)).join('')}
     ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
   return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
-    ${rows ? `<div class="card lead">${rows}</div>` : ''}</header>`;
+    ${rows ? `<div class="card lead">${rows}</div>` : `<div class="card lead"><div class="lead-row"><span class="label">Government</span><span class="muted">Government data not yet available</span></div></div>`}</header>`;
 }
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 // Parses the calendar's date text. Returns { date: last possible day, precision } or null.
@@ -1479,7 +1479,7 @@ function viewPolling(cfg, poll) {
   if (NO_POLLING.includes(ISO)) { POLL = null; return ''; }
   POLL = poll || null;
   const right = `<a href="${esc(DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`;
-  const note = `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}.`;
+  const note = `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}. If data is too sparse, no average is produced.`;
   if (POLL) {
     const spanYears = (POLL.full.b - POLL.full.a) / (365.25 * 864e5);
     const ranges = RANGES.filter(([r]) => r === 'all' || +r < spanYears);
