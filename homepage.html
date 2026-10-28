@@ -3,9 +3,10 @@
      Paste this whole block into ONE "Custom HTML" block in WordPress.
      Settings you may want to change are at the top of the last <script>.
      ============================================================ -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700;800&display=swap">
 <style>
 #ee-home{--navy:#1a2b4a;--navy2:#0d1830;--gold:#ffcc00;--ink:#001936;--muted:#5f5e5a;--line:#e4e3de;--soft:#f6f5f1;--sky:#0085ff;
-  font-family:'Alegreya Sans','Segoe UI',system-ui,sans-serif;color:var(--ink);line-height:1.35;max-width:1180px;margin:0 auto;padding:24px 0 32px}
+  font-family:'Advent Pro',system-ui,sans-serif;color:var(--ink);line-height:1.35;max-width:1180px;margin:0 auto;padding:24px 0 32px}
 #ee-home *,#ee-home *::before,#ee-home *::after{box-sizing:border-box}
 #ee-home p{margin:0}
 #ee-home a{color:inherit}
@@ -19,7 +20,7 @@
   box-shadow:0 1px 3px rgba(0,25,54,.06)}
 #ee-home .eeh-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy);
   padding:12px 18px;text-decoration:none;border-bottom:2px solid var(--gold);flex:none}
-#ee-home .eeh-bar span{font-family:'Arial Narrow','Alegreya Sans','Roboto Condensed',Arial,sans-serif;font-size:15px}
+#ee-home .eeh-bar span{font-family:'Advent Pro',system-ui,sans-serif;font-size:16.5px}
 #ee-home .eeh-bar .t{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#fff}
 #ee-home .eeh-bar.live .t::before{content:"";width:8px;height:8px;border-radius:50%;flex:none}
 #ee-home .eeh-bar .m{color:var(--gold);white-space:nowrap;font-weight:700}
@@ -28,9 +29,9 @@
 @keyframes eeh-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
 #ee-home .eeh-body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;min-width:0}
 #ee-home .eeh-body.flush{padding:0}
-#ee-home .eeh-sub{font-size:13px;color:var(--muted);margin:0 0 14px}
-#ee-home .eeh-h{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}
-#ee-home .eeh-status{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+#ee-home .eeh-sub{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+#ee-home .eeh-h{font-size:14.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}
+#ee-home .eeh-status{padding:30px;text-align:center;color:var(--muted);font-size:14.5px}
 #ee-home .eeh-status.err{color:#c00}
 
 /* ---------- featured dashboard ---------- */
@@ -40,7 +41,7 @@
 #ee-home .eeh-feat-im{flex:0 0 190px;position:relative;background:#f4f1e8;overflow:hidden}
 #ee-home .eeh-feat-im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:left top}
 #ee-home .eeh-feat-tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:14px 22px}
-#ee-home .eeh-feat-k{font-family:'Arial Narrow','Alegreya Sans',Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+#ee-home .eeh-feat-k{font-family:'Advent Pro',system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 #ee-home .eeh-feat-t{font-size:20px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.15}
 #ee-home .eeh-feat-go{display:flex;align-items:center;padding:0 22px;color:var(--gold);font-size:22px;font-weight:800}
 @media (max-width:600px){#ee-home .eeh-feat-im{flex-basis:110px}#ee-home .eeh-feat-t{font-size:16px}#ee-home .eeh-feat-go{padding:0 14px}}
@@ -48,45 +49,49 @@
 /* ---------- support band ---------- */
 #ee-home .eeh-support{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:18px 26px;align-items:center;
   padding:20px 22px;border-radius:6px;background:var(--navy);color:#fff;border-top:2px solid var(--gold)}
-#ee-home .eeh-support .k{font-family:'Arial Narrow','Alegreya Sans',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+#ee-home .eeh-support .k{font-family:'Advent Pro',system-ui,sans-serif;font-size:14.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
 #ee-home .eeh-support h2{margin:4px 0 6px;font-size:21px;line-height:1.2;font-weight:700;color:#fff}
-#ee-home .eeh-support p{font-size:14px;color:rgba(255,255,255,.78);line-height:1.4}
+#ee-home .eeh-support p{font-size:15.5px;color:rgba(255,255,255,.78);line-height:1.4}
 #ee-home .eeh-btns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:relative;z-index:1}
 #ee-home .eeh-s{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;padding:14px 8px 12px;background:#fff;border-radius:4px;
   text-decoration:none;color:var(--ink);border-top:3px solid var(--c);transition:background .15s,box-shadow .15s}
 #ee-home .eeh-s:hover,#ee-home .eeh-s:focus-visible{background:#f6f5f1;box-shadow:0 0 0 2px var(--gold)}
 #ee-home .eeh-s .ic{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center}
 #ee-home .eeh-s b{font-size:16px;line-height:1.1}
-#ee-home .eeh-s small{font-size:12.5px;color:var(--muted);line-height:1.2}
+#ee-home .eeh-s small{font-size:13.5px;color:var(--muted);line-height:1.2}
 
 /* ---------- EP projection ---------- */
-#ee-home .eeh-bars .r{display:grid;grid-template-columns:200px 1fr 44px 48px;align-items:center;gap:10px;margin-bottom:8px;font-size:13.5px;font-variant-numeric:tabular-nums}
+#ee-home .eeh-bars .r{display:grid;grid-template-columns:200px 1fr 44px 48px;align-items:center;gap:10px;margin-bottom:8px;font-size:15px;font-variant-numeric:tabular-nums}
 #ee-home .eeh-bars .r:last-of-type{margin-bottom:0}
 #ee-home .eeh-bars .l{font-weight:700}
 #ee-home .eeh-bars .tr{height:14px;background:#f0f0ec;border-radius:2px;overflow:hidden}
 #ee-home .eeh-bars .f{height:100%;border-radius:2px;transition:width .25s}
 #ee-home .eeh-bars .v{text-align:right;font-weight:700}
-#ee-home .eeh-bars .c{text-align:right;font-weight:700;font-size:12px}
+#ee-home .eeh-bars .c{text-align:right;font-weight:700;font-size:13px}
 #ee-home .pos{color:#009900}#ee-home .neg{color:#990000}#ee-home .neu{color:#8a8a86}
-#ee-home .eeh-maj{font-size:12px;color:var(--muted);margin-top:10px}
+#ee-home .eeh-maj{font-size:13px;color:var(--muted);margin-top:10px}
 #ee-home .eeh-trend{position:relative;margin-top:16px;padding-top:14px;border-top:1px solid #efeee9}
 #ee-home .eeh-trend svg{display:block;width:100%;height:auto;touch-action:pan-y}
-#ee-home .eeh-trend-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}
-#ee-home .eeh-trend-h b{color:var(--ink);font-size:13px}
+#ee-home .eeh-trend-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);margin-bottom:4px}
+#ee-home .eeh-trend-h b{color:var(--ink);font-size:14.5px}
 #ee-home .eeh-map{position:relative;margin-top:16px;padding-top:6px;border-top:1px solid #efeee9}
 #ee-home .eeh-map svg{width:100%;display:block}
+#ee-home .eeh-maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:var(--muted);margin-top:6px}
+#ee-home .eeh-maplegend span{display:inline-flex;align-items:center;gap:6px}
+#ee-home .eeh-maplegend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+#ee-home .eeh-maplegend .note{margin-left:auto;font-style:italic}
 #ee-home .eeh-map .country{cursor:pointer;stroke:#fff;stroke-width:.5;transition:opacity .15s}
 #ee-home .eeh-map .country:hover{opacity:.75;stroke:#001936;stroke-width:1.5}
 #ee-home .eeh-map .none{fill:#e6e4dc;stroke:#fff;stroke-width:.5}
-#ee-home .eeh-tip{position:absolute;pointer-events:none;display:none;background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;min-width:190px;line-height:1.6;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)}
-#ee-home .eeh-tip strong{display:block;font-size:15px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.2)}
+#ee-home .eeh-tip{position:absolute;pointer-events:none;display:none;background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:14.5px;min-width:190px;line-height:1.6;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#ee-home .eeh-tip strong{display:block;font-size:16.5px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.2)}
 #ee-home .eeh-tip i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;vertical-align:-1px}
-#ee-home .eeh-tip .tot{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.15);font-size:12px;opacity:.75}
+#ee-home .eeh-tip .tot{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.15);font-size:13px;opacity:.75}
 
 /* ---------- live feed (Bluesky) ---------- */
 #ee-home .eeh-live{position:relative;flex:1;min-height:460px;background:#f0f7ff;border-top:3px solid var(--sky)}
-#ee-home .eeh-live-scroll{position:absolute;inset:0;overflow:auto;padding:12px;font-size:13px}
-#ee-home .eeh-follow{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;font-size:14px;font-weight:700;color:var(--sky);text-decoration:none;border-top:1px solid #d9e9fb;background:#fff;flex:none}
+#ee-home .eeh-live-scroll{position:absolute;inset:0;overflow:auto;padding:12px;font-size:14.5px}
+#ee-home .eeh-follow{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;font-size:15.5px;font-weight:700;color:var(--sky);text-decoration:none;border-top:1px solid #d9e9fb;background:#fff;flex:none}
 #ee-home .eeh-follow:hover{text-decoration:underline}
 
 /* ---------- polling ---------- */
@@ -99,11 +104,11 @@
 #ee-home .eeh-cal li:last-child{border-bottom:0}
 #ee-home .eeh-date{border-radius:4px;text-align:center;padding:6px 0 7px;color:#fff;line-height:1}
 #ee-home .eeh-date b{display:block;font-size:21px}
-#ee-home .eeh-date small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+#ee-home .eeh-date small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
 #ee-home .eeh-date.tbc{background:#fff!important;border:1.5px dashed currentColor}
 #ee-home .eeh-cal .n{font-weight:700;font-size:16px}
-#ee-home .eeh-cal .d{font-size:13px;color:var(--muted)}
-#ee-home .eeh-key{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-top:auto;padding-top:12px;border-top:1px solid #efeee9}
+#ee-home .eeh-cal .d{font-size:14.5px;color:var(--muted)}
+#ee-home .eeh-key{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin-top:auto;padding-top:12px;border-top:1px solid #efeee9}
 #ee-home .eeh-key span{display:inline-flex;align-items:center;gap:5px}
 #ee-home .eeh-key i{width:9px;height:9px;border-radius:2px;display:inline-block}
 
@@ -129,11 +134,11 @@
 /* ---------- hero ---------- */
 #ee-home .eeh-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #ee-home .eeh-hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 28px;padding:4px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
-#ee-home .eeh-hero .k{font-family:'Arial Narrow','Alegreya Sans',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8a6d00}
+#ee-home .eeh-hero .k{font-family:'Advent Pro',system-ui,sans-serif;font-size:14.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8a6d00}
 #ee-home .eeh-hero h1{margin:4px 0 6px;font-size:32px;line-height:1.1;font-weight:800;color:var(--ink);letter-spacing:-.01em}
 #ee-home .eeh-hero p{font-size:16px;color:var(--muted);max-width:620px}
 #ee-home .eeh-quick{display:flex;flex-wrap:wrap;gap:8px}
-#ee-home .eeh-quick a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:14px;font-weight:700;text-decoration:none;color:var(--navy)}
+#ee-home .eeh-quick a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:15.5px;font-weight:700;text-decoration:none;color:var(--navy)}
 #ee-home .eeh-quick a:hover{border-color:var(--navy);background:var(--soft)}
 #ee-home .eeh-quick a.pri{background:var(--navy);border-color:var(--navy);color:#fff}
 #ee-home .eeh-quick a.pri:hover{background:var(--navy2)}
@@ -146,47 +151,47 @@
 #ee-home .eeh-posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 #ee-home .eeh-post{display:flex;flex-direction:column;text-decoration:none;color:var(--ink);min-width:0}
 #ee-home .eeh-post .im{aspect-ratio:16/9;background:#eceae4 center/cover no-repeat;border-radius:4px;margin-bottom:10px}
-#ee-home .eeh-post .dt{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d00}
+#ee-home .eeh-post .dt{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d00}
 #ee-home .eeh-post h3{margin:3px 0 5px;font-size:17px;line-height:1.25;font-weight:700}
 #ee-home .eeh-post:hover h3{text-decoration:underline}
-#ee-home .eeh-post p{font-size:14px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#ee-home .eeh-post p{font-size:15.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ---------- countries ---------- */
-#ee-home .eeh-find{width:100%;max-width:340px;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:15px;margin-bottom:14px}
+#ee-home .eeh-find{width:100%;max-width:none;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:16.5px;margin-bottom:14px}
 #ee-home .eeh-find:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--navy)}
 #ee-home .eeh-countries{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;list-style:none;margin:0;padding:0}
-#ee-home .eeh-countries a{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:15px;text-decoration:none;color:var(--ink);border-bottom:1px solid #f0efea}
+#ee-home .eeh-countries a{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:16.5px;text-decoration:none;color:var(--ink);border-bottom:1px solid #f0efea}
 #ee-home .eeh-countries a:hover{color:#1E4C99}
-#ee-home .eeh-countries .iso{font-size:11px;font-weight:700;color:#fff;background:var(--navy);border-radius:3px;padding:2px 5px;min-width:26px;text-align:center}
+#ee-home .eeh-countries .iso{font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:3px;padding:2px 5px;min-width:26px;text-align:center}
 #ee-home .eeh-countries a.eu .iso{background:#003399;color:var(--gold)}
 
 /* ---------- newsletter / follow ---------- */
 #ee-home .eeh-social{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-#ee-home .eeh-social a{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:14px;font-weight:700;text-decoration:none;color:var(--navy)}
+#ee-home .eeh-social a{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:15.5px;font-weight:700;text-decoration:none;color:var(--navy)}
 #ee-home .eeh-social a:hover{border-color:var(--navy);background:var(--soft)}
 #ee-home .eeh-sub-frame{display:block;width:100%;height:150px;border:1px solid var(--line);border-radius:4px;background:#fff}
 
 /* ---------- data access form ---------- */
 #ee-home .eeh-data{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:26px}
 #ee-home .eeh-data h3{margin:0 0 8px;font-size:20px;line-height:1.2}
-#ee-home .eeh-data ul{margin:12px 0 0;padding:0;list-style:none;font-size:14.5px}
+#ee-home .eeh-data ul{margin:12px 0 0;padding:0;list-style:none;font-size:16px}
 #ee-home .eeh-data li{padding:7px 0 7px 22px;border-bottom:1px solid #f0efea;position:relative}
 #ee-home .eeh-data li::before{content:"";position:absolute;left:4px;top:13px;width:8px;height:8px;border-radius:2px;background:var(--gold)}
 #ee-home .eeh-form{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
-#ee-home .eeh-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--navy)}
+#ee-home .eeh-form label{display:flex;flex-direction:column;gap:4px;font-size:14.5px;font-weight:700;color:var(--navy)}
 #ee-home .eeh-form .full{grid-column:1/-1}
-#ee-home .eeh-form input,#ee-home .eeh-form select,#ee-home .eeh-form textarea{font:inherit;font-size:15px;font-weight:400;color:var(--ink);padding:9px 11px;border:1px solid #d5d3cc;border-radius:4px;background:#fff;width:100%}
+#ee-home .eeh-form input,#ee-home .eeh-form select,#ee-home .eeh-form textarea{font:inherit;font-size:16.5px;font-weight:400;color:var(--ink);padding:9px 11px;border:1px solid #d5d3cc;border-radius:4px;background:#fff;width:100%}
 #ee-home .eeh-form textarea{min-height:96px;resize:vertical}
 #ee-home .eeh-form input:focus,#ee-home .eeh-form select:focus,#ee-home .eeh-form textarea:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--navy)}
 #ee-home .eeh-form .chk{flex-direction:row;align-items:flex-start;gap:8px;font-weight:400;color:var(--muted)}
 #ee-home .eeh-form .chk input{width:auto;margin-top:3px}
-#ee-home .eeh-form button{justify-self:start;padding:11px 22px;border:0;border-radius:4px;background:var(--navy);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold)}
+#ee-home .eeh-form button{justify-self:start;padding:11px 22px;border:0;border-radius:4px;background:var(--navy);color:#fff;font:inherit;font-size:16.5px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold)}
 #ee-home .eeh-form button:hover{background:var(--navy2)}
-#ee-home .eeh-form .msg{font-size:14px;align-self:center}
+#ee-home .eeh-form .msg{font-size:15.5px;align-self:center}
 #ee-home .eeh-hp{position:absolute;left:-9999px}
 
 /* ---------- footer ---------- */
-#ee-home .eeh-foot{margin-top:30px;padding:18px 0 0;border-top:2px solid var(--navy);display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;font-size:14px;color:var(--muted)}
+#ee-home .eeh-foot{margin-top:30px;padding:18px 0 0;border-top:2px solid var(--navy);display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;font-size:15.5px;color:var(--muted)}
 #ee-home .eeh-foot nav{display:flex;flex-wrap:wrap;gap:6px 18px}
 #ee-home .eeh-foot a{color:var(--navy);text-decoration:none;font-weight:700}
 #ee-home .eeh-foot a:hover{text-decoration:underline}
@@ -200,6 +205,28 @@
   #ee-home .eeh-form{grid-template-columns:1fr}
   #ee-home .eeh-countries{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+/* ---------- party database ---------- */
+#ee-home .eeh-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+#ee-home .eeh-stat{background:var(--soft);border-radius:4px;padding:10px 12px;border-left:3px solid var(--gold)}
+#ee-home .eeh-stat b{display:block;font-size:28px;line-height:1;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+#ee-home .eeh-stat span{display:block;font-size:14.5px;color:var(--muted);margin-top:4px;line-height:1.2}
+#ee-home .eeh-db-list{list-style:none;margin:0;padding:0}
+#ee-home .eeh-db-list li > a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f0efea;text-decoration:none;color:var(--ink)}
+#ee-home .eeh-db-list li > a:hover .nm{text-decoration:underline}
+#ee-home .eeh-db-list .iso{font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:3px;padding:3px 0;text-align:center}
+#ee-home .eeh-db-list .nm{font-size:17px;font-weight:700;line-height:1.15}
+#ee-home .eeh-db-list .ab{font-weight:600;color:var(--muted)}
+#ee-home .eeh-db-list .meta{display:block;font-size:14.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ee-home .eeh-pill{padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+#ee-home .eeh-db-eu{margin-top:18px;padding-top:14px;border-top:1px solid #efeee9}
+#ee-home .eeh-eubar{display:flex;height:22px;border-radius:3px;overflow:hidden;margin:8px 0}
+#ee-home .eeh-eubar i{display:block;height:100%}
+#ee-home .eeh-eukey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:var(--muted)}
+#ee-home .eeh-eukey span{display:inline-flex;align-items:center;gap:6px}
+#ee-home .eeh-eukey i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#ee-home .eeh-more{margin-top:10px;align-self:flex-start;padding:8px 14px;border:1px solid var(--line);border-radius:4px;background:#fff;font:inherit;font-size:15.5px;font-weight:700;color:var(--navy);cursor:pointer}
+#ee-home .eeh-more:hover{border-color:var(--navy);background:var(--soft)}
+@media (max-width:600px){#ee-home .eeh-stats{grid-template-columns:1fr 1fr}#ee-home .eeh-db-list li > a{grid-template-columns:30px minmax(0,1fr)}#ee-home .eeh-db-list .eeh-pill{grid-column:2;justify-self:start}}
 </style>
 
 <div id="ee-home">
@@ -275,6 +302,7 @@
       <a class="eeh-bar" href="https://europeelects.eu/calendar/"><span class="t">Electoral Calendar</span><span class="m">Full Calendar →</span></a>
       <div class="eeh-body">
         <ul id="eeh-cal" class="eeh-cal"><li class="eeh-status" style="display:block">Loading the calendar…</li></ul>
+        <button type="button" class="eeh-more" id="eeh-cal-more" hidden></button>
         <div class="eeh-key" id="eeh-cal-key"></div>
       </div>
     </aside>
@@ -284,9 +312,13 @@
   <!-- ===== Party registrations + podcast ===== -->
   <div class="eeh-row top">
     <section class="eeh-panel">
-      <a class="eeh-bar" href="https://europeelects.eu/parties/"><span class="t">Latest Party Registrations</span><span class="m">Full Party Database →</span></a>
+      <a class="eeh-bar" href="https://europeelects.eu/parties/"><span class="t">Party Database</span><span class="m">Full Party Database →</span></a>
       <div class="eeh-body">
-        <iframe title="Newest Parties in Our Database" aria-label="Table" id="datawrapper-chart-PujNL" src="https://datawrapper.dwcdn.net/PujNL/6/" scrolling="no" frameborder="0" style="width:0;min-width:100%!important;border:none" height="964" data-external="1"></iframe>
+        <div class="eeh-stats" id="eeh-db-stats"></div>
+        <input class="eeh-find" id="eeh-db-find" type="search" placeholder="Search parties by name or abbreviation…" aria-label="Search the party database">
+        <p class="eeh-h" id="eeh-db-h">New in the database</p>
+        <ul class="eeh-db-list" id="eeh-db-list"><li class="eeh-status">Loading the party database…</li></ul>
+        <div class="eeh-db-eu" id="eeh-db-eu"></div>
       </div>
     </section>
     <div class="eeh-col-stack">
@@ -356,8 +388,8 @@
 // Country pages on GitHub Pages: ?country=next picks the next national parliament election that has a recent polling average.
 const POLL_FRAME_URL = 'https://europe-elects.github.io/country-pages/?country=next&view=polling';
 // Electoral calendar (Google Sheet, shared "Anyone with the link can view"). Columns: Country, Specification, Type, Mode, Sequence, (Expected) Date, Date Status
-const CALENDAR = { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '1530371858' };
-const CALENDAR_ROWS = 8;          // how many upcoming elections to list
+const CALENDAR = { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0' };
+const CALENDAR_ROWS = 12;         // upcoming elections listed at first; "Show more" adds this many each time
 const CALENDAR_SKIP_BY_ELECTIONS = true;
 // EP projection: per-country sheet (one column per month, e.g. "Sep-26") and the headline sheet (group, 2024 result, current).
 const PROJ_URL = 'https://opensheet.elk.sh/1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ/1';
@@ -372,6 +404,10 @@ const COUNTRIES = [["Albania", "AL"], ["Andorra", "AD"], ["Armenia", "AM"], ["Au
 // or email = address the visitor's mail program opens a pre-filled message to. With neither, the form opens DATA_ACCESS_URL.
 const DATA_FORM = { endpoint: '', email: '' };
 const DATA_ACCESS_URL = 'https://europeelects.eu/data-access-request/';
+// Party database (full sheet). Falls back to the published CSV if the sheet can't be read directly.
+const PARTY_DB = { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '959052694',
+  publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' };
+const PARTY_NEW_ROWS = 8; // newest parties listed
 
 /* ================= Shared ================= */
 const root = document.getElementById('ee-home');
@@ -441,7 +477,9 @@ async function loadCalendar() {
       if (hit) { if (x.o['specification']) hit.specs.push(x.o['specification']); return; }
       merged.push({ k, ...x, specs: x.o['specification'] ? [x.o['specification']] : [] });
     });
-    const show = merged.slice(0, CALENDAR_ROWS);
+    let shown = CALENDAR_ROWS;
+    const render = () => {
+    const show = merged.slice(0, shown);
     if (!show.length) { list.innerHTML = '<li class="eeh-status" style="display:block">No upcoming elections listed.</li>'; return; }
     list.innerHTML = show.map((x) => {
       const kind = kindOf(x.o['type']), col = KIND_COLORS[kind];
@@ -458,6 +496,12 @@ async function loadCalendar() {
     const kinds = [...new Set(show.map((x) => kindOf(x.o['type'])))].filter((k) => KIND_LABELS[k]);
     document.getElementById('eeh-cal-key').innerHTML = kinds.map((k) => `<span><i style="background:${KIND_COLORS[k]}"></i>${KIND_LABELS[k]}</span>`).join('')
       + '<span><i style="border:1.5px dashed #5f5e5a"></i>Expected date</span>';
+    const more = document.getElementById('eeh-cal-more');
+    more.hidden = shown >= merged.length;
+    more.textContent = `Show more elections (${merged.length - shown} more)`;
+    };
+    document.getElementById('eeh-cal-more').onclick = () => { shown += CALENDAR_ROWS; render(); };
+    render();
   } catch (e) {
     list.innerHTML = `<li class="eeh-status err" style="display:block">Couldn't load the calendar (${esc(e.message)}).</li>`;
   }
@@ -534,8 +578,8 @@ function drawTrend() {
   const ymax = Math.ceil(Math.max(...P.totals.flatMap((t) => groups.map((g) => t[g] || 0))) / 50) * 50;
   const x = (i) => m.l + i / (P.months.length - 1) * iw, y = (v) => m.t + ih - v / ymax * ih;
   let s = '';
-  for (let v = 0; v <= ymax; v += 50) s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="#ecebe6"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8a8a86">${v}</text>`;
-  P.months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) s += `<text x="${x(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'middle'}" font-size="11" fill="#8a8a86">${d.getMonth() === 0 ? d.getFullYear() : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</text>`; });
+  for (let v = 0; v <= ymax; v += 50) s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="#ecebe6"/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="12.5" fill="#8a8a86">${v}</text>`;
+  P.months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) s += `<text x="${x(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'middle'}" font-size="12.5" fill="#8a8a86">${d.getMonth() === 0 ? d.getFullYear() : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</text>`; });
   groups.forEach((g) => {
     const pts = P.totals.map((t, i) => (t[g] == null ? null : [x(i), y(t[g])])).filter(Boolean);
     s += `<polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="${GROUP_COLORS[g]}" stroke-width="2" stroke-linejoin="round"/>`;
@@ -543,7 +587,7 @@ function drawTrend() {
   // End labels (nudged apart)
   const last = P.totals.length - 1, labs = groups.map((g) => ({ g, y: y(P.totals[last][g] || 0) })).sort((a, b) => a.y - b.y);
   for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 11) labs[i].y = labs[i - 1].y + 11;
-  labs.forEach((l) => { s += `<text x="${m.l + iw + 5}" y="${l.y + 4}" font-size="10.5" font-weight="700" fill="${GROUP_COLORS[l.g] === '#FFD700' ? '#9a8000' : GROUP_COLORS[l.g]}">${esc(l.g)}</text>`; });
+  labs.forEach((l) => { s += `<text x="${m.l + iw + 5}" y="${l.y + 4}" font-size="12" font-weight="700" fill="${GROUP_COLORS[l.g] === '#FFD700' ? '#9a8000' : GROUP_COLORS[l.g]}">${esc(l.g)}</text>`; });
   s += `<line id="eeh-cur" y1="${m.t}" y2="${m.t + ih}" stroke="#001936" stroke-dasharray="3 3" x1="${x(P.sel)}" x2="${x(P.sel)}"/>`;
   s += `<rect id="eeh-hit" x="${m.l}" y="0" width="${iw}" height="${H}" fill="transparent" style="cursor:crosshair"/>`;
   host.innerHTML = `<div class="eeh-trend-h"><span>Seats per group over time</span><b id="eeh-trend-m">${esc(monthTxt(P.months[P.sel]))}</b></div>
@@ -562,42 +606,132 @@ function drawTrend() {
   }
 }
 let colourMap = () => {};
+// Dot map: one dot per projected seat, clustered on each country and split into group wedges (left to right).
+const SPECTRUM = ['LEFT', 'G/EFA', 'S&D', 'RE', 'EPP', 'ECR', 'PfE', 'ESN', 'NI', 'unaffiliated'];
+const SMALL_STATES = { 'Malta': [14.4, 35.9], 'Luxembourg': [6.1, 49.8], 'Cyprus': [33.2, 35.0] };
+const DOT_R = 3.3, DOT_GAP = 7.6; // dot radius and spacing in map units (map is 960 wide)
 function drawMap() {
   if (!window.d3 || !window.topojson) return;
   const wrap = document.getElementById('eeh-map'); wrap.hidden = false;
-  const svg = d3.select(wrap).append('svg').attr('viewBox', '0 0 960 500');
-  const defs = svg.append('defs');
-  const path = d3.geoPath(d3.geoConicConformal().center([14, 52]).scale(700).translate([480, 260]));
-  const cache = {};
-  const fill = (name) => {
-    const g = P.data[P.sel][name]; if (!g) return '#e3e1d9';
-    const sorted = Object.entries(g).sort((a, b) => b[1] - a[1]); const tops = sorted.filter(([, v]) => v === sorted[0][1]).map(([k]) => k);
-    if (tops.length === 1) return GROUP_COLORS[tops[0]] || '#888780';
-    const key = tops.join('|');
-    if (!cache[key]) {
-      const id = 'eeh-st-' + key.replace(/[^a-zA-Z0-9]/g, '_');
-      const pat = defs.append('pattern').attr('id', id).attr('patternUnits', 'userSpaceOnUse').attr('width', tops.length * 8).attr('height', 8).attr('patternTransform', 'rotate(45)');
-      tops.forEach((t, i) => pat.append('rect').attr('x', i * 8).attr('width', 8).attr('height', 8).attr('fill', GROUP_COLORS[t] || '#888780'));
-      cache[key] = `url(#${id})`;
-    }
-    return cache[key];
-  };
+  const W = 960, H = 640;
+  const svg = d3.select(wrap).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Map: projected European Parliament seats per country, one dot per seat');
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then((r) => r.json()).then((world) => {
     const feats = topojson.feature(world, world.objects.countries).features;
+    // Mainland polygon only (no overseas territories or remote islands) for centring.
+    const mainland = (f) => {
+      if (f.geometry.type !== 'MultiPolygon') return f;
+      const polys = f.geometry.coordinates.map((c) => ({ type: 'Feature', geometry: { type: 'Polygon', coordinates: c } }));
+      return { ...polys.sort((a, b) => d3.geoArea(b) - d3.geoArea(a))[0], id: f.id };
+    };
+    const eu = feats.filter((f) => ISO_TO_NAME[String(f.id)]).map(mainland);
+    const proj = d3.geoConicConformal().rotate([-12, 0]).fitExtent([[40, 30], [W - 40, H - 20]], { type: 'FeatureCollection', features: eu });
+    const path = d3.geoPath(proj);
+    svg.append('g').selectAll('path').data(feats).join('path').attr('d', path)
+      .attr('fill', (d) => (ISO_TO_NAME[String(d.id)] ? '#e3e1d8' : '#f1f0eb')).attr('stroke', '#fff').attr('stroke-width', 0.7);
+    // Cluster centres: fixed for all months (sized by the largest seat count), pushed apart where they would overlap.
+    const sizeOf = (name) => Math.max(...P.data.map((m) => Object.values(m[name] || {}).reduce((a, v) => a + v, 0)));
+    const nodes = eu.map((f) => { const name = ISO_TO_NAME[String(f.id)], c = path.centroid(f), n = sizeOf(name);
+      return { name, x: c[0], y: c[1], ax: c[0], ay: c[1], r: DOT_GAP * 0.55 * Math.sqrt(n) + DOT_R + 2 }; });
+    // Countries too small for the base map (e.g. Malta) are placed by coordinates.
+    Object.entries(SMALL_STATES).forEach(([name, ll]) => { if (nodes.some((d) => d.name === name)) return; const c = proj(ll), n = sizeOf(name);
+      nodes.push({ name, x: c[0], y: c[1], ax: c[0], ay: c[1], r: DOT_GAP * 0.55 * Math.sqrt(n) + DOT_R + 2 }); });
+    for (let i = nodes.length - 1; i >= 0; i--) if (!isFinite(nodes[i].x) || !(nodes[i].r > DOT_R + 2)) nodes.splice(i, 1);
+    const sim = d3.forceSimulation(nodes).force('x', d3.forceX((d) => d.ax).strength(0.25)).force('y', d3.forceY((d) => d.ay).strength(0.25))
+      .force('c', d3.forceCollide((d) => d.r + 1.5).strength(1).iterations(3)).stop();
+    for (let i = 0; i < 300; i++) sim.tick();
+    const lines = svg.append('g'), dots = svg.append('g'), hits = svg.append('g');
+    lines.selectAll('line').data(nodes.filter((d) => Math.hypot(d.x - d.ax, d.y - d.ay) > d.r * 0.6)).join('line')
+      .attr('x1', (d) => d.ax).attr('y1', (d) => d.ay).attr('x2', (d) => d.x).attr('y2', (d) => d.y).attr('stroke', '#b9b7ae').attr('stroke-width', 1);
+    lines.selectAll('circle').data(nodes.filter((d) => Math.hypot(d.x - d.ax, d.y - d.ay) > d.r * 0.6)).join('circle')
+      .attr('cx', (d) => d.ax).attr('cy', (d) => d.ay).attr('r', 2).attr('fill', '#b9b7ae');
     const tip = document.getElementById('eeh-tip');
-    const paths = svg.selectAll('path').data(feats).join('path').attr('d', path)
+    hits.selectAll('circle').data(nodes).join('circle').attr('cx', (d) => d.x).attr('cy', (d) => d.y).attr('r', (d) => d.r).attr('fill', 'transparent').style('cursor', 'pointer')
       .on('mousemove', function (ev, d) {
-        const name = ISO_TO_NAME[String(d.id)], g = name && P.data[P.sel][name]; if (!g) { tip.style.display = 'none'; return; }
-        const sorted = Object.entries(g).sort((a, b) => b[1] - a[1]), tot = sorted.reduce((a, [, v]) => a + v, 0);
-        tip.innerHTML = `<strong>${esc(name)}</strong>` + sorted.map(([k, v]) => `<div><i style="background:${GROUP_COLORS[k] || '#888'}"></i>${esc(k)}: <b>${v}</b></div>`).join('') + `<div class="tot">${tot} seats · ${esc(monthTxt(P.months[P.sel]))}</div>`;
+        const g = P.data[P.sel][d.name]; if (!g) { tip.style.display = 'none'; return; }
+        const sorted = Object.entries(g).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]), tot = sorted.reduce((a, [, v]) => a + v, 0);
+        tip.innerHTML = `<strong>${esc(d.name)}</strong>` + sorted.map(([k, v]) => `<div><i style="background:${GROUP_COLORS[k] || '#888'}"></i>${esc(GROUP_LABELS[k] || k)}: <b>${v}</b></div>`).join('') + `<div class="tot">${tot} seats · ${esc(monthTxt(P.months[P.sel]))}</div>`;
         tip.style.display = 'block';
-        const r = wrap.getBoundingClientRect(); let x = ev.clientX - r.left + 14; if (x + 210 > r.width) x -= 230;
+        const r = wrap.getBoundingClientRect(); let x = ev.clientX - r.left + 14; if (x + 230 > r.width) x -= 250;
         tip.style.left = x + 'px'; tip.style.top = (ev.clientY - r.top - 10) + 'px';
+        d3.select(this).attr('stroke', '#001936').attr('stroke-width', 1.2);
       })
-      .on('mouseleave', () => { tip.style.display = 'none'; });
-    colourMap = () => paths.attr('class', (d) => { const n = ISO_TO_NAME[String(d.id)]; return n && P.data[P.sel][n] ? 'country' : 'none'; }).attr('fill', (d) => fill(ISO_TO_NAME[String(d.id)]));
+      .on('mouseleave', function () { tip.style.display = 'none'; d3.select(this).attr('stroke', null); });
+    // Sunflower layout; dots sorted by angle so each group forms a wedge.
+    const layout = (d) => {
+      const g = P.data[P.sel][d.name] || {}, n = Math.round(Object.values(g).reduce((a, v) => a + v, 0)); if (!n) return [];
+      const c = DOT_GAP * 0.55, pts = [];
+      for (let i = 0; i < n; i++) { const rr = c * Math.sqrt(i + 0.5), a = i * 2.39996323; pts.push({ x: d.x + rr * Math.cos(a), y: d.y + rr * Math.sin(a), a: Math.atan2(rr * Math.sin(a), rr * Math.cos(a)) }); }
+      pts.sort((p, q) => ((p.a + 5 * Math.PI / 2) % (2 * Math.PI)) - ((q.a + 5 * Math.PI / 2) % (2 * Math.PI)));
+      const cols = []; SPECTRUM.concat(Object.keys(g).filter((k) => !SPECTRUM.includes(k))).forEach((k) => { for (let i = 0; i < Math.round(g[k] || 0); i++) cols.push(GROUP_COLORS[k] || '#888780'); });
+      return pts.map((p, i) => ({ x: p.x, y: p.y, c: cols[i] || '#c4c4c4' }));
+    };
+    colourMap = () => {
+      dots.selectAll('circle').data(nodes.flatMap(layout)).join('circle').attr('r', DOT_R).attr('cx', (p) => p.x).attr('cy', (p) => p.y).attr('fill', (p) => p.c)
+        .attr('stroke', (p) => (p.c === '#FFD700' ? '#d9b600' : 'none')).attr('stroke-width', 0.6);
+    };
     colourMap();
+    // Legend
+    const used = SPECTRUM.filter((k) => P.data.some((m) => Object.values(m).some((g) => g[k])));
+    wrap.insertAdjacentHTML('beforeend', `<div class="eeh-maplegend">${used.map((k) => `<span><i style="background:${GROUP_COLORS[k]}"></i>${esc(k === 'unaffiliated' ? 'Unaffiliated' : k)}</span>`).join('')}<span class="note">1 dot = 1 seat</span></div>`);
   }).catch((e) => { wrap.insertAdjacentHTML('beforeend', `<div class="eeh-status err">Couldn't load the map (${esc(e.message)}).</div>`); });
+}
+
+/* ================= Party database ================= */
+const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79', 'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700', 'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
+const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
+const textOn = (hex) => { const h = hex.replace('#', ''); const l = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.25 ? '#1A1D23' : '#FFFFFF'; };
+const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+async function loadPartyDb() {
+  const list = document.getElementById('eeh-db-list');
+  let rows = null;
+  for (const url of [`https://docs.google.com/spreadsheets/d/${PARTY_DB.sheetId}/gviz/tq?tqx=out:csv&headers=1&gid=${PARTY_DB.gid}`, PARTY_DB.publishedCsv]) {
+    try { const r = await fetch(url); if (!r.ok) continue; const t = parseCSV(await r.text()); if (t.length && 'europe elects entity id' in t[0]) { rows = t; break; } } catch (e) { /* try the next source */ }
+  }
+  if (!rows) { list.innerHTML = '<li class="eeh-status err">Couldn\'t load the party database.</li>'; return; }
+  const year = (v) => { const m = String(v || '').match(/(\d{4})/); return m ? +m[1] : 0; };
+  // One row per party: the newest version (column "Latest" = Yes, else the highest version number).
+  const byId = {};
+  rows.forEach((o) => { const id = o['europe elects entity id']; if (!id) return;
+    const v = parseFloat(o['europe elects entity version']) || 0, cur = byId[id];
+    if (!cur || /^yes$/i.test(o['latest']) || (!/^yes$/i.test(cur.o['latest']) && v > cur.v)) byId[id] = { o, v }; });
+  const all = Object.values(byId).map(({ o }) => {
+    const eu = String(o['europarty affiliation'] || '').split(/[|;,]/)[0].trim();
+    return { id: o['europe elects entity id'], iso: (o['iso-2'] || '').toUpperCase(), country: o['country'], native: o['name (native)'], english: o['name (english)'] || o['name (native)'],
+      abbr: o['abbreviation'], ideo: o['ideological orientation'], status: (o['status'] || '').toLowerCase(),
+      eu: /^(unaffiliated|none|)$/i.test(eu) ? '' : eu,
+      since: Math.max(year(o['political activity started']), year(o['legal entity registration'])),
+      seq: parseInt(String(o['europe elects entity id']).replace(/^\D+/, ''), 10) || 0,
+      key: fold([o['name (native)'], o['name (english)'], o['abbreviation']].join(' ')) };
+  });
+  const active = all.filter((p) => p.status === 'active');
+  const countries = new Set(active.map((p) => p.iso).filter(Boolean));
+  const members = active.filter((p) => p.eu);
+  const thisYear = new Date().getFullYear();
+  const fresh = active.filter((p) => p.since >= thisYear - 1);
+  document.getElementById('eeh-db-stats').innerHTML = [[active.length, 'active parties'], [countries.size, 'countries'], [members.length, 'Europarty members'], [fresh.length, `new since ${thisYear - 1}`]]
+    .map(([n, l]) => `<div class="eeh-stat"><b>${n.toLocaleString('en-GB')}</b><span>${esc(l)}</span></div>`).join('');
+  document.getElementById('eeh-db-find').placeholder = `Search ${active.length.toLocaleString('en-GB')} parties by name or abbreviation…`;
+  const url = (p) => COUNTRY_URL.replace('{iso}', p.iso).replace('{slug}', fold(p.country).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  const pill = (eu) => { if (!eu) return '<span class="eeh-pill" style="background:#ECEAE4;color:#5f5e5a">No Europarty</span>'; const c = EUROPARTY_COLORS[eu] || '#5B6170'; return `<span class="eeh-pill" style="background:${c};color:${textOn(c)}">${esc(epName(eu))}</span>`; };
+  const item = (p) => `<li><a href="${esc(url(p))}"><span class="iso" title="${esc(p.country)}">${esc(p.iso)}</span>
+    <span><span class="nm">${esc(p.english)}</span>${p.abbr ? ` <span class="ab">${esc(p.abbr)}</span>` : ''}
+    <span class="meta">${esc([p.native !== p.english ? p.native : '', p.ideo, p.since ? 'since ' + p.since : ''].filter(Boolean).join(' · '))}</span></span>${pill(p.eu)}</a></li>`;
+  const newest = [...active].sort((a, b) => b.since - a.since || b.seq - a.seq).slice(0, PARTY_NEW_ROWS);
+  const head = document.getElementById('eeh-db-h');
+  const showNewest = () => { head.textContent = 'New in the database'; list.innerHTML = newest.map(item).join(''); };
+  showNewest();
+  document.getElementById('eeh-db-find').addEventListener('input', (e) => {
+    const q = fold(e.target.value.trim()); if (q.length < 2) return showNewest();
+    const hits = all.filter((p) => p.key.includes(q)).sort((a, b) => (fold(b.abbr) === q) - (fold(a.abbr) === q) || (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1) || a.english.localeCompare(b.english));
+    head.textContent = hits.length ? `${hits.length} ${hits.length === 1 ? 'party' : 'parties'} found` + (hits.length > 10 ? ' · showing 10' : '') : 'No party found';
+    list.innerHTML = hits.slice(0, 10).map(item).join('');
+  });
+  // Europarty membership among active parties
+  const cnt = {}; members.forEach((p) => { cnt[p.eu] = (cnt[p.eu] || 0) + 1; });
+  const eus = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
+  document.getElementById('eeh-db-eu').innerHTML = `<p class="eeh-h" style="margin:0">Europarty members in our database</p>
+    <div class="eeh-eubar" role="img" aria-label="${esc(eus.map(([k, n]) => `${epName(k)} ${n}`).join(', '))}">${eus.map(([k, n]) => `<i title="${esc(epName(k))}: ${n}" style="width:${n / members.length * 100}%;background:${EUROPARTY_COLORS[k] || '#5B6170'}"></i>`).join('')}</div>
+    <div class="eeh-eukey">${eus.map(([k, n]) => `<span><i style="background:${EUROPARTY_COLORS[k] || '#5B6170'}"></i>${esc(epName(k))} <b>${n}</b></span>`).join('')}</div>`;
 }
 
 /* ================= Latest analysis ================= */
@@ -656,6 +790,7 @@ function bindForm() {
 
 bindForm();
 loadPosts();
+loadPartyDb();
 loadCalendar();
 loadProjection();
 })();
