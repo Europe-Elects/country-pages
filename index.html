@@ -1819,7 +1819,7 @@ async function main() {
   teamRows.filter((o) => { const c = g(o, ...TEAM_COLUMNS.country).trim(); return c.toUpperCase() === ISO || sameCountry(c, cfg.name); })
     .forEach((o) => { const since = boundDate(g(o, ...TEAM_COLUMNS.since));
       String(TEAM_COLUMNS.member.map((k) => g(o, k)).find(Boolean) || '').split(/\s*[,;\n]\s*/).map((v) => v.trim())
-        .filter((v) => v && !/active team member/i.test(v))
+        .filter((v) => v && !/active team member|apply now|vacant|^tbd$|^-$/i.test(v))
         .forEach((v) => { const prev = teamMap.get(v); if (prev === undefined || since < prev) teamMap.set(v, since); }); });
   const team = [...teamMap].sort((a, b) => a[1] - b[1]).map(([name, since]) => ({ name, since: since > -Infinity ? new Date(since).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '' }));
   const projection = buildProjection(projectionRows, cfg.name, current);
