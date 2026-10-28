@@ -16,6 +16,7 @@ MIN_NEIGHBOURS = 8      # ... but at least this many
 GAP_DAYS = 150          # break a party's line where it went unpolled for longer than this
 MIN_POLLS = 4           # parties with fewer national polls get dots only, no line
 GRID_DAYS = 7           # spacing of the published curve points
+NO_POLLING = {'RU', 'BY', 'AZ', 'FR'}  # countries that never get a polling average
 
 FIELD = re.compile(r'•([A-Z]+):\s*(\S+)')
 RESULT = re.compile(r'(?<![•\w])([^\s•:][^\s:]*):\s*([<>]?\d+(?:[.,]\d+)?)')
@@ -47,6 +48,8 @@ def parse_ropf(text):
             m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
             if fields.get('SC', 'N') != 'N':
                 continue
+            if 'A' in fields:
+                continue  # poll for one area/region only (e.g. Flanders): not part of the national average
             fs, fe = parse_date(fields.get('FS', '')), parse_date(fields.get('FE', ''), True)
             if not fs and not fe:
                 continue
@@ -61,6 +64,15 @@ def parse_ropf(text):
                 num = float(val.strip('<>')) / (2 if val.startswith('<') else 1)
                 values[key] = num
             if values:
+                # Normalise every poll: all valid choices (the listed parties plus "others", •O) are scaled
+                # proportionally to add up to 100%. Undecided / excluded shares (•EX etc.) are not valid choices.
+                def num(x):
+                    try: return float(str(x).replace(',', '.'))
+                    except (TypeError, ValueError): return None
+                other = num(fields.get('O')) or 0.0
+                total = sum(values.values()) + max(other, 0.0)
+                if total > 0:
+                    values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 polls.append({'d': mid, 'pf': pf, 'v': values})
         else:
             m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
@@ -69,16 +81,17 @@ def parse_ropf(text):
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
                 abbr = attrs.pop('A', key)
                 en = attrs.pop('EN', '')
+                roman = attrs.pop('R', '')  # romanised abbreviation (•R), used where the abbreviation is not in Latin script
                 native = next(iter(attrs.values()), '')
-                parties[key] = {'key': key, 'id': m.group(2), 'abbr': abbr, 'native': native, 'english': en}
+                parties[key] = {'key': key, 'id': m.group(2), 'abbr': abbr, 'roman': roman, 'native': native, 'english': en}
     return polls, parties
 
 
-def loess(xs, ys, x0, k):
+def loess(xs, ys, x0, k, span=SPAN_DAYS):
     """Local linear regression at x0 with tricube weights over the k nearest points (within SPAN_DAYS)."""
     dist = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))[:k]
     h = max(dist[-1][0], 1.0) * 1.0001
-    h = min(h, SPAN_DAYS) if dist[0][0] < SPAN_DAYS else h
+    h = min(h, span) if dist[0][0] < span else h
     sw = swx = swy = swxx = swxy = 0.0
     for d, x, y in dist:
         if d >= h:
@@ -102,7 +115,7 @@ def build_country(polls, parties):
     keys = sorted({k for p in polls for k in p['v']}, key=lambda k: -max(p['v'].get(k, 0) for p in polls))
     for key in keys:
         pts = [((p['d'] - day0).days, p['v'][key]) for p in polls if key in p['v']]
-        info = parties.get(key, {'key': key, 'abbr': key, 'native': '', 'english': '', 'id': ''})
+        info = parties.get(key, {'key': key, 'abbr': key, 'roman': '', 'native': '', 'english': '', 'id': ''})
         curve = []
         if len(pts) >= MIN_POLLS:
             xs, ys = [x for x, _ in pts], [y for _, y in pts]
@@ -144,7 +157,7 @@ def main(src, dst):
     done = []
     for name in sorted(os.listdir(src)):
         m = re.fullmatch(r'([a-z]{2})\.ropf', name)  # one file per country; variants like fi_p20.ropf are skipped
-        if not m:
+        if not m or m.group(1).upper() in NO_POLLING:
             continue
         with open(os.path.join(src, name), encoding='utf-8') as fh:
             polls, parties = parse_ropf(fh.read())
