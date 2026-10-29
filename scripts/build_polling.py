@@ -10,6 +10,7 @@ No third-party packages needed.
 """
 import json, os, re, sys, datetime as dt
 
+MIN_SPAN_DAYS = 21     # LOESS window half-width floor (days)
 SPAN_DAYS = 90          # LOESS window half-width cap: polls further away than this get no weight
 NEIGHBOURS = 0.06       # fraction of a party's polls used for each local fit (adaptive span) ...
 MIN_NEIGHBOURS = 8      # ... but at least this many
@@ -37,13 +38,34 @@ def parse_date(s, end=False):
 
 def parse_ropf(text):
     polls, parties = [], {}
+    head, head_fields, done = None, {}, True   # the current poll's first line, its fields, national row taken?
     for line in text.splitlines():
-        if not line.strip() or line.startswith('&'):
-            continue  # '&' = alternative response scenario of the previous poll: use the first one only
-        if line.startswith('•PF:'):
-            fields = {}
+        if not line.strip():
+            continue
+        if line.startswith('&'):
+            # '&' = another row of the previous poll (other scope or scenario). It inherits the pollster, dates
+            # and area of the first line; its own fields (•SC, •SS, results) take precedence. Only the first
+            # national row of a poll is used, so a poll whose first row is e.g. a European-election question
+            # (•SC: E) still counts with its national row.
+            if head is None or done:
+                continue
+            own = {}
             for k, v in FIELD.findall(line):
-                fields.setdefault(k, v)
+                own.setdefault(k, v)
+            fields = {k: v for k, v in head_fields.items() if k in ('FS', 'FE', 'A')}
+            fields.update(own)
+            if 'O' not in own:
+                fields.pop('O', None)
+            line = head + ' ' + line[1:]  # pollster from the first line, results from this one
+            body_src = line[len(head):]
+        else:
+            body_src = None
+        if line.startswith('•PF:'):
+            if body_src is None:
+                fields = {}
+                for k, v in FIELD.findall(line):
+                    fields.setdefault(k, v)
+                head, head_fields, done = re.match(r'^(•PF:[^•]*(?:•C:[^•]*)*)', line).group(1), dict(fields), False
             # pollster / commissioner can contain spaces: read them up to the next bullet
             m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
             if fields.get('SC', 'N') != 'N':
@@ -56,7 +78,7 @@ def parse_ropf(text):
             fs, fe = fs or fe, fe or fs
             mid = fs + (fe - fs) / 2
             # drop metadata: pollster/commissioner run up to the next bullet, other fields are one token
-            body = re.sub(r'•(PF|C):\s*[^•]*', ' ', line)
+            body = re.sub(r'•(PF|C):\s*[^•]*', ' ', body_src if body_src is not None else line)
             body = re.sub(r'•[A-Z]+:\s*\S+', ' ', body)
             values = {}
             for key, val in RESULT.findall(body):
@@ -74,6 +96,7 @@ def parse_ropf(text):
                 if total > 0:
                     values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 polls.append({'d': mid, 'pf': pf, 'v': values})
+                done = True
         else:
             m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
             if m and '•A:' in line:
@@ -89,8 +112,11 @@ def parse_ropf(text):
 
 def loess(xs, ys, x0, k, span=SPAN_DAYS):
     """Local linear regression at x0 with tricube weights over the k nearest points (within SPAN_DAYS)."""
-    dist = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))[:k]
-    h = max(dist[-1][0], 1.0) * 1.0001
+    allp = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))
+    # k nearest polls, but always every poll within MIN_SPAN_DAYS: dense daily trackers before an
+    # election would otherwise make the window only a few days wide and the line jumpy.
+    dist = allp[:max(k, sum(1 for d, _, _ in allp if d < MIN_SPAN_DAYS))]
+    h = max(dist[-1][0], 1.0, MIN_SPAN_DAYS if dist[0][0] < MIN_SPAN_DAYS else 0) * 1.0001
     h = min(h, span) if dist[0][0] < span else h
     sw = swx = swy = swxx = swxy = 0.0
     for d, x, y in dist:
@@ -105,7 +131,10 @@ def loess(xs, ys, x0, k, span=SPAN_DAYS):
         return swy / sw
     b = (sw * swxy - swx * swy) / den
     a = (swy - b * swx) / sw
-    return a + b * x0
+    # Guard against runaway slopes where the polls lie on one side of x0 (e.g. a polling pause after an
+    # election): the local line may not leave the range of the polls it was fitted to.
+    used = [y for d, x, y in dist if d < h]
+    return min(max(a + b * x0, min(used)), max(used))
 
 
 def build_country(polls, parties):
