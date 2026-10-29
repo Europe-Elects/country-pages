@@ -827,6 +827,10 @@ function electionKind(type) {
   if (/parliament|legislat|national/.test(t)) return 'parliament';
   return '';
 }
+// Self-governing territories (Åland, Faroe Islands, Greenland, Crown Dependencies, Gibraltar): the calendar's
+// "nationwide" / "national parliament" mean the whole territory and its own parliament, so they are relabelled.
+const TERRITORIES = ['AX', 'FO', 'GL', 'GG', 'JE', 'IM', 'GI'];
+const territoryLabel = (t) => (TERRITORIES.includes(ISO) ? t.replace(/\(nationwide\)/i, '(territory-wide)').replace(/^National parliament/i, 'Parliament') : t);
 function buildElections(rows, countryName) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const cap = (x) => x ? x.charAt(0).toUpperCase() + x.slice(1) : '';
@@ -838,7 +842,7 @@ function buildElections(rows, countryName) {
     if (parsed && parsed.precision === 'day') dateTxt = parsed.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     else if (parsed && parsed.precision === 'month') dateTxt = parsed.date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
     const detail = [cap(g(o, 'Mode')), g(o, 'Sequence'), status ? (/^not/i.test(status) ? 'date ' + status.toLowerCase() : 'date ' + status.toLowerCase().replace(/^date\s+/, '')) : ''].filter(Boolean).join(' · ');
-    return { type: cap(g(o, 'Type')), spec: g(o, 'Specification'), comment: g(o, 'Comment'), kind: electionKind(g(o, 'Type')),
+    return { type: territoryLabel(cap(g(o, 'Type'))), spec: g(o, 'Specification'), comment: g(o, 'Comment'), kind: electionKind(g(o, 'Type')),
              date: dateTxt || 'Date to be announced', detail, when: parsed ? parsed.date : null };
   }).filter((e) => !e.when || e.when >= today) // future only; rows without a readable date are kept
     .sort((a, b) => (a.when ? a.when.getTime() : Infinity) - (b.when ? b.when.getTime() : Infinity));
@@ -884,7 +888,7 @@ function viewElections(cfg, elections) {
     const maxStack = Math.max(0, ...groups.map((gr) => (gr.scatter ? 1.2 : gr.items.length - 1)));
     const ticks = []; for (let y = start.getFullYear() + 1; ; y++) { const t = new Date(y, 0, 1).getTime(); if (t > end) break; ticks.push({ y, x: pos(t) }); }
     const kinds = [...new Set(list.map((e) => e.kind || ''))];
-    body = `<div class="tl-legend">${kinds.map((k) => `<span><span class="dot" style="background:${ELECTION_COLORS[k] || '#8A9099'}"></span>${esc(ELECTION_LABELS[k] || ELECTION_LABELS[''])}</span>`).join('')}</div>
+    body = `<div class="tl-legend">${kinds.map((k) => `<span><span class="dot" style="background:${ELECTION_COLORS[k] || '#8A9099'}"></span>${esc(territoryLabel(ELECTION_LABELS[k] || ELECTION_LABELS['']))}</span>`).join('')}</div>
       <div class="tl-wrap" id="tl" style="height:${64 + maxStack * 20}px">
         <div class="tl-axis"></div>
         <div class="tl-today" style="left:2%"><span>Today</span></div>
@@ -1773,19 +1777,25 @@ async function main() {
     try { return await loadSheet(src); }
     catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ sheetId: src.sheetId, gid: src.gid, publishedCsv: '' }); }
   };
+  // Start every download at once (they used to run one after another, which made the page slow).
+  const soft = (src, what) => loadWithFallback(src).catch((e) => { console.warn(what + ' sheet not loaded', e); return []; });
+  const early = {
+    alliances: soft(SOURCES.alliances, 'Alliance'),
+    calendar: soft(SOURCES.calendar, 'Calendar'),
+    polling: (!NO_POLLING.includes(ISO) && ISO !== 'NEXT') ? fetch(`polling/${ISO}.json`, { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null) : Promise.resolve(null)
+  };
+  if (!VIEW) Object.assign(early, { projection: soft(SOURCES.projection, 'Projection'), government: soft(SOURCES.government, 'Government'), seats: soft(SOURCES.seats, 'Seat') });
   try { partyRows = await loadWithFallback(SOURCES.parties); }
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
-  try { allianceRows = await loadWithFallback(SOURCES.alliances); } catch (e) { console.warn('Alliance sheet not loaded', e); }
-  let calendarRows = [], projectionRows = [], teamRows = [];
-  let pollData = null;
+  allianceRows = await early.alliances;
+  let calendarRows = await early.calendar, projectionRows = [], teamRows = [];
+  let pollData = await early.polling;
   if (ISO === 'NEXT') {
-    try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
     NEXT = await pickNext(calendarRows, partyRows);
     if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
     ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
   }
   if (VIEW === 'polling') {
-    if (!calendarRows.length) try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
     if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
     const { list: parties } = buildParties(partyRows, ISO, cfg);
     cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
@@ -1806,11 +1816,8 @@ async function main() {
     return;
   }
   teamRows = TEAM_DATA.map(([area, name, since]) => ({ 'area of designated responsibility': area, assignment: name, 'start date': since }));
-  try { projectionRows = await loadWithFallback(SOURCES.projection); } catch (e) { console.warn('Projection sheet not loaded', e); }
-  if (!calendarRows.length) try { calendarRows = await loadWithFallback(SOURCES.calendar); } catch (e) { console.warn('Calendar sheet not loaded', e); }
-  let governmentRows = [], seatRows = [];
-  try { governmentRows = await loadWithFallback(SOURCES.government); } catch (e) { console.warn('Government sheet not loaded', e); }
-  try { seatRows = await loadWithFallback(SOURCES.seats); } catch (e) { console.warn('Seat sheet not loaded', e); }
+  const [projectionRows2, governmentRows, seatRows] = await Promise.all([early.projection || soft(SOURCES.projection, 'Projection'), early.government || soft(SOURCES.government, 'Government'), early.seats || soft(SOURCES.seats, 'Seat')]);
+  projectionRows = projectionRows2;
   const { list: parties, merged } = buildParties(partyRows, ISO, cfg);
   cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
 
