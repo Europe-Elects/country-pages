@@ -245,6 +245,10 @@ const SECOND_CHAMBER = {
   IE: ['Seanad Éireann', 'Dáil Éireann'], IT: ['Senate of the Republic', 'Chamber of Deputies'], NL: ['Senate (Eerste Kamer)', 'House of Representatives'],
   PL: ['Senate', 'Sejm'], RO: ['Senate', 'Chamber of Deputies'], RU: ['Federation Council', 'State Duma'], SI: ['National Council', 'National Assembly']
 };  // [upper, lower]
+// Upper houses that are not directly elected (members delegated, appointed or elected by other bodies):
+// a column is the chamber's composition at that date, not a popular election.
+const INDIRECT_UPPER_HOUSES = ['AT', 'DE', 'BE', 'GB', 'RU', 'BA', 'BY', 'NL', 'FR', 'IE', 'SI'];
+const whenLabel = (c, label) => (c.type === 'upper house' && INDIRECT_UPPER_HOUSES.includes(ISO) ? `composition in ${label}` : `${label} election`);
 // Country names used in other sheets that differ from the party database.
 const COUNTRY_ALIASES = { 'czech republic': 'czechia', 'russia': 'russian federation', 'turkiye': 'turkey', 'türkiye': 'turkey', 'macedonia': 'north macedonia', 'moldova, republic of': 'moldova' };
 const sameCountry = (a, b) => { const f = (x) => { const n = norm(x); return COUNTRY_ALIASES[n] || n; }; return !!a && !!b && f(a) === f(b); };
@@ -1225,7 +1229,7 @@ function setParlYear(ci, i) {
   el.querySelector('.parl-seats').textContent = total;
   el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
   el.querySelector('.majline').style.left = (majority / total * 100).toFixed(2) + '%';
-  el.querySelector('.parl-when').textContent = e.key === 'current' ? 'current composition' : `${e.label} election`;
+  el.querySelector('.parl-when').textContent = e.key === 'current' ? 'current composition' : whenLabel(c, e.label);
   el.querySelectorAll('.yrbtn').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.i === i)));
 }
 const parlTimers = {};
