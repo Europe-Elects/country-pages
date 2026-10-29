@@ -628,11 +628,12 @@ function buildAlliances(rows, iso, parties) {
   return Object.values(groups).map((vs) => {
     vs.sort((x, y) => (x.version - y.version) || (x.a - y.a) || (x.idx - y.idx));
     const cur = vs[vs.length - 1];
-    if (cur.inactive) return null;
     const history = { grp: [], ep: vs.map((v, i) => ({ a: v.a, b: v.b, v: v.europarty === 'None' ? null : v.europarty.split(/[|;,]/)[0].trim(), ver: i + 1 })) };
-    const { o, idx, a, b, inactive, ...rest } = cur;
+    // Inactive (dissolved) alliances are kept for colouring old polling lines and seat history,
+    // but not shown as alliance cards or tags.
+    const { o, idx, a, b, ...rest } = cur;
     return { ...rest, oldAbbr: vs.map((v) => v.abbr).filter((x) => x !== cur.abbr), history: vs.length > 1 ? history : null };
-  }).filter(Boolean);
+  });
 }
 
 /* ---------- Logos (Wikidata / Wikimedia Commons) ---------- */
@@ -1347,7 +1348,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
     const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
     const m = byId || findParty(keys) || findLoose(pp);
-    const al = m ? null : findAlliance(keys);
+    const al = m ? null : ((pp.id && (alliances || []).find((x) => x.entityId === pp.id)) || findAlliance(keys));
     if (m) {
       color = m.color;  // polling lines follow the Europarty only (no EP-group fallback)
       // abbreviation strictly from the party database (most recent version)
@@ -1840,7 +1841,7 @@ async function main() {
   const gov = buildGovernment(governmentRows, cfg, parties);
   if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
   const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
-  alliances.forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
+  alliances.filter((a) => !a.inactive).forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
 
   const setMode = (m) => {
     if (m === COLOR_MODE) return;
@@ -1852,7 +1853,7 @@ async function main() {
   const bindMode = () => document.querySelectorAll('.cmode button').forEach((b) => { b.onclick = () => setMode(b.dataset.m); });
   const render = () => {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
-      viewAlliances(alliances) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
+      viewAlliances(alliances.filter((a) => !a.inactive)) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
