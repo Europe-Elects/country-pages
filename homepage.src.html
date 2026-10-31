@@ -35,6 +35,7 @@
 #ee-home .eeh-body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;min-width:0}
 #ee-home .eeh-body.flush{padding:0}
 #ee-home .eeh-sub{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+#ee-home .eeh-intro{font-size:15.5px;line-height:1.45;color:var(--ink);padding-bottom:12px;border-bottom:1px solid var(--line)}
 #ee-home .eeh-h{font-size:14.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}
 #ee-home .eeh-status{padding:30px;text-align:center;color:var(--muted);font-size:14.5px}
 #ee-home .eeh-status.err{color:#c00}
@@ -280,6 +281,8 @@ __FEATURE__
       <section class="eeh-panel">
         <a class="eeh-bar" href="https://europeelects.eu/ep2029"><span class="t">European Parliament Projection</span><span class="m">More →</span></a>
         <div class="eeh-body">
+          <!-- Introduction to the projection: edit the text between <p …> and </p> -->
+          <p class="eeh-sub eeh-intro">Our monthly projection estimates how the 720 seats of the European Parliament would be shared out if an election were held today, based on the latest national polls in all 27 member states.</p>
           <div id="eeh-bars" class="eeh-bars"><div class="eeh-status">Loading the projection…</div></div>
           <div id="eeh-map" class="eeh-map" hidden><div id="eeh-tip" class="eeh-tip"></div></div>
           <button type="button" class="eeh-more" id="eeh-trend-btn" aria-expanded="false" hidden>Show the trend since 2024</button>
