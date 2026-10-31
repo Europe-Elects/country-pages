@@ -410,6 +410,9 @@ const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
 const PARTY_DB = { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '959052694',
   publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' };
 const PARTY_NEW_ROWS = 5; // newest parties listed
+// Where a party in the list links to: the party database page. {q} = the party's abbreviation (or name), {iso} = country code.
+// The search and country are passed on, so the database opens filtered to that party.
+const PARTY_URL = 'https://europeelects.eu/parties/#q={q}&country={iso}';
 
 /* ================= Shared ================= */
 const root = document.getElementById('ee-home');
@@ -731,7 +734,7 @@ async function loadPartyDb() {
   document.getElementById('eeh-db-stats').innerHTML = [[active.length, 'active parties'], [countries.size, 'countries'], [members.length, 'Europarty members'], [fresh.length, `new since ${thisYear - 1}`]]
     .map(([n, l]) => `<div class="eeh-stat"><b>${n.toLocaleString('en-GB')}</b><span>${esc(l)}</span></div>`).join('');
   document.getElementById('eeh-db-find').placeholder = `Search ${active.length.toLocaleString('en-GB')} parties by name or abbreviation…`;
-  const url = (p) => COUNTRY_URL.replace('{iso}', p.iso).replace('{slug}', fold(p.country).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  const url = (p) => PARTY_URL.replace('{q}', encodeURIComponent(p.abbr || p.english || '')).replace('{iso}', encodeURIComponent(p.iso || ''));
   const pill = (eu) => { if (!eu) return '<span class="eeh-pill" style="background:#ECEAE4;color:#5f5e5a">No Europarty</span>'; const c = EUROPARTY_COLORS[eu] || '#5B6170'; return `<span class="eeh-pill" style="background:${c};color:${textOn(c)}">${esc(epName(eu))}</span>`; };
   const item = (p) => `<li><a href="${esc(url(p))}"><span class="iso" title="${esc(p.country)}">${esc(p.iso)}</span>
     <span><span class="nm">${esc(p.english)}</span>${p.abbr ? ` <span class="ab">${esc(p.abbr)}</span>` : ''}
