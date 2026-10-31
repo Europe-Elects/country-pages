@@ -397,7 +397,9 @@ const EP_SEATS = 720;
 // Latest articles: WordPress REST API of the site (hidden if it can't be reached).
 const POSTS_API = 'https://europeelects.eu/wp-json/wp/v2/posts?per_page=3&_embed=wp:term';
 // Country links. {iso} = ISO-2 code, {slug} = country name in lower case with dashes (e.g. bosnia-and-herzegovina).
-const COUNTRY_URL = 'https://europe-elects.github.io/country-pages/?country={iso}';
+const COUNTRY_URL = 'https://europeelects.eu/{slug}/';
+// Countries whose page address differs from their name (name in lower case with dashes → address).
+const COUNTRY_SLUGS = { 'russian-federation': 'russia' };
 const COUNTRIES = [["Albania", "AL"], ["Andorra", "AD"], ["Armenia", "AM"], ["Austria", "AT"], ["Azerbaijan", "AZ"], ["Belarus", "BY"], ["Belgium", "BE"], ["Bosnia and Herzegovina", "BA"], ["Bulgaria", "BG"], ["Croatia", "HR"], ["Cyprus", "CY"], ["Czechia", "CZ"], ["Denmark", "DK"], ["Estonia", "EE"], ["Faroe Islands", "FO"], ["Finland", "FI"], ["France", "FR"], ["Georgia", "GE"], ["Germany", "DE"], ["Greece", "GR"], ["Greenland", "GL"], ["Guernsey", "GG"], ["Hungary", "HU"], ["Iceland", "IS"], ["Ireland", "IE"], ["Isle of Man", "IM"], ["Italy", "IT"], ["Jersey", "JE"], ["Kosovo", "XK"], ["Latvia", "LV"], ["Liechtenstein", "LI"], ["Lithuania", "LT"], ["Luxembourg", "LU"], ["Malta", "MT"], ["Moldova", "MD"], ["Monaco", "MC"], ["Montenegro", "ME"], ["Netherlands", "NL"], ["North Macedonia", "MK"], ["Norway", "NO"], ["Poland", "PL"], ["Portugal", "PT"], ["Romania", "RO"], ["Russian Federation", "RU"], ["San Marino", "SM"], ["Serbia", "RS"], ["Slovakia", "SK"], ["Slovenia", "SI"], ["Spain", "ES"], ["Sweden", "SE"], ["Switzerland", "CH"], ["Turkey", "TR"], ["Ukraine", "UA"], ["United Kingdom", "GB"], ["Åland Islands", "AX"]];
 // Data access form. Set ONE of these: endpoint = a form service URL (e.g. Formspree) that accepts POST,
 // or email = address the visitor's mail program opens a pre-filled message to. With neither, the form opens DATA_ACCESS_URL.
@@ -407,6 +409,9 @@ const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
 const PARTY_DB = { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '959052694',
   publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' };
 const PARTY_NEW_ROWS = 5; // newest parties listed
+// Where a party in the list links to: the party database page. {q} = the party's abbreviation (or name), {iso} = country code.
+// The search and country are passed on, so the database opens filtered to that party.
+const PARTY_URL = 'https://europeelects.eu/parties/#q={q}&country={iso}';
 
 /* ================= Shared ================= */
 const root = document.getElementById('ee-home');
@@ -728,7 +733,7 @@ async function loadPartyDb() {
   document.getElementById('eeh-db-stats').innerHTML = [[active.length, 'active parties'], [countries.size, 'countries'], [members.length, 'Europarty members'], [fresh.length, `new since ${thisYear - 1}`]]
     .map(([n, l]) => `<div class="eeh-stat"><b>${n.toLocaleString('en-GB')}</b><span>${esc(l)}</span></div>`).join('');
   document.getElementById('eeh-db-find').placeholder = `Search ${active.length.toLocaleString('en-GB')} parties by name or abbreviation…`;
-  const url = (p) => COUNTRY_URL.replace('{iso}', p.iso).replace('{slug}', fold(p.country).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  const url = (p) => PARTY_URL.replace('{q}', encodeURIComponent(p.abbr || p.english || '')).replace('{iso}', encodeURIComponent(p.iso || ''));
   const pill = (eu) => { if (!eu) return '<span class="eeh-pill" style="background:#ECEAE4;color:#5f5e5a">No Europarty</span>'; const c = EUROPARTY_COLORS[eu] || '#5B6170'; return `<span class="eeh-pill" style="background:${c};color:${textOn(c)}">${esc(epName(eu))}</span>`; };
   const item = (p) => `<li><a href="${esc(url(p))}"><span class="iso" title="${esc(p.country)}">${esc(p.iso)}</span>
     <span><span class="nm">${esc(p.english)}</span>${p.abbr ? ` <span class="ab">${esc(p.abbr)}</span>` : ''}
@@ -776,7 +781,8 @@ async function loadPosts() {
 /* ================= Countries ================= */
 function renderCountries() {
   const ul = document.getElementById('eeh-countries');
-  const url = (name, iso) => COUNTRY_URL.replace('{iso}', iso).replace('{slug}', name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  const url = (name, iso) => { const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return COUNTRY_URL.replace('{iso}', iso).replace('{slug}', COUNTRY_SLUGS[slug] || slug); };
   ul.innerHTML = COUNTRIES.map(([n, iso]) => `<li data-n="${esc(n.toLowerCase())}"><a href="${esc(url(n, iso))}"><span class="iso">${esc(iso)}</span>${esc(n)}</a></li>`).join('');
   document.getElementById('eeh-find').addEventListener('input', (e) => {
     const q = e.target.value.trim().toLowerCase();
