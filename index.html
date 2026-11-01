@@ -1347,9 +1347,12 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const keys = names(pp);
     let joint = null;  // joint list not in the alliance sheet ("DK+MSZP+P"): its member parties
     let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
-    const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
+    // Matched by the Europe Elects Entity ID documented in the poll file (•EEID on the party's legend line),
+    // else an Entity ID used as the poll file's own ID, else by name.
+    const eid = pp.eeid || pp.id;
+    const byId = eid ? (parties.find((x) => x.entityId === eid && x.latest !== false) || parties.find((x) => x.entityId === eid)) : null;
     const m = byId || findParty(keys) || findLoose(pp);
-    const al = m ? null : ((pp.id && (alliances || []).find((x) => x.entityId === pp.id)) || findAlliance(keys));
+    const al = m ? null : ((eid && ((alliances || []).find((x) => x.entityId === eid && !x.inactive) || (alliances || []).find((x) => x.entityId === eid))) || findAlliance(keys));
     if (m) {
       color = m.color;  // polling lines follow the Europarty only (no EP-group fallback)
       // abbreviation strictly from the party database (most recent version)
@@ -1360,7 +1363,9 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       tag = al.europarty === 'None' ? (IS_EU ? groupLabel(al.epGroup || '') : '') : (al.europarty.includes('|') ? epName(al.europarty) : partyTag(al.europarty, al.epGroup));
     } else {
       // Joint lists without an alliance record ("A/B", "A–B"): use the first member party found.
-      const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => findParty([normKey(x)]));
+      // Each part is looked up by the •EEID of the poll-file party with that key (PLAID+SNP -> PLAID, SNP), else by name.
+      const partById = (x) => { const q = data.parties.find((o) => o.key === x && o.eeid); return q ? (parties.find((y) => y.entityId === q.eeid && y.latest !== false) || parties.find((y) => y.entityId === q.eeid)) : null; };
+      const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => partById(x) || findParty([normKey(x)]));
       const part = parts.find(Boolean);
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
       if (parts.length > 1 && parts.every(Boolean)) { abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }  // e.g. VOLYA+KB
