@@ -556,16 +556,9 @@ function buildParties(rows, iso, cfg) {
   });
   const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
   list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
-  // Merge duplicate current records with the same native name (keeps the better-documented one).
+  // Parties are identified strictly by Europe Elects Entity ID, version and Status, never by name:
+  // two entities that share a name (e.g. a party and its regional branch) both stay on the page.
   const merged = [];
-  const groups = {};
-  list.filter((p) => p.latest).forEach((p) => { (groups[norm(p.native)] = groups[norm(p.native)] || []).push(p); });
-  Object.values(groups).forEach((ps) => {
-    if (ps.length < 2) return;
-    ps.sort((a, b) => b.affs.length - a.affs.length);
-    ps.slice(1).forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
-  });
-  list = list.filter((p) => !p.duplicateOf);
   const seatData = (cfg.seats && cfg.seats.parties) || {};
   list.forEach((p) => {
     const own = [p.abbr, ...(p.abbrs || [])];
