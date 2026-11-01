@@ -366,9 +366,11 @@ const NONE = '#8A9099';
 const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
 const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79',
   'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
-  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
+  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076',
+  // Non-attached (EP: NI, PACE: NR) is treated as a group of its own, so it is told apart from unaffiliated (grey #8A9099).
+  'NI': '#5C5F66' };
 // EP groups / pill labels map to the Europarty of the same family.
-const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN' };
+const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN', 'NI': 'NI', 'NR': 'NI' };
 const textOn = (hex) => { const h = hex.replace('#', ''); const [r, g2, b2] = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * r + 0.7152 * g2 + 0.0722 * b2 > 0.25 ? '#1A1D23' : '#FFFFFF'; };
 const pillColor = (label) => {
   if (/^unaffiliated$/i.test(label)) return ['#C9CCD3', '#1A1D23'];
@@ -520,7 +522,7 @@ function affiliationHistory(versions) {
     const a = v.aff || {};
     const epVal = isNone(a.ep) ? null : a.ep.split(/[|;,]/)[0].trim();
     if (epVal || a.epS || a.epE) ep.push({ a: boundDate(a.epS), b: boundDate(a.epE, true), v: epVal, ver: v.version });
-    const gVal = isNone(a.grp) || /^NI$/i.test(String(a.grp).trim()) ? null : a.grp.split(/[;,]/)[0].trim();
+    const gVal = isNone(a.grp) ? null : a.grp.split(/[;,]/)[0].trim();
     if (gVal || a.grpS || a.grpE) grp.push({ a: boundDate(a.grpS), b: boundDate(a.grpE, true), v: gVal, ver: v.version });
   });
   return { ep, grp };
@@ -681,9 +683,11 @@ function buildAlliances(rows, iso, parties) {
 // Europarty or orientation), hollow when the members only state an interest to join. Members pointing different ways: grey.
 function allianceLean(al) {
   if (al.color !== NONE) return { color: al.color, style: 'solid', fam: al.europarty, reason: `Member of ${epName(al.europarty)}` };
-  const g1 = IS_EU ? String(al.epGroup || '').split(/[|;,]/)[0].trim() : '', gFam = g1 && !/^NI$/i.test(g1) ? GROUP_TO_EUROPARTY[g1] : '';
+  const g1 = IS_EU ? String(al.epGroup || '').split(/[|;,]/)[0].trim() : '', gFam = g1 ? GROUP_TO_EUROPARTY[g1] : '';
   if (gFam && EUROPARTY_COLORS[gFam]) return { color: EUROPARTY_COLORS[gFam], style: 'soft', fam: gFam, tag: groupLabel(g1), reason: `Sits in EP group ${groupLabel(g1)} (no Europarty)` };
-  const coloured = al.members.filter((m) => m.party && m.party.color !== NONE && m.party.colorStyle !== 'none');
+  let coloured = al.members.filter((m) => m.party && m.party.color !== NONE && m.party.colorStyle !== 'none');
+  // Non-attached (NI/NR) members do not outweigh members that point to a family; only-NI alliances are NI.
+  if (coloured.some((m) => m.party.colorFam !== 'NI')) coloured = coloured.filter((m) => m.party.colorFam !== 'NI');
   const fams = [...new Set(coloured.map((m) => m.party.colorFam))];
   if (fams.length !== 1) return { color: NONE, style: 'none', fam: '(none)',
     reason: fams.length ? `No Europarty; member parties point to different families (${coloured.map((m) => m.abbr + ' ' + epName(m.party.colorFam)).join(', ')})` : 'No Europarty, EP group or member with an affiliation' };
@@ -1039,7 +1043,7 @@ function buildProjection(rows, countryName, parties) {
     const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
     // Members: Europarty + projected group. Non-members: their interest (e.g. →EPP), else their orientation (~EPP), else "unaffiliated";
     // the group the projection sheet assigns to a non-member is not shown.
-    const member = match && (match.europartyShort || (match.epGroup && !/^NI$/i.test(match.epGroup)));
+    const member = match && (match.europartyShort || match.epGroup);
     const tag = member ? fullTag(match.europartyShort || '', group, match)
       : (match && interestTag(match) ? fullTag('', '', match) : ((softAffiliation(match && match.orientation) || {}).label || 'unaffiliated'));
     return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, interest: interestTag(match), interestNote: match ? epName(match.interestNote) : '', group,
@@ -1170,8 +1174,8 @@ const electionLabel = (k) => { if (k === 'current') return 'Current'; const m = 
   return m ? new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : k; };
 const electionSort = (k) => (k === 'current' ? 1e9 : (+k.slice(0, 4)) * 100 + (k.length > 4 ? +k.slice(5, 7) : 50));
 // Left-to-right order in the seat bar by Europarty family (or EP group when there is no Europarty);
-// unaffiliated and non-attached (NI) parties and independents sit between the liberals (RE) and the EPP.
-const FAMILY_ORDER = ['ECA', 'PEL', 'ELA', 'DiEM25', 'Animal Politics EU', 'EGP', 'EFA', 'Volt', 'PPEU', 'PES', 'ALDE', 'EDP', '(none)', 'EPP', 'ECPP', 'ECR', 'Patriots.eu', 'ESN', 'APF'];
+// unaffiliated parties and independents, then non-attached (NI), sit between the liberals (RE) and the EPP.
+const FAMILY_ORDER = ['ECA', 'PEL', 'ELA', 'DiEM25', 'Animal Politics EU', 'EGP', 'EFA', 'Volt', 'PPEU', 'PES', 'ALDE', 'EDP', '(none)', 'NI', 'EPP', 'ECPP', 'ECR', 'Patriots.eu', 'ESN', 'APF'];
 function buildChambers(rows, cfg, parties, alliances) {
   const mine = (rows || []).filter((o) => String(g(o, 'ISO-2')).toUpperCase() === ISO || sameCountry(g(o, 'Country'), cfg.name));
   const byEid = (eid) => eid ? (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid)
@@ -1192,7 +1196,7 @@ function buildChambers(rows, cfg, parties, alliances) {
       let tag = ent ? partyTag(eu, IS_EU ? String(grp).split(/[|;,]/)[0].trim() : '') : '';
       // Soft affiliation ("Orientation", e.g. ~ALDE) for parties with no Europarty or EP group: striped segment in that colour.
       let soft = '', color = ent ? ent.color : NONE, cstyle = '';
-      // No Europarty: an EP group (not NI) counts as a soft affiliation too (striped, group colour)
+      // No Europarty: an EP group (NI included) counts as a soft affiliation too (striped, group colour)
       const g1 = String(grp).split(/[|;,]/)[0].trim(), gEu = IS_EU && !eu ? GROUP_TO_EUROPARTY[g1] : '';
       const ori = ent && !eu && !gEu ? softAffiliation(ent.orientation) : null;
       if (ent && !isAlliance) {
@@ -1218,9 +1222,9 @@ function buildChambers(rows, cfg, parties, alliances) {
 }
 // Dependent / autonomous territories: their legislature is just "Parliament", not a national one.
 const DEPENDENCIES = ['AX', 'FO', 'GL', 'GG', 'JE', 'IM', 'GI'];
-// "Orientation" column: ~ALDE, ~EPP, ~PES, ~ECR, ~Left, ~EGP, ~PfE (~NI / unaffiliated = none).
+// "Orientation" column: ~ALDE, ~EPP, ~PES, ~ECR, ~Left, ~EGP, ~PfE, ~NI / ~NR (non-attached, a group of its own); unaffiliated = none.
 const ORIENTATION = { ALDE: ['ALDE', 'RE'], EPP: ['EPP', 'EPP'], PES: ['PES', 'S&D'], ECR: ['ECR', 'ECR'], LEFT: ['PEL', 'LEFT'],
-  EGP: ['EGP', 'G/EFA'], PFE: ['Patriots.eu', 'PfE'], ESN: ['ESN', 'ESN'], EFA: ['EFA', 'G/EFA'] };
+  EGP: ['EGP', 'G/EFA'], PFE: ['Patriots.eu', 'PfE'], ESN: ['ESN', 'ESN'], EFA: ['EFA', 'G/EFA'], NI: ['NI', 'NI'], NR: ['NI', 'NR'] };
 function softAffiliation(v) {
   const k = String(v || '').replace(/^~/, '').trim().toUpperCase(); const o = ORIENTATION[k];
   if (!o || !EUROPARTY_COLORS[o[0]]) return null;
@@ -1388,7 +1392,7 @@ const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.in
 /* ---------- One colour rule for every view (cards, seat bars, polling, EP projection) ----------
    At time t, the first that applies:
    1. Europarty membership in force          -> solid,  Europarty colour
-   2. EP group membership (EU only, not NI)   -> soft,   colour of the group's Europarty family
+   2. EP group membership (EU only; NI counts as a group) -> soft, colour of the group's Europarty family (NI: dark grey)
    3. Stated interest to join (Europarty first, else EP group), from its year on -> thin, colour of the target
    4. "Orientation" column (e.g. ~ALDE)       -> soft,   that family's colour
    5. otherwise                               -> none,   grey
@@ -1415,7 +1419,7 @@ function affiliationAt(p, t) {
   // 2. EP group without a Europarty
   if (IS_EU) {
     const g1 = h.grp.length ? pick(h.grp) : (p.epGroup ? { v: String(p.epGroup).split(/[|;,]/)[0].trim() } : undefined);
-    const fam = g1 && g1.v && !/^NI$/i.test(g1.v) ? GROUP_TO_EUROPARTY[g1.v] : '';
+    const fam = g1 && g1.v ? GROUP_TO_EUROPARTY[g1.v] : '';
     if (fam && EUROPARTY_COLORS[fam]) return { color: EUROPARTY_COLORS[fam], style: 'soft', fam, reason: `Sits in EP group ${groupLabel(g1.v)} (no Europarty)` };
   }
   // 3. Stated interest to join
@@ -2033,7 +2037,7 @@ async function main() {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
       viewAlliances(alliances.filter((a) => !a.inactive)) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer>
-      <p>Party colours follow one rule everywhere: Europarty membership (solid), else EP group (dashed/striped), else a stated interest to join (thin/finely striped), else the orientation column (dashed/striped), else grey. Alliances without a Europarty or EP group take the family their member parties share (striped, or finely striped if the members only state an interest); grey if members point different ways. The EP seat projection's group assignment is not used for colours or labels.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
+      <p>Party colours follow one rule everywhere: Europarty membership (solid), else EP group (dashed/striped; non-attached NI/NR counts as a group, dark grey), else a stated interest to join (thin/finely striped), else the orientation column (dashed/striped), else grey. Alliances without a Europarty or EP group take the family their member parties share (striped, or finely striped if the members only state an interest); grey if members point different ways. The EP seat projection's group assignment is not used for colours or labels.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
     mountContact(cfg);
     postHeight();
