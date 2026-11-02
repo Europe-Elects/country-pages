@@ -202,6 +202,33 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 footer .team{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
+/* ---------- contact form (collapsed by default) ---------- */
+.contact{margin-top:4px;border-top:4px solid var(--navy);border-radius:6px}
+.contact>summary{list-style:none;cursor:pointer;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
+.contact>summary::-webkit-details-marker{display:none}
+.contact>summary .sub{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)}
+.contact>summary .chev{flex:none;width:10px;height:10px;border-right:2px solid var(--navy);border-bottom:2px solid var(--navy);transform:rotate(45deg);transition:transform .15s;margin-top:-4px}
+.contact[open]>summary .chev{transform:rotate(-135deg);margin-top:4px}
+.contact>summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.contact form{padding:4px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.contact .f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.contact .f.full{grid-column:1/-1}
+.contact [hidden]{display:none}
+.contact label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
+.contact label .opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+.contact input,.contact select,.contact textarea{font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid #D5D3CC;border-radius:4px;padding:8px 10px;width:100%}
+.contact textarea{min-height:120px;resize:vertical}
+.contact input:focus,.contact select:focus,.contact textarea:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
+.contact .hint{font-size:13px;color:var(--muted)}
+.contact .actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.contact button{font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--navy);color:#fff;border:0;border-radius:4px;padding:10px 22px;cursor:pointer}
+.contact button:hover{background:var(--blue)}
+.contact button[disabled]{opacity:.6;cursor:wait}
+.contact .msg{font-size:15px}
+.contact .msg.ok{color:#1F7A3A;font-weight:600}
+.contact .msg.err{color:#B3261E}
+.contact .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media (max-width:640px){.contact form{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -215,27 +242,28 @@ footer .team{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);f
    Everything that is NOT in those sheets lives in COUNTRIES (per country).
    ===================================================================== */
 
-const SHEET_ID = '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8';
+// Sheet data is read by the GitHub Action (keyless Google login) and published next to this page as
+// sheets/<name>.csv, so the page never contacts Google and no Sheet link appears in the code.
+// To add a tab: add it to scripts/fetch_sheets.py and point an entry below at its file.
+const SHEETS_BASE = 'sheets/';
 const SOURCES = {
-  // publishedCsv: optional "File › Share › Publish to web › CSV" link for the tab.
-  // Recommended: it keeps every value as text. The gviz fallback can drop
-  // values in columns that mix numbers and text (e.g. "1992 (SI)").
-  parties:   { gid: '0',         publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' },
-  alliances: { gid: '860650586', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=860650586&single=true&output=csv' },
-  // Electoral calendar (separate spreadsheet). Columns: Country, Specification, Type, Mode, Sequence,
+  // Party database: one row per party version.
+  parties:   { file: 'parties.csv' },
+  alliances: { file: 'alliances.csv' },
+  // Electoral calendar. Columns: Country, Specification, Type, Mode, Sequence,
   // (Expected) Date, Date Status, Comment, Result. Rows are matched on the country name.
-  calendar:  { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0', publishedCsv: '' },
-  // European Parliament projection (Mastersheet, wide format: Country, EU Parliament group, Party,
+  calendar:  { file: 'calendar.csv' },
+  // European Parliament projection (wide format: Country, EU Parliament group, Party,
   // Party Name + Group, then one column per month such as "Jul-26"). Rows are matched on the country name.
-  projection: { sheetId: '1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ', gid: '0', publishedCsv: '' },
+  projection: { file: 'projection.csv' },
   // Government (heads of state/government and governing parties). Columns: Country, Entity / Person,
   // Entity ID, Start Date, End Date, Type ("Head of State", "Head of Government", "Government Party").
   // Rows with an End Date in the past are history and not shown. An Entity ID on a person row = their party.
-  government: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '124081312', publishedCsv: '' },
+  government: { file: 'government.csv' },
   // Parliament seats. Columns: Country, ISO-2, Chamber, Chamber type (unicameral / lower house / upper house),
   // Party (as given), Abbreviation, Europe Elects Entity ID, Affiliation (as given), one column per election
   // ("Current", "2025", "2024-10", …), Note. One "Total seats" row per chamber.
-  seats: { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '902537041', publishedCsv: '' }
+  seats: { file: 'seats.csv' }
 };
 // Bicameral parliaments: the chamber shown as "no data yet" when the seat sheet only has the other one.
 const SECOND_CHAMBER = {
@@ -256,10 +284,8 @@ const sameCountry = (a, b) => { const f = (x) => { const n = norm(x); return COU
 const EP_PROJECTION_URL = 'https://europeelects.eu/ep2029';
 
 // Team members responsible for each country (shown at the bottom of the page).
-// Paste the tab's "Publish to web" CSV link into publishedCsv. Entries reading "active team member" are skipped.
 // Team credits (hard-coded copy of the assignment sheet: area, name(s), start date). Update by replacing this list.
 const TEAM_DATA = [["Åland Islands", "Julius Lehtinen", "1 August 2018"], ["Albania", "Julius Lehtinen", "25 October 2025"], ["Andorra", "Tomos Stokes", "1 January 2025"], ["Austria", "Mingo Garscha", "29 September 2022"], ["Belarus", "Roman Broszkowski", "1 November 2022"], ["Bosnia and Herzegovina", "Roman Broszkowski", "1 November 2022"], ["Bulgaria", "Kostadin Kostov", "12 November 2025"], ["Canada - 1", "Šárka Neumannová", "1 April 2025"], ["China - 2", "Edwin Shiu", "10 November 2025"], ["Czechia", "Mikuláš Králíček", "1 April 2026"], ["Denmark", "Tristan Løve", "1 July 2022"], ["El Salvador", "Rithwik Narendra", "11 November 2023"], ["Estonia", "Gert Armand Valgerist", "1 February 2023"], ["Finland", "Julius Lehtinen", "1 August 2018"], ["France - 1", "Matthias Troude", "1 September 2023"], ["France - 2", "Rayane S", "14 November 2025"], ["Georgia", "Jan Jakob Langer", "28 April 2023"], ["Ghana", "David Montoto Salas", "30 March 2026"], ["Gibraltar", "Tomos Stokes", "1 January 2025"], ["Greece", "Vasilis Karatzoglou", "24 March 2026"], ["Greenland", "Julius Lehtinen", "1 August 2018"], ["Holy See", "Antonio F. Modeo", "21 December 2018"], ["Hungary", "I. Telegdi", "21 November 2025"], ["Iceland", "Rithwik Narendra", "11 November 2023"], ["Iraq", "Mohammed Majeed", "1 October 2021"], ["Ireland", "Dylan Simpson", "24 October 2024"], ["Italy - 1", "Francesca Giosuè", "1 March 2025"], ["Kiribati", "Rithwik Narendra", "11 November 2023"], ["Kosovo", "James J-B", "1 April 2025"], ["Latvia", "Linus Folke Jensen", "22 August 2020"], ["Liechtenstein", "Nasha Gagnebin", "20 December 2020"], ["Malta", "Liam Meade", "11 November 2025"], ["Monaco", "Matthias Troude", "1 September 2023"], ["Nigeria - 1", "Adrian Elimian", "1 May 2021"], ["Republic of Korea", "Sturmovik", "22 August 2022"], ["Russian Federation - 2", "Murasaki Helimsky", "1 August 2023"], ["Slovakia", "Andrej Černek", "6 January 2024"], ["South Africa - 1", "Dylan Simpson", "12 January 2024"], ["Spain 2", "Teo García Prado", "1 September 2025"], ["Switzerland - 1", "Nasha Gagnebin", "20 December 2020"], ["Switzerland - 2", "Simone Sessolo", "9 April 2024"], ["Thailand - 1", "Tinnakorn Wantae", "10 January 2020"], ["Türkiye -2", "Arhan Özturan", "14 November 2025"], ["Tuvalu", "Rithwik Narendra", "11 November 2023"], ["United Kingdom - 2", "Emanuele Vaudano", "30 March 2026"], ["United States of America - 4", "Y. Lowitz", "1 May 2025"]];
-const TEAM_SOURCE = { sheetId: '1GaBoIAmC0q_zr3sT__ZlkyWS0SffGogxIubIkteJ3wI', gid: '1332653481', publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQN8eCtgoyqV7jtGDoOlkoGvoaetL6hLF6Ppk2PMGHhzklNTSdcis3NSwbTXGIo3KxMRc_SuSddtHJw/pub?gid=1173701697&single=true&output=csv' };
 // Columns: Area of Designated Responsibility (country name or ISO code), Assignment (name), Start Date.
 const TEAM_COLUMNS = { country: ['Area of Designated Responsibility', 'ISO-2', 'ISO', 'Country code', 'Country'], since: ['Start Date', 'Since'], member: ['Assignment', 'Team member', 'Responsible', 'Responsible team member', 'Country coordinator', 'Coordinator', 'Editor', 'Name', 'Member'] };
 
@@ -291,6 +317,11 @@ const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
 
 const LOGOS = { enabled: true, cacheHours: 24 };
 const LOGO_OVERRIDES = {};
+
+// Contact form at the bottom of the page. Messages are relayed by FormSubmit (formsubmit.co), which needs no
+// server: the very first submission sends a one-time activation email to CONTACT.to that must be confirmed.
+// If the relay can't be reached, the form falls back to opening the visitor's mail app with the message filled in.
+const CONTACT = { enabled: true, to: 'contact@europeelects.eu', endpoint: 'https://formsubmit.co/ajax/contact@europeelects.eu' };
 
 const COUNTRIES = {
   AL: {
@@ -465,8 +496,7 @@ const g = (o, ...keys) => { for (const k of keys) { const v = o[norm(k)]; if (v)
 const gStarts = (o, prefix) => { const p = norm(prefix); for (const k in o) if (k.startsWith(p) && o[k]) return o[k]; return ''; };
 
 async function loadSheet(src) {
-  const url = src.publishedCsv || `https://docs.google.com/spreadsheets/d/${src.sheetId || SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${src.gid}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(SHEETS_BASE + src.file, { cache: 'no-cache' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return toObjects(parseCSV(await res.text()));
 }
@@ -1853,7 +1883,7 @@ async function main() {
   let partyRows, allianceRows = [];
   const loadWithFallback = async (src) => {
     try { return await loadSheet(src); }
-    catch (e) { if (!src.publishedCsv) throw e; console.warn('Published CSV failed, trying gviz', e); return loadSheet({ sheetId: src.sheetId, gid: src.gid, publishedCsv: '' }); }
+    catch (e) { console.warn('Retrying', src.file, e); await new Promise((ok) => setTimeout(ok, 1500)); return loadSheet(src); }
   };
   // Start every download at once (they used to run one after another, which made the page slow).
   const soft = (src, what) => loadWithFallback(src).catch((e) => { console.warn(what + ' sheet not loaded', e); return []; });
@@ -1942,6 +1972,7 @@ async function main() {
       `<footer>
       <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
+    mountContact(cfg);
     postHeight();
   };
   const bindLegend = () => {
@@ -1971,6 +2002,72 @@ async function main() {
       bindFilter(); postHeight();
     }).catch((e) => { console.warn('Logos not loaded', e); if (LOGO_DEBUG) { app.insertAdjacentHTML('beforeend', viewLogoReport([], e.message)); postHeight(); } });
   }
+}
+
+/* ---------- contact form ---------- */
+// Built once and re-attached after every render, so a half-written message survives colour-mode switches etc.
+let contactEl = null;
+const contactSections = () => {
+  const seen = new Set(), out = ['Overview (top of page)'];
+  document.querySelectorAll('#app .bar h2').forEach((h) => {
+    const t = h.textContent.replace(/\s*·\s*\d+\s*$/, '').trim();
+    if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
+  });
+  out.push('Other');
+  return out;
+};
+function mountContact(cfg) {
+  if (!CONTACT.enabled) return;
+  const country = (cfg && cfg.name) || ISO;
+  if (!contactEl) {
+    contactEl = document.createElement('details');
+    contactEl.className = 'card contact';
+    contactEl.id = 'contact';
+    contactEl.innerHTML = `<summary><span>Contact us <span class="sub">· report an error, suggest a correction or send a source</span></span><span class="chev" aria-hidden="true"></span></summary>
+      <form novalidate>
+        <div class="f"><label for="ct-section">Section</label><select id="ct-section" name="section" required></select></div>
+        <div class="f" id="ct-other-wrap" hidden><label for="ct-other">Topic</label><input id="ct-other" name="other" type="text" maxlength="120" placeholder="What is it about?"></div>
+        <div class="f full"><label for="ct-source">Source</label><input id="ct-source" name="source" type="text" maxlength="500" required placeholder="Link or reference (e.g. official results page, article, law)"><span class="hint">Please give a link or a precise reference so we can verify the information.</span></div>
+        <div class="f full"><label for="ct-message">Message</label><textarea id="ct-message" name="message" maxlength="5000" required placeholder="What should we add, correct or know?"></textarea></div>
+        <div class="f full"><label for="ct-email">Your email <span class="opt">(optional, only if you'd like a reply)</span></label><input id="ct-email" name="email" type="email" maxlength="200" autocomplete="email"></div>
+        <div class="hp" aria-hidden="true"><label for="ct-hp">Leave empty</label><input id="ct-hp" name="_honey" type="text" tabindex="-1" autocomplete="off"></div>
+        <div class="actions"><button type="submit">Send</button><span class="msg" role="status" aria-live="polite"></span></div>
+      </form>`;
+    const form = contactEl.querySelector('form'), sel = form.querySelector('#ct-section'), otherWrap = form.querySelector('#ct-other-wrap'), msg = form.querySelector('.msg'), btn = form.querySelector('button');
+    const say = (t, cls) => { msg.className = 'msg' + (cls ? ' ' + cls : ''); msg.innerHTML = t; postHeight(); };
+    sel.addEventListener('change', () => { otherWrap.hidden = sel.value !== 'Other'; postHeight(); });
+    contactEl.addEventListener('toggle', () => { postHeight(); if (contactEl.open) sel.focus({ preventScroll: true }); });
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const v = (n) => (form.elements[n].value || '').trim();
+      if (v('_honey')) return; // bot
+      const missing = [['section', sel], ['source', form.elements.source], ['message', form.elements.message]].find(([n]) => !v(n));
+      if (missing) { say('Please fill in the section, a source and your message.', 'err'); missing[1].focus(); return; }
+      if (v('email') && !form.elements.email.checkValidity()) { say('That email address doesn’t look right.', 'err'); form.elements.email.focus(); return; }
+      const section = v('section') === 'Other' && v('other') ? 'Other: ' + v('other') : v('section');
+      const page = (() => { try { return window.top.location.href; } catch (e) { return document.referrer || location.href; } })();
+      const data = { Country: country, Section: section, Source: v('source'), Message: v('message'), Page: page,
+        _subject: `Europe Elects ${country} page – ${section}`, _template: 'table', _captcha: 'false' };
+      if (v('email')) { data.email = v('email'); data._replyto = v('email'); }
+      btn.disabled = true; say('Sending…');
+      try {
+        const r = await fetch(CONTACT.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || String(j.success) === 'false') throw new Error(j.message || 'HTTP ' + r.status);
+        form.reset(); otherWrap.hidden = true;
+        say('Thank you, your message has been sent to the Europe Elects team.', 'ok');
+      } catch (e) {
+        console.warn('Contact form', e);
+        const body = `Country: ${country}\nSection: ${section}\nSource: ${v('source')}\nPage: ${page}\n\n${v('message')}`;
+        const href = `mailto:${CONTACT.to}?subject=${encodeURIComponent(data._subject)}&body=${encodeURIComponent(body)}`;
+        say(`The message couldn’t be sent from here. <a href="${esc(href)}" target="_top">Open it in your email app</a> or write to <a href="mailto:${esc(CONTACT.to)}" target="_top">${esc(CONTACT.to)}</a>.`, 'err');
+      } finally { btn.disabled = false; }
+    });
+  }
+  // Refresh the section list from what is actually on the page (sections differ per country), keeping the choice.
+  const sel = contactEl.querySelector('#ct-section'), cur = sel.value;
+  sel.innerHTML = '<option value="">Choose a section…</option>' + contactSections().map((s) => `<option${s === cur ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  app.appendChild(contactEl);
 }
 
 /* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
