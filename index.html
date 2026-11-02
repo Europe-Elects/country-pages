@@ -1313,6 +1313,10 @@ const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(
 const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
 const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.interestNote}` : '');
 let POLL = null;
+// Dot size by sample size: area grows with the number of respondents (1,000 = normal size), within limits.
+const dotScale = (n) => (n ? Math.min(1.8, Math.max(0.7, Math.sqrt(n / 1000))) : 1);
+// Margin of error of one poll for a party share v (in %), 95% confidence, from the sample size.
+const moeOf = (v, n) => (n && v > 0 && v < 100 ? 1.96 * Math.sqrt((v / 100) * (1 - v / 100) / n) * 100 : null);
 // Poll-chart abbreviations are always in Latin script, like the party database: the database abbreviation when the
 // party is matched, else the poll file's romanisation (•R), else a transliteration (Cyrillic, Greek).
 const TRANSLIT = Object.fromEntries([...'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'].map((c, i) => [c, ['a','b','v','g','d','e','yo','zh','z','i','y','k','l','m','n','o','p','r','s','t','u','f','h','ts','ch','sh','sht','a','y','','e','yu','ya','ye','i','yi','g'][i]])
@@ -1401,7 +1405,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
       if (parts.length > 1 && parts.every(Boolean)) { abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }  // e.g. VOLYA+KB
     }
-    const curve = (pp.curve || []).map((seg) => seg.map(([d, v]) => ({ t: new Date(d), v })).filter((q) => q.t >= from)).filter((seg) => seg.length);
+    const curve = (pp.curve || []).map((seg) => seg.map(([d, v, e]) => ({ t: new Date(d), v, e: e == null ? null : +e })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : (al && al.history ? al.history : null);
     // Not a member but interested in joining: the target's colour (lines drawn thinner, see thinAt).
     const grpFirst = m && IS_EU && !m.europartyShort ? EUROPARTY_COLORS[GROUP_TO_EUROPARTY[String(m.epGroup || '').split(/[|;,]/)[0].trim()]] || '' : '';
@@ -1429,7 +1433,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       soft: alSoft || (!!(curGrpCol || ori) && !iCol), colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
-  const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: { ...p.v } })).filter((p) => p.t >= from);
+  const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, n: p.n || null, v: { ...p.v } })).filter((p) => p.t >= from);
   // Member parties do not run on their own while an alliance they belong to is polled: their line and poll
   // dots are cut for the alliance's polled period(s), even if separate figures exist. Exception: ALLIANCE_TOGGLE.
   const isToggle = (al) => ALLIANCE_TOGGLE.includes(al.entityId) || ALLIANCE_TOGGLE.includes(al.abbr);
@@ -1557,7 +1561,7 @@ function viewPolling(cfg, poll) {
       ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
       ${modeNote()}
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
-      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures.' : ''}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
+      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures, with each party’s margin of error (95%).' : ' The shaded band is the 95% uncertainty range of the average, based on how much the polls scatter around it.'} Larger dots are polls with larger samples. Margins of error cover random sampling only; real polling error, including differences between pollsters, is typically larger.${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
   }
   const id = POLLING_CHARTS[ISO];
   const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
@@ -1625,6 +1629,14 @@ function drawPolling() {
   elections.forEach((d) => { const xx = x(d.getTime()); svg += `<line x1="${xx}" x2="${xx}" y1="${m.t}" y2="${m.t + ih}" stroke="#C8202F" stroke-width="1" stroke-dasharray="4 3" opacity=".7"><title>Parliamentary election, ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</title></line>`; });
   const ordered = [...series].sort((p1, p2) => (p1.color === NONE ? 0 : 1) - (p2.color === NONE ? 0 : 1));
   svg += '<g clip-path="url(#poll-clip)">';
+  // Shaded band: 95% uncertainty range of the average (from the build), drawn behind the lines.
+  ordered.forEach((sr) => sr.curve.forEach((seg) => {
+    const pts = seg.filter((q) => q.e != null && q.t.getTime() >= t0 - 30 * 864e5 && q.t.getTime() <= t1 + 30 * 864e5);
+    if (pts.length < 2) return;
+    const up = pts.map((q) => [x(q.t.getTime()), y(q.v + q.e)]), lo = pts.map((q) => [x(q.t.getTime()), y(Math.max(0, q.v - q.e))]).reverse();
+    const c = sr.colorAt(pts[pts.length - 1].t.getTime());
+    svg += `<path class="pband" data-k="${esc(sr.key)}" d="M${up.map((p) => p.join(',')).join('L')}L${lo.map((p) => p.join(',')).join('L')}Z" fill="${c}" fill-opacity="${c === NONE ? 0.1 : 0.14}" stroke="none"/>`;
+  }));
   ordered.forEach((sr) => sr.curve.forEach((seg) => {
     const pts = seg.filter((q, i) => { const t = q.t.getTime(); const nxt = seg[i + 1], prv = seg[i - 1]; return (t >= t0 && t <= t1) || (nxt && nxt.t.getTime() >= t0 && t < t0) || (prv && prv.t.getTime() <= t1 && t > t1); });
     if (pts.length < 2) return;
@@ -1661,7 +1673,7 @@ function drawPolling() {
   ctx.globalAlpha = bold ? 0.9 : 0.14;
   const r = bold ? (small ? 3.2 : 4.2) : (small ? 1.2 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2 : 1.5));
   if (bold) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; }
-  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); if (bold) ctx.stroke(); } });
+  polls.forEach((p) => { const xx = x(p.t.getTime()), rr = r * dotScale(p.n); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), rr, 0, 6.283); ctx.fill(); if (bold) ctx.stroke(); } });
   // hover / tap pop-up, drag to zoom
   const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip'), sel = document.getElementById('poll-sel');
   const pxOf = (evt) => { const rc = host.getBoundingClientRect(); return Math.max(m.l, Math.min(m.l + iw, (evt.touches ? evt.touches[0].clientX : evt.clientX) - rc.left)); };
@@ -1680,11 +1692,14 @@ function drawPolling() {
       polls.forEach((p) => { const d = Math.abs(x(p.t.getTime()) - px); if (d < bd && Object.keys(p.v).some((k) => shownKeys.has(k))) { bd = d; best = p; } });
       cross.setAttribute('visibility', best ? 'visible' : 'hidden');
       if (best) cross.setAttribute('x1', x(best.t.getTime())), cross.setAttribute('x2', x(best.t.getTime()));
-      document.getElementById('poll-marks').innerHTML = '';
-      if (!best) { tip.hidden = true; return; }
-      tip.innerHTML = `<strong>${esc(best.pf || 'Poll')}</strong><span class="pf">Fieldwork midpoint: ${best.t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>` +
-        Object.entries(best.v).filter(([k]) => shownKeys.has(k)).sort((p1, p2) => p2[1] - p1[1])
-          .map(([k, v]) => `<div><span class="dot" style="background:${byKey[k].colorAt(best.t.getTime())}"></span><span>${esc(seriesLabel(byKey[k].abbr, byKey[k].tag))}</span><strong>${v.toFixed(1)}%</strong></div>`).join('');
+      if (!best) { document.getElementById('poll-marks').innerHTML = ''; tip.hidden = true; return; }
+      // error bars: each party's margin of error (95%) for this poll's sample size
+      const bx = x(best.t.getTime()), rows0 = Object.entries(best.v).filter(([k]) => shownKeys.has(k)).sort((p1, p2) => p2[1] - p1[1]);
+      document.getElementById('poll-marks').innerHTML = rows0.map(([k, v]) => { const e = moeOf(v, best.n); if (!e) return '';
+        const c = byKey[k].colorAt(best.t.getTime()), y1 = y(v + e), y2 = y(Math.max(0, v - e));
+        return `<line x1="${bx}" x2="${bx}" y1="${y1}" y2="${y2}" stroke="${c}" stroke-width="2"/><line x1="${bx - 4}" x2="${bx + 4}" y1="${y1}" y2="${y1}" stroke="${c}" stroke-width="2"/><line x1="${bx - 4}" x2="${bx + 4}" y1="${y2}" y2="${y2}" stroke="${c}" stroke-width="2"/>`; }).join('');
+      tip.innerHTML = `<strong>${esc(best.pf || 'Poll')}</strong><span class="pf">Fieldwork midpoint: ${best.t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${best.n ? ` · ${best.n.toLocaleString('en-GB')} respondents` : ''}</span>` +
+        rows0.map(([k, v]) => { const e = moeOf(v, best.n); return `<div><span class="dot" style="background:${byKey[k].colorAt(best.t.getTime())}"></span><span>${esc(seriesLabel(byKey[k].abbr, byKey[k].tag))}</span><strong>${v.toFixed(1)}%${e ? ` <span style="font-weight:400;color:var(--muted)">±${e.toFixed(1)}</span>` : ''}</strong></div>`; }).join('');
     } else
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
