@@ -586,6 +586,18 @@ const ALLIANCE_TYPES = [
   ['Alternative Party Name (Regional Adaptation)', 'Regional name variant'],
   ['Official Nuance Labels', 'Official nuance label']
 ];
+// An alliance with no Europarty of its own takes the colour of its first listed member party (Party 1, 2, …)
+// that has an affiliation, skipping unaffiliated members. Shown dashed / striped like other soft affiliations:
+// that member's Europarty colour, else its own soft affiliation (EP group, ~Orientation, PACE).
+function leadColour(noEuroparty, members) {
+  if (!noEuroparty) return {};
+  for (const m of members) {
+    const p = m.party; if (!p) continue;
+    const so = p.color !== NONE ? { color: p.color, label: p.europartyShort ? epName(p.europartyShort) : '' } : softOf(p);
+    if (so && so.color && so.color !== NONE) return { color: so.color, soft: true, softLabel: `via ${p.abbr}${so.label ? ' (' + so.label + ')' : ''}` };
+  }
+  return {};
+}
 function buildAlliances(rows, iso, parties) {
   const byId = {};
   parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
@@ -623,7 +635,7 @@ function buildAlliances(rows, iso, parties) {
       europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
       color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
       types: ALLIANCE_TYPES.filter(([h]) => /^yes$/i.test(g(o, h))).map(([, t]) => t),
-      members
+      members, ...leadColour(isNone(europarty), members)
     };
   });
   // Versions of one alliance (same Entity ID) become one alliance: the newest version (highest version number,
@@ -1109,6 +1121,7 @@ function buildChambers(rows, cfg, parties, alliances) {
       const ori = ent && !eu && !gEu ? (softAffiliation(ent.orientation) || paceAffiliation(ent.pace, ent.paceEnd)) : null;
       if (gEu && EUROPARTY_COLORS[gEu]) { famKey = gEu; soft = EUROPARTY_COLORS[gEu]; color = soft; }
       else if (ori) { famKey = ori.europarty; soft = ori.color; color = ori.color; tag = ori.label; }
+      else if (isAlliance && ent.soft && !eu) { soft = ent.color; color = ent.color; tag = ent.softLabel; }
       return { ide: ideoOf(ent), a: toLatin(ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)'))), title: ent ? ent.english : g(o, 'Party (as given)'),
         color, soft: !!soft, eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
         memberIds: ent && ent.members ? ent.members.map((m) => m.party && m.party.entityId).filter(Boolean) : [] };
@@ -1408,8 +1421,10 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     if (iCol && color === NONE) color = iCol;
     else if (color === NONE && (curGrpCol || ori)) color = curGrpCol || ori.color;
     abbr = toLatin(abbr, pp.roman);
+    const alSoft = !!(al && al.soft && !m);
+    if (alSoft && !tag) tag = al.softLabel;
     return { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
-      soft: !!(curGrpCol || ori) && !iCol, colorAt: (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt };
+      soft: alSoft || (!!(curGrpCol || ori) && !iCol), colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: { ...p.v } })).filter((p) => p.t >= from);
@@ -1693,7 +1708,7 @@ window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize =
 function viewAlliances(alliances) {
   if (!alliances.length) return '';
   return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
-    <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
+    <article class="al" style="${a.soft ? `border-top:5px dashed ${a.color}` : `border-top-color:${a.color}`}" title="${esc(a.native)}${a.soft ? ` · no Europarty of its own; colour ${esc(a.softLabel)}` : ''}">
       <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
       <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
       <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
