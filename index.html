@@ -535,7 +535,7 @@ function buildParties(rows, iso, cfg) {
       aff: { ep: europarty, epS: g(o, 'Europarty Start'), epE: europartyEnd, grp: epGroup, grpS: g(o, 'EP Group Start'), grpE: g(o, 'EP Group End') }, wikidata: (g(o, 'Wikidata ID', 'Wikidata', 'QID').match(/Q\d+/) || [''])[0],
       abbr: g(o, 'Abbreviation') || g(o, 'Name (English)'), logoSpec: g(o, 'Logo', 'Logo URL', 'Logo Override'), country: g(o, 'Country'),
       ideologies: ideology.split(/[,;]/).map((x) => x.trim()).filter(Boolean).map((x) => (/^libertarian$/i.test(x) ? 'Libertarianism' : x)).map((x) => ({ name: x, color: ideoColor(x) })),
-      epInterest, euInterest, interestNote, orientation: g(o, 'Orientation'),
+      epInterest, euInterest, interestNote, orientation: g(o, 'Orientation'), pace: g(o, 'PACE Group'), paceEnd: g(o, 'PACE End'),
       european: !!currentEuroparty || (IS_EU && !isNone(epGroup)) || affs2.some(([, v]) => !/\(until /.test(v)), affs2, europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
       eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
       affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
@@ -1106,7 +1106,7 @@ function buildChambers(rows, cfg, parties, alliances) {
       let soft = '', color = ent ? ent.color : NONE;
       // No Europarty: an EP group (not NI) counts as a soft affiliation too (striped, group colour)
       const g1 = String(grp).split(/[|;,]/)[0].trim(), gEu = IS_EU && !eu ? GROUP_TO_EUROPARTY[g1] : '';
-      const ori = ent && !eu && !gEu ? softAffiliation(ent.orientation) : null;
+      const ori = ent && !eu && !gEu ? (softAffiliation(ent.orientation) || paceAffiliation(ent.pace, ent.paceEnd)) : null;
       if (gEu && EUROPARTY_COLORS[gEu]) { famKey = gEu; soft = EUROPARTY_COLORS[gEu]; color = soft; }
       else if (ori) { famKey = ori.europarty; soft = ori.color; color = ori.color; tag = ori.label; }
       return { ide: ideoOf(ent), a: toLatin(ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)'))), title: ent ? ent.english : g(o, 'Party (as given)'),
@@ -1134,6 +1134,20 @@ function softAffiliation(v) {
   return { europarty: o[0], color: EUROPARTY_COLORS[o[0]], label: '~' + (IS_EU ? o[1] : epName(o[0])) };
 }
 const stripes = (c) => `repeating-linear-gradient(135deg,${c} 0 4px,#fff 4px 7px)`;
+// PACE group as a last-resort soft affiliation (only unambiguous single groups; ECPA and NR are mixed).
+const PACE_TO_EUROPARTY = { 'EPP/CD': 'EPP', SOC: 'PES', ALDE: 'ALDE', UEL: 'PEL' };
+function paceAffiliation(v, end) {
+  const k = String(v || '').trim().toUpperCase(); if (end || !PACE_TO_EUROPARTY[k]) return null;
+  const e = PACE_TO_EUROPARTY[k]; if (!EUROPARTY_COLORS[e]) return null;
+  return { europarty: e, color: EUROPARTY_COLORS[e], label: '~' + epName(e) + ' (PACE)' };
+}
+// Soft affiliation of a party without a Europarty: EP group (EU members), else Orientation (~EPP …), else PACE group.
+function softOf(p) {
+  if (!p || p.europartyShort) return null;
+  const gEu = IS_EU && p.epGroup ? GROUP_TO_EUROPARTY[String(p.epGroup).split(/[|;,]/)[0].trim()] : '';
+  if (gEu && EUROPARTY_COLORS[gEu]) return { europarty: gEu, color: EUROPARTY_COLORS[gEu], label: p.epGroup };
+  return softAffiliation(p.orientation) || paceAffiliation(p.pace, p.paceEnd);
+}
 /* ---------- Colour mode: affiliation (Europarty / EP group) or ideology ("Ideological Orientation") ---------- */
 let COLOR_MODE = 'aff';
 try { if (localStorage.getItem('ee-color-mode') === 'ideo') COLOR_MODE = 'ideo'; } catch (e) { /* storage unavailable */ }
@@ -1387,7 +1401,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const grpHist = history && IS_EU ? { ep: [], grp: history.grp } : null;
     const curGrpCol = m && IS_EU && !m.europartyShort ? EUROPARTY_COLORS[GROUP_TO_EUROPARTY[String(m.epGroup || '').split(/[|;,]/)[0].trim()]] || '' : '';
     const grpAt = (t) => (grpHist && grpHist.grp.length ? colourAt(grpHist, t, NONE) : (curGrpCol || NONE));
-    const ori = m && !m.europartyShort && !curGrpCol ? softAffiliation(m.orientation) : null;
+    const ori = m && !m.europartyShort && !curGrpCol ? (softAffiliation(m.orientation) || paceAffiliation(m.pace, m.paceEnd)) : null;
     const softAt = (t) => { const c = grpAt(t); return c !== NONE ? c : ori ? ori.color : NONE; };
     const dashAt = (t) => !thinAt(t) && baseAt(t) === NONE && softAt(t) !== NONE;
     if (ori && !tag) tag = ori.label;
@@ -1720,26 +1734,30 @@ function tags(p) {
 // Native name under the English one, unless they're the same.
 const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
   ? `<p class="native">${esc(p.native)}${isLatin(p.native) || String(p.native).split(/\s+\/\s+/).some(isLatin) ? '' : ` <span class="translit">(${esc(transliterate(p.native))})</span>`}</p>` : '');
+// Top edge of a party tile: solid Europarty colour, or dashed in the colour of a soft affiliation.
+const tileEdge = (p) => { if (p.color !== NONE) return `border-top-color:${p.color}`; const so = softOf(p); return so ? `border-top:5px dashed ${so.color}` : `border-top-color:${p.color}`; };
+const tileTitle = (p) => { const so = p.color === NONE ? softOf(p) : null; return esc(p.native) + (so ? ` · no Europarty; related to ${esc(so.label)}` : ''); };
+const barFill = (p) => { if (p.color !== NONE) return p.color; const so = softOf(p); return so ? stripes(so.color) : p.color; };
 // Secondary affiliations (PACE, CoR, CLRAE, Benelux, Nordic Council, international federation)
 const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
   if (!p.seats) { const affs0 = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
+    return `<article class="tile" style="${tileEdge(p)}" title="${tileTitle(p)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
   const affs = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
-  return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
+  return `<article class="tile" style="${tileEdge(p)}" title="${tileTitle(p)}">
     <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
     <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs)}${kv2(p)}
     <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
-      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
+      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? barFill(p) : '#E4E2DB'}"></i></div>`).join('')}</div>
       <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
 }
 function smallTile(p, years) {
   const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
-  return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
+  return `<article class="tile small" style="${tileEdge(p)}" title="${tileTitle(p)}">
     <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
     <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(p.affs)}${kv2(p)}
     ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
