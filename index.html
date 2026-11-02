@@ -1118,7 +1118,9 @@ function buildChambers(rows, cfg, parties, alliances) {
       let soft = '', color = ent ? ent.color : NONE;
       // No Europarty: an EP group (not NI) counts as a soft affiliation too (striped, group colour)
       const g1 = String(grp).split(/[|;,]/)[0].trim(), gEu = IS_EU && !eu ? GROUP_TO_EUROPARTY[g1] : '';
-      const ori = ent && !eu && !gEu ? (softAffiliation(ent.orientation) || paceAffiliation(ent.pace, ent.paceEnd)) : null;
+      const ic = ent && !eu && !gEu && !isAlliance ? interestColor(ent) : '';
+      const ori = ic ? { europarty: ent.euInterest, color: ic, label: 'wants to join ' + epName(ent.euInterest) }
+        : ent && !eu && !gEu ? (softAffiliation(ent.orientation) || paceAffiliation(ent.pace, ent.paceEnd)) : null;
       if (gEu && EUROPARTY_COLORS[gEu]) { famKey = gEu; soft = EUROPARTY_COLORS[gEu]; color = soft; }
       else if (ori) { famKey = ori.europarty; soft = ori.color; color = ori.color; tag = ori.label; }
       else if (isAlliance && ent.soft && !eu) { soft = ent.color; color = ent.color; tag = ent.softLabel; }
@@ -1154,12 +1156,16 @@ function paceAffiliation(v, end) {
   const e = PACE_TO_EUROPARTY[k]; if (!EUROPARTY_COLORS[e]) return null;
   return { europarty: e, color: EUROPARTY_COLORS[e], label: '~' + epName(e) + ' (PACE)' };
 }
-// Soft affiliation of a party without a Europarty: EP group (EU members), else Orientation (~EPP …), else PACE group.
+// Colour of a party without a Europarty, strongest first: EP group (EU members), then a stated interest to join
+// a Europarty, then indirect ties: Orientation (~EPP …), then PACE group. kind = 'group' | 'interest' | 'indirect'.
 function softOf(p) {
   if (!p || p.europartyShort) return null;
   const gEu = IS_EU && p.epGroup ? GROUP_TO_EUROPARTY[String(p.epGroup).split(/[|;,]/)[0].trim()] : '';
-  if (gEu && EUROPARTY_COLORS[gEu]) return { europarty: gEu, color: EUROPARTY_COLORS[gEu], label: p.epGroup };
-  return softAffiliation(p.orientation) || paceAffiliation(p.pace, p.paceEnd);
+  if (gEu && EUROPARTY_COLORS[gEu]) return { europarty: gEu, color: EUROPARTY_COLORS[gEu], label: p.epGroup, kind: 'group' };
+  const ic = interestColor(p);
+  if (ic) return { europarty: p.euInterest, color: ic, label: 'wants to join ' + epName(p.euInterest), kind: 'interest' };
+  const so = softAffiliation(p.orientation) || paceAffiliation(p.pace, p.paceEnd);
+  return so ? { ...so, kind: 'indirect' } : null;
 }
 /* ---------- Colour mode: affiliation (Europarty / EP group) or ideology ("Ideological Orientation") ---------- */
 let COLOR_MODE = 'aff';
@@ -1306,8 +1312,9 @@ const fullTag = (europarty, epGroup, p) => {
 };
 const interestTag = (p) => (p && (p.euInterest || (IS_EU && p.epInterest)) ? 'y' : '');
 // colour of the Europarty a party wants to join (Europarty interest first, else the Europarty of the EP group)
+const INTEREST_ALIAS = { RE: 'ALDE', RENEW: 'ALDE', PFE: 'Patriots.eu', 'S&D': 'PES', LEFT: 'PEL', 'G/EFA': 'EGP', 'GREENS/EFA': 'EGP' };
 const interestColor = (p) => { if (!p) return ''; const e = p.euInterest;  // Europarty interest only
-  return EUROPARTY_COLORS[e] || ''; };
+  return EUROPARTY_COLORS[e] || EUROPARTY_COLORS[INTEREST_ALIAS[String(e || '').toUpperCase()]] || ''; };
 const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(/\b(19|20)\d{2}\b/g); return m ? Date.UTC(Math.min(...m.map(Number)), 0, 1) : -Infinity; };
 const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
 const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.interestNote}` : '');
@@ -1743,6 +1750,8 @@ function tags(p) {
   if (p.gov) t.push(`<span class="tag gov">In government</span>`);
   p.ideologies.forEach((i) => t.push(`<span class="tag" style="border:1px solid ${i.color};background:${i.color}1F;color:#1A1D23">${esc(i.name)}</span>`));
   if (p.eu) t.push(`<span class="tag eu">EU: ${esc(p.eu)}</span>`);
+  if (p.interestNote) { const ic = interestColor(p) || '#8A9099';
+    t.push(`<span class="tag" style="border:1px dotted ${ic};background:${ic}1A;color:#1A1D23">Interest to join: ${esc(epName(p.interestNote.replace(/^Europarty /, '').replace(/, Europarty /g, ', ')))}</span>`); }
   if (p.status !== 'active') t.push(`<span class="tag warn">${esc(p.status.charAt(0).toUpperCase() + p.status.slice(1))}</span>`);
   return `<div class="tags">${t.join('')}</div>`;
 }
@@ -1750,8 +1759,10 @@ function tags(p) {
 const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
   ? `<p class="native">${esc(p.native)}${isLatin(p.native) || String(p.native).split(/\s+\/\s+/).some(isLatin) ? '' : ` <span class="translit">(${esc(transliterate(p.native))})</span>`}</p>` : '');
 // Top edge of a party tile: solid Europarty colour, or dashed in the colour of a soft affiliation.
-const tileEdge = (p) => { if (p.color !== NONE) return `border-top-color:${p.color}`; const so = softOf(p); return so ? `border-top:5px dashed ${so.color}` : `border-top-color:${p.color}`; };
-const tileTitle = (p) => { const so = p.color === NONE ? softOf(p) : null; return esc(p.native) + (so ? ` · no Europarty; related to ${esc(so.label)}` : ''); };
+// Solid = Europarty member; dotted = wants to join a Europarty; dashed = EP group only or an indirect tie (~Orientation, PACE).
+const tileEdge = (p) => { if (p.color !== NONE) return `border-top-color:${p.color}`; const so = softOf(p);
+  return so ? `border-top:5px ${so.kind === 'interest' ? 'dotted' : 'dashed'} ${so.color}` : `border-top-color:${p.color}`; };
+const tileTitle = (p) => { const so = p.color === NONE ? softOf(p) : null; return esc(p.native) + (so ? ` · no Europarty; ${so.kind === 'interest' ? '' : 'related to '}${esc(so.label)}` : ''); };
 const barFill = (p) => { if (p.color !== NONE) return p.color; const so = softOf(p); return so ? stripes(so.color) : p.color; };
 // Secondary affiliations (PACE, CoR, CLRAE, Benelux, Nordic Council, international federation)
 const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
