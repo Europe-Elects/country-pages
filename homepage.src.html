@@ -389,13 +389,16 @@ __FEATURE__
 /* ================= Settings ================= */
 // Country pages on GitHub Pages: ?country=next picks the next national parliament election that has a recent polling average.
 const POLL_FRAME_URL = 'https://europe-elects.github.io/country-pages/?country=next&view=polling';
-// Electoral calendar (Google Sheet, shared "Anyone with the link can view"). Columns: Country, Specification, Type, Mode, Sequence, (Expected) Date, Date Status
-const CALENDAR = { sheetId: '1Wdx_eDbVv2XaMlSoYnzauLch_47xWHjP181iVV8QIrM', gid: '0' };
+// Sheet data is read by the GitHub Action (keyless Google login) and published on GitHub Pages,
+// so the page never contacts Google and no Sheet link appears in the code (see scripts/fetch_sheets.py).
+const SHEETS_BASE = 'https://europe-elects.github.io/country-pages/sheets/';
+// Electoral calendar. Columns: Country, Specification, Type, Mode, Sequence, (Expected) Date, Date Status
+const CALENDAR_URL = SHEETS_BASE + 'calendar.csv';
 const CALENDAR_ROWS = 6;          // upcoming elections listed at first; "Show more" adds this many each time
 const CALENDAR_SKIP_BY_ELECTIONS = true;
 // EP projection: per-country sheet (one column per month, e.g. "Sep-26") and the headline sheet (group, 2024 result, current).
-const PROJ_URL = 'https://opensheet.elk.sh/1MJY1jUwtom8aNadqYkYp3iH2jhWc1RU43HbtKu2-KQQ/1';
-const HEADLINE_URL = 'https://opensheet.elk.sh/1sO807T0QFc9Lp4u-m2ZdZSu7dAuWjh1Xa1j0DAIdI6Q/1';
+const PROJ_URL = SHEETS_BASE + 'projection.json';
+const HEADLINE_URL = SHEETS_BASE + 'headline.json';
 const EP_SEATS = 720;
 // Latest articles: WordPress REST API of the site (hidden if it can't be reached).
 const POSTS_API = 'https://europeelects.eu/wp-json/wp/v2/posts?per_page=3&_embed=wp:term';
@@ -408,9 +411,8 @@ const COUNTRIES = [["Albania", "AL"], ["Andorra", "AD"], ["Armenia", "AM"], ["Au
 // or email = address the visitor's mail program opens a pre-filled message to. With neither, the form opens DATA_ACCESS_URL.
 const DATA_FORM = { endpoint: '', email: 'contact@europeelects.eu' };
 const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
-// Party database (full sheet). Falls back to the published CSV if the sheet can't be read directly.
-const PARTY_DB = { sheetId: '1MAdqaO7SU4uhjjbaDoTGdj7DPZ_NuWvjTnAcrUnTHY8', gid: '959052694',
-  publishedCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR35PF-ZwAVgUSBPpOKPyBNXyGBzFIl0g5zBiGKqBHA5y8Fqu15fb-5YNy43fmcbVlI4A0-VulJOU29/pub?gid=0&single=true&output=csv' };
+// Party database (published by the Action from the party sheet).
+const PARTY_DB_URL = SHEETS_BASE + 'party-db.csv';
 const PARTY_NEW_ROWS = 5; // newest parties listed
 // Where a party in the list links to: the party database page. {q} = the party's abbreviation (or name), {iso} = country code.
 // The search and country are passed on, so the database opens filtered to that party.
@@ -469,7 +471,7 @@ function parseCSV(text) {
 async function loadCalendar() {
   const list = document.getElementById('eeh-cal');
   try {
-    const res = await fetch(`https://docs.google.com/spreadsheets/d/${CALENDAR.sheetId}/gviz/tq?tqx=out:csv&headers=1&gid=${CALENDAR.gid}`);
+    const res = await fetch(CALENDAR_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const rows = parseCSV(await res.text()).map((o) => ({ o, when: parseDate(o['(expected) date'] || o['expected date'] || o['date']) }))
@@ -709,7 +711,7 @@ const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-
 async function loadPartyDb() {
   const list = document.getElementById('eeh-db-list');
   let rows = null;
-  for (const url of [`https://docs.google.com/spreadsheets/d/${PARTY_DB.sheetId}/gviz/tq?tqx=out:csv&headers=1&gid=${PARTY_DB.gid}`, PARTY_DB.publishedCsv]) {
+  for (const url of [PARTY_DB_URL]) {
     try { const r = await fetch(url); if (!r.ok) continue; const t = parseCSV(await r.text()); if (t.length && 'europe elects entity id' in t[0]) { rows = t; break; } } catch (e) { /* try the next source */ }
   }
   if (!rows) { list.innerHTML = '<li class="eeh-status err">Couldn\'t load the party database.</li>'; return; }
