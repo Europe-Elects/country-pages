@@ -1,13 +1,15 @@
 # Builds the polling averages from the private poll database (Europe-Elects/apopod)
 # and publishes the country pages to GitHub Pages.
-# Runs on every change to this repository, every 6 hours, and on demand (Actions › Build and deploy › Run workflow).
+# Also reads the Google Sheets (party database, calendar, EP projection) with a keyless Google login and
+# publishes them as sheets/*.csv|json, so the pages never contact Google.
+# Runs on every change to this repository, every hour, and on demand (Actions › Build and deploy › Run workflow).
 name: Build and deploy
 
 on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +42,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - id: google
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/659866385408/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: ee-sheets-reader@project-6c08a079-4a01-46eb-aaf.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/spreadsheets.readonly
+          create_credentials_file: false
+
+      - name: Read the Google Sheets
+        env:
+          GOOGLE_TOKEN: ${{ steps.google.outputs.access_token }}
+          PARTY_DB_SHEET_ID: ${{ secrets.PARTY_DB_SHEET_ID }}
+          CALENDAR_SHEET_ID: ${{ secrets.CALENDAR_SHEET_ID }}
+          PROJECTION_SHEET_ID: ${{ secrets.PROJECTION_SHEET_ID }}
+          HEADLINE_SHEET_ID: ${{ secrets.HEADLINE_SHEET_ID }}
+        run: python3 scripts/fetch_sheets.py site/sheets
 
       - name: Assemble the site
         run: |
