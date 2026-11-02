@@ -184,6 +184,7 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .poll-range,.poll-parties{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.proj-tip .pf{display:block;margin:6px 0 2px;color:var(--muted);font-size:13px}
 .pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
 .poll .poll-key{display:flex;align-items:center;gap:6px;font-style:normal}
 .pseg{display:inline-flex}.pseg .pchip:first-child{border-radius:999px 0 0 999px}.pseg .pchip:last-child{border-radius:0 999px 999px 0;margin-left:-1px}.pseg .pchip[aria-pressed="false"]{text-decoration:none}.pseg .dot+.dot{margin-left:-3px}
@@ -1525,7 +1526,7 @@ function viewPolling(cfg, poll) {
       ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
       ${modeNote()}
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
-      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll.' : ''}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
+      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures.' : ''}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
   }
   const id = POLLING_CHARTS[ISO];
   const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
@@ -1642,6 +1643,18 @@ function drawPolling() {
       .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
       .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+    // Countries without any average: the pop-up shows the nearest poll instead (pollster, fieldwork date, figures).
+    if (POLL.bold) {
+      let best = null, bd = 21;
+      polls.forEach((p) => { const d = Math.abs(x(p.t.getTime()) - px); if (d < bd && Object.keys(p.v).some((k) => shownKeys.has(k))) { bd = d; best = p; } });
+      cross.setAttribute('visibility', best ? 'visible' : 'hidden');
+      if (best) cross.setAttribute('x1', x(best.t.getTime())), cross.setAttribute('x2', x(best.t.getTime()));
+      document.getElementById('poll-marks').innerHTML = '';
+      if (!best) { tip.hidden = true; return; }
+      tip.innerHTML = `<strong>${esc(best.pf || 'Poll')}</strong><span class="pf">Fieldwork midpoint: ${best.t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>` +
+        Object.entries(best.v).filter(([k]) => shownKeys.has(k)).sort((p1, p2) => p2[1] - p1[1])
+          .map(([k, v]) => `<div><span class="dot" style="background:${byKey[k].colorAt(best.t.getTime())}"></span><span>${esc(seriesLabel(byKey[k].abbr, byKey[k].tag))}</span><strong>${v.toFixed(1)}%</strong></div>`).join('');
+    } else
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
