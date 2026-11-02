@@ -52,7 +52,7 @@ def parse_ropf(text):
             own = {}
             for k, v in FIELD.findall(line):
                 own.setdefault(k, v)
-            fields = {k: v for k, v in head_fields.items() if k in ('FS', 'FE', 'A')}
+            fields = {k: v for k, v in head_fields.items() if k in ('FS', 'FE', 'A', 'SS')}
             fields.update(own)
             if 'O' not in own:
                 fields.pop('O', None)
@@ -95,7 +95,8 @@ def parse_ropf(text):
                 total = sum(values.values()) + max(other, 0.0)
                 if total > 0:
                     values = {k: round(v * 100 / total, 2) for k, v in values.items()}
-                polls.append({'d': mid, 'pf': pf, 'v': values})
+                ss = num(fields.get('SS'))
+                polls.append({'d': mid, 'pf': pf, 'v': values, 'n': int(ss) if ss and ss >= 50 else None})
                 done = True
         else:
             m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
@@ -103,16 +104,28 @@ def parse_ropf(text):
                 key = m.group(1)
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
                 abbr = attrs.pop('A', key)
+                # •EE: Europe Elects Entity ID of the party or alliance (e.g. •EE: PT283159). When given, the country
+                # page matches the line to the party database by this ID instead of by name or abbreviation.
+                # The second column is the poll repository's own number, which can coincide with an unrelated
+                # Entity ID, so it is not passed on.
+                ee = attrs.pop('EE', '') or attrs.pop('ID', '')
                 en = attrs.pop('EN', '')
                 roman = attrs.pop('R', '')  # romanised abbreviation (•R), used where the abbreviation is not in Latin script
-                eeid = attrs.pop('EEID', '')  # Europe Elects Entity ID (•EEID), links the poll party to the party database
                 native = next(iter(attrs.values()), '')
-                parties[key] = {'key': key, 'id': m.group(2), 'eeid': eeid, 'abbr': abbr, 'roman': roman, 'native': native, 'english': en}
+                parties[key] = {'key': key, 'id': ee, 'abbr': abbr, 'roman': roman, 'native': native, 'english': en}
     return polls, parties
 
 
 def loess(xs, ys, x0, k, span=SPAN_DAYS):
     """Local linear regression at x0 with tricube weights over the k nearest points (within SPAN_DAYS)."""
+    r = loess_se(xs, ys, x0, k, span)
+    return r[0] if r else None
+
+
+def loess_se(xs, ys, x0, k, span=SPAN_DAYS):
+    """As loess(), but returns (value, standard error of the value).
+    The standard error comes from how far the polls in the window scatter around the local line
+    (weighted residual variance) and how much each poll contributes to the value at x0."""
     allp = sorted(((abs(x - x0), x, y) for x, y in zip(xs, ys)))
     # k nearest polls, but always every poll within MIN_SPAN_DAYS: dense daily trackers before an
     # election would otherwise make the window only a few days wide and the line jumpy.
@@ -127,15 +140,24 @@ def loess(xs, ys, x0, k, span=SPAN_DAYS):
         sw += w; swx += w * x; swy += w * y; swxx += w * x * x; swxy += w * x * y
     if sw == 0:
         return None
+    pts = [((1 - (d / h) ** 3) ** 3, x, y) for d, x, y in dist if d < h]
     den = sw * swxx - swx * swx
     if abs(den) < 1e-9:
-        return swy / sw
-    b = (sw * swxy - swx * swy) / den
-    a = (swy - b * swx) / sw
+        a, b = swy / sw, 0.0
+    else:
+        b = (sw * swxy - swx * swy) / den
+        a = (swy - b * swx) / sw
+    # Uncertainty of the average: weighted scatter of the polls around the local line, divided by the effective
+    # number of polls in the window (as for a weighted mean). This stays stable next to gaps in the data, where the
+    # contributions of a local line would blow up. It is capped at the scatter of single polls: the range of the
+    # average is never wider than the spread of the polls themselves.
+    n_eff = sw * sw / sum(w * w for w, _, _ in pts)
+    resid = sum(w * (y - (a + b * x)) ** 2 for w, x, y in pts) / sw * n_eff / max(n_eff - 2, 1.0)
+    var = min(resid / n_eff, resid)
     # Guard against runaway slopes where the polls lie on one side of x0 (e.g. a polling pause after an
     # election): the local line may not leave the range of the polls it was fitted to.
-    used = [y for d, x, y in dist if d < h]
-    return min(max(a + b * x0, min(used)), max(used))
+    used = [y for _, _, y in pts]
+    return min(max(a + b * x0, min(used)), max(used)), var ** 0.5
 
 
 def build_country(polls, parties):
@@ -145,7 +167,7 @@ def build_country(polls, parties):
     keys = sorted({k for p in polls for k in p['v']}, key=lambda k: -max(p['v'].get(k, 0) for p in polls))
     for key in keys:
         pts = [((p['d'] - day0).days, p['v'][key]) for p in polls if key in p['v']]
-        info = parties.get(key, {'key': key, 'abbr': key, 'roman': '', 'native': '', 'english': '', 'id': '', 'eeid': ''})
+        info = parties.get(key, {'key': key, 'abbr': key, 'roman': '', 'native': '', 'english': '', 'id': ''})
         curve = []
         if len(pts) >= MIN_POLLS:
             xs, ys = [x for x, _ in pts], [y for _, y in pts]
@@ -162,20 +184,27 @@ def build_country(polls, parties):
                 sx, sy = xs[a:b], ys[a:b]
                 seg = []
                 x = sx[0]
+                # each point: [date, average, half-width of the 95% uncertainty range of the average]
+                def point(x):
+                    r = loess_se(sx, sy, x, min(k, len(sx)))
+                    if r is None:
+                        return None
+                    v, se = r
+                    return [(day0 + dt.timedelta(days=x)).isoformat(), round(max(v, 0), 1), round(1.96 * se, 1)]
                 while x <= sx[-1]:
-                    v = loess(sx, sy, x, min(k, len(sx)))
-                    if v is not None:
-                        seg.append([(day0 + dt.timedelta(days=x)).isoformat(), round(max(v, 0), 1)])
+                    q = point(x)
+                    if q:
+                        seg.append(q)
                     x += GRID_DAYS
-                v = loess(sx, sy, sx[-1], min(k, len(sx)))
-                if v is not None:
-                    seg.append([(day0 + dt.timedelta(days=sx[-1])).isoformat(), round(max(v, 0), 1)])
+                q = point(sx[-1])
+                if q:
+                    seg.append(q)
                 curve.append(seg)
         out_parties.append({**info, 'key': key, 'n': len(pts), 'curve': curve})
     return {
         'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         'parties': out_parties,
-        'polls': [{'d': p['d'].isoformat(), 'pf': p['pf'], 'v': p['v']} for p in polls],
+        'polls': [{'d': p['d'].isoformat(), 'pf': p['pf'], 'v': p['v'], **({'n': p['n']} if p.get('n') else {})} for p in polls],
     }
 
 
