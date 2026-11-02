@@ -86,9 +86,6 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .grid-m{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,176px),1fr));gap:8px}
 .tile{display:flex;flex-direction:column;gap:9px;padding:11px 14px 13px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
 .tile.small{gap:6px;padding:9px 11px 10px;border-top-width:4px}
-.tile.c-soft{border-top-style:dashed}
-.tile.c-thin{border-top-width:2px;padding-top:14px}
-.tile.small.c-thin{border-top-width:2px;padding-top:11px}
 .tile .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .nm{display:flex;align-items:center;gap:8px;min-width:0}
 .logo{display:block;flex:none;width:auto;object-fit:contain}
@@ -127,8 +124,6 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .yrs span{flex:1;text-align:center}
 .al[hidden]{display:none}
 .al{display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px;border:1px solid var(--line);border-top:5px solid #8A9099;border-radius:6px;background:#fff}
-.al.c-soft{border-top-style:dashed}
-.al.c-thin{border-top-width:2px;padding-top:15px}
 .al .members{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line2)}
 .al .mlabel{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
@@ -206,32 +201,6 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 footer{margin-top:16px;font-size:13px;color:var(--muted);line-height:1.55}
 footer p{margin:0 0 4px}
 footer .team{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
-/* ---------- contact form (collapsed by default) ---------- */
-.contact{margin-top:4px;border-top:4px solid var(--navy);border-radius:6px}
-.contact>summary{list-style:none;cursor:pointer;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
-.contact>summary::-webkit-details-marker{display:none}
-.contact>summary .sub{font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted)}
-.contact>summary .chev{flex:none;width:10px;height:10px;border-right:2px solid var(--navy);border-bottom:2px solid var(--navy);transform:rotate(45deg);transition:transform .15s;margin-top:-4px}
-.contact[open]>summary .chev{transform:rotate(-135deg);margin-top:4px}
-.contact>summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-.contact form{padding:4px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
-.contact .f{display:flex;flex-direction:column;gap:5px;min-width:0}
-.contact .f.full{grid-column:1/-1}
-.contact label{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase}
-.contact label .opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
-.contact input,.contact select,.contact textarea{font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid #D5D3CC;border-radius:4px;padding:8px 10px;width:100%}
-.contact textarea{min-height:120px;resize:vertical}
-.contact input:focus,.contact select:focus,.contact textarea:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
-.contact .hint{font-size:13px;color:var(--muted)}
-.contact .actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
-.contact button{font:inherit;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--navy);color:#fff;border:0;border-radius:4px;padding:10px 22px;cursor:pointer}
-.contact button:hover{background:var(--blue)}
-.contact button[disabled]{opacity:.6;cursor:wait}
-.contact .msg{font-size:15px}
-.contact .msg.ok{color:#1F7A3A;font-weight:600}
-.contact .msg.err{color:#B3261E}
-.contact .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-@media (max-width:640px){.contact form{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -322,11 +291,6 @@ const DATA_ACCESS_URL = 'https://europeelects.eu/data/';
 const LOGOS = { enabled: true, cacheHours: 24 };
 const LOGO_OVERRIDES = {};
 
-// Contact form at the bottom of the page. Messages are relayed by FormSubmit (formsubmit.co), which needs no
-// server: the very first submission sends a one-time activation email to CONTACT.to that must be confirmed.
-// If the relay can't be reached, the form falls back to opening the visitor's mail app with the message filled in.
-const CONTACT = { enabled: true, to: 'contact@europeelects.eu', endpoint: 'https://formsubmit.co/ajax/contact@europeelects.eu' };
-
 const COUNTRIES = {
   AL: {
     name: 'Albania',
@@ -366,11 +330,9 @@ const NONE = '#8A9099';
 const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
 const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79',
   'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700',
-  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076',
-  // Non-attached (EP: NI, PACE: NR) is treated as a group of its own, so it is told apart from unaffiliated (grey #8A9099).
-  'NI': '#5C5F66' };
+  'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
 // EP groups / pill labels map to the Europarty of the same family.
-const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN', 'NI': 'NI', 'NR': 'NI' };
+const GROUP_TO_EUROPARTY = { 'S&D': 'PES', 'EPP': 'EPP', 'ECR': 'ECR', 'RE': 'ALDE', 'Renew': 'ALDE', 'Greens/EFA': 'EGP', 'G/EFA': 'EGP', 'PfE': 'Patriots.eu', 'LEFT': 'PEL', 'ESN': 'ESN' };
 const textOn = (hex) => { const h = hex.replace('#', ''); const [r, g2, b2] = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * r + 0.7152 * g2 + 0.0722 * b2 > 0.25 ? '#1A1D23' : '#FFFFFF'; };
 const pillColor = (label) => {
   if (/^unaffiliated$/i.test(label)) return ['#C9CCD3', '#1A1D23'];
@@ -522,7 +484,7 @@ function affiliationHistory(versions) {
     const a = v.aff || {};
     const epVal = isNone(a.ep) ? null : a.ep.split(/[|;,]/)[0].trim();
     if (epVal || a.epS || a.epE) ep.push({ a: boundDate(a.epS), b: boundDate(a.epE, true), v: epVal, ver: v.version });
-    const gVal = isNone(a.grp) ? null : a.grp.split(/[;,]/)[0].trim();
+    const gVal = isNone(a.grp) || /^NI$/i.test(String(a.grp).trim()) ? null : a.grp.split(/[;,]/)[0].trim();
     if (gVal || a.grpS || a.grpE) grp.push({ a: boundDate(a.grpS), b: boundDate(a.grpE, true), v: gVal, ver: v.version });
   });
   return { ep, grp };
@@ -575,16 +537,13 @@ function buildParties(rows, iso, cfg) {
       epInterest, euInterest, interestNote, orientation: g(o, 'Orientation'),
       european: !!currentEuroparty || (IS_EU && !isNone(epGroup)) || affs2.some(([, v]) => !/\(until /.test(v)), affs2, europartyShort: currentEuroparty, epGroup: isNone(epGroup) ? '' : epGroup,
       eu: g(o, 'EU Integration Position'), founded: year(g(o, 'Political Activity Started')),
-      affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE, colorStyle: 'solid', colorReason: ''
+      affs, color: EUROPARTY_COLORS[currentEuroparty] || NONE
     };
   });
   // Earlier versions of a party that has a current (Latest = Yes) record are dropped, so each party appears once.
   const versions = {};
   list.forEach((p) => { if (p.entityId) (versions[p.entityId] = versions[p.entityId] || []).push(p); });
   list.forEach((p) => { p.history = affiliationHistory(versions[p.entityId] || [p]); });
-  // Colour from the shared rule (affiliationAt), so the card matches the charts.
-  list.forEach((p) => { const a = affiliationAt(p, NOW); p.color = a.color; p.colorStyle = a.style; p.colorReason = a.reason; p.colorFam = a.fam;
-    if (p.interestNote && !p.affs.some((x) => x[0] === 'Interest')) p.affs.push(['Interest', epName(p.interestNote)]); });
   // Abbreviations: always the one recorded on the most recent version of the entity (highest version number).
   list.forEach((p) => { p.ownAbbr = p.abbr; });
   list.forEach((p) => {
@@ -597,9 +556,16 @@ function buildParties(rows, iso, cfg) {
   });
   const hasLatest = new Set(list.filter((p) => p.latest && p.entityId).map((p) => p.entityId));
   list = list.filter((p) => p.latest || !hasLatest.has(p.entityId));
-  // Parties are identified strictly by Europe Elects Entity ID, version and Status, never by name:
-  // two entities that share a name (e.g. a party and its regional branch) both stay on the page.
+  // Merge duplicate current records with the same native name (keeps the better-documented one).
   const merged = [];
+  const groups = {};
+  list.filter((p) => p.latest).forEach((p) => { (groups[norm(p.native)] = groups[norm(p.native)] || []).push(p); });
+  Object.values(groups).forEach((ps) => {
+    if (ps.length < 2) return;
+    ps.sort((a, b) => b.affs.length - a.affs.length);
+    ps.slice(1).forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
+  });
+  list = list.filter((p) => !p.duplicateOf);
   const seatData = (cfg.seats && cfg.seats.parties) || {};
   list.forEach((p) => {
     const own = [p.abbr, ...(p.abbrs || [])];
@@ -638,7 +604,7 @@ function buildAlliances(rows, iso, parties) {
       if (id) refs.push(id);
       if (exit) continue;
       const p = byId[id] || byId[id.replace(/\.v\d+$/, '')];
-      members.push({ abbr: p ? p.abbr : nm, english: p ? p.english : nm, color: p ? p.color : NONE, cstyle: p ? p.colorStyle : 'solid', party: p });
+      members.push({ abbr: p ? p.abbr : nm, english: p ? p.english : nm, color: p ? p.color : NONE, party: p });
     }
     const europarty = g(o, 'Europarty Affiliation'), epGroup = g(o, 'European Parliament Group');
     // When this version applied: optional "Europarty Start/End" columns, else the overlap of the
@@ -670,32 +636,8 @@ function buildAlliances(rows, iso, parties) {
     // Inactive (dissolved) alliances are kept for colouring old polling lines and seat history,
     // but not shown as alliance cards or tags.
     const { o, idx, a, b, ...rest } = cur;
-    const al = { ...rest, oldAbbr: vs.map((v) => v.abbr).filter((x) => x !== cur.abbr), history: vs.length > 1 ? history : null };
-    const lean = allianceLean(al);
-    al.colorStyle = lean.style; al.colorReason = lean.reason; al.lean = lean.style !== 'solid' && lean.color !== NONE ? lean : null;
-    if (al.lean) al.color = lean.color;
-    return al;
+    return { ...rest, oldAbbr: vs.map((v) => v.abbr).filter((x) => x !== cur.abbr), history: vs.length > 1 ? history : null };
   });
-}
-// Colour of an alliance, by the same rule as parties: its own Europarty (solid), else its EP group (striped),
-// else what its current member parties have in common: if every member that is coloured points to the same family,
-// the alliance takes that colour, striped when at least one member belongs to or leans to that family (EP group,
-// Europarty or orientation), hollow when the members only state an interest to join. Members pointing different ways: grey.
-function allianceLean(al) {
-  if (al.color !== NONE) return { color: al.color, style: 'solid', fam: al.europarty, reason: `Member of ${epName(al.europarty)}` };
-  const g1 = IS_EU ? String(al.epGroup || '').split(/[|;,]/)[0].trim() : '', gFam = g1 ? GROUP_TO_EUROPARTY[g1] : '';
-  if (gFam && EUROPARTY_COLORS[gFam]) return { color: EUROPARTY_COLORS[gFam], style: 'soft', fam: gFam, tag: groupLabel(g1), reason: `Sits in EP group ${groupLabel(g1)} (no Europarty)` };
-  let coloured = al.members.filter((m) => m.party && m.party.color !== NONE && m.party.colorStyle !== 'none');
-  // Non-attached (NI/NR) members do not outweigh members that point to a family; only-NI alliances are NI.
-  if (coloured.some((m) => m.party.colorFam !== 'NI')) coloured = coloured.filter((m) => m.party.colorFam !== 'NI');
-  const fams = [...new Set(coloured.map((m) => m.party.colorFam))];
-  if (fams.length !== 1) return { color: NONE, style: 'none', fam: '(none)',
-    reason: fams.length ? `No Europarty; member parties point to different families (${coloured.map((m) => m.abbr + ' ' + epName(m.party.colorFam)).join(', ')})` : 'No Europarty, EP group or member with an affiliation' };
-  const fam = fams[0], who = coloured.map((m) => m.abbr).join(', ');
-  const onlyInterest = coloured.every((m) => m.party.colorStyle === 'thin');
-  return { color: EUROPARTY_COLORS[fam] || NONE, style: onlyInterest ? 'thin' : 'soft', fam,
-    tag: (onlyInterest ? '→' : '~') + (IS_EU ? groupLabel(EUROPARTY_TO_GROUP[fam] || fam) : epName(fam)),
-    reason: `No Europarty; via member ${coloured.length > 1 ? 'parties' : 'party'} ${who} (${onlyInterest ? 'interested in joining' : 'linked to'} ${epName(fam)})` };
 }
 
 /* ---------- Logos (Wikidata / Wikimedia Commons) ---------- */
@@ -798,29 +740,12 @@ const bar = (title, right) => `<div class="bar"><h2>${esc(title)}</h2>${right ||
 const pill = (label) => { const c = pillColor(label); return `<span class="pill" style="background:${c[0]};color:${c[1]}">${esc(epName(label))}</span>`; };
 
 // Government box from the government sheet. Returns rows in the same shape as cfg.government, or null.
-function buildGovernment(rows, cfg, parties, alliances) {
+function buildGovernment(rows, cfg, parties) {
   const today = Date.now();
   const mine = (rows || []).filter((o) => sameCountry(g(o, 'Country'), cfg.name) || String(g(o, 'Country')).toUpperCase() === ISO);
   if (!mine.length) return null;
   const current = mine.filter((o) => { const e = g(o, 'End Date'); return !e || boundDate(e, true) >= today; });
   const byEid = (eid) => eid ? (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid)) : null;
-  // A government row that is an alliance (by Entity ID, else by the abbreviation in brackets or the name) is listed as its member parties.
-  const als = (alliances || []).filter((a) => !a.inactive);
-  const allianceOf = (o) => {
-    const eid = g(o, 'Entity ID'), nm = g(o, 'Entity / Person');
-    if (eid) { const a = als.find((x) => x.entityId === eid); if (a) return a; if (byEid(eid)) return null; }
-    const br = (String(nm).match(/\(([^)]+)\)\s*$/) || [])[1], plain = normKey(String(nm).replace(/\s*\([^)]*\)\s*$/, ''));
-    return als.find((x) => (br && [x.abbr, ...(x.oldAbbr || [])].some((ab) => normKey(ab) === normKey(br))) || [x.english, x.native].some((n2) => n2 && normKey(n2) === plain)) || null;
-  };
-  const expand = (list) => {
-    const res = [], seen = new Set();
-    list.forEach((o) => {
-      const a = allianceOf(o);
-      if (a) a.members.forEach((m) => { const k = m.party ? m.party.entityId || m.abbr : 'n:' + m.abbr; if (seen.has(k)) return; seen.add(k); res.push({ o, p: m.party || null, name: m.party ? '' : m.english || m.abbr, via: a.abbr }); });
-      else { const p = byEid(g(o, 'Entity ID')), k = p ? p.entityId : 'o:' + g(o, 'Entity / Person'); if (seen.has(k)) return; seen.add(k); res.push({ o, p, name: p ? '' : g(o, 'Entity / Person'), via: '' }); }
-    });
-    return res;
-  };
   const fmtDate = (v) => { const t = boundDate(v); return t > -Infinity ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
   const label = (p) => (p ? (partyTag(p.europartyShort, IS_EU ? p.epGroup : '') || 'Unaffiliated') : '');
   const kind = (o) => { const t = norm(g(o, 'Type')); return /head of state/.test(t) ? 'hos' : /head of government|prime minister/.test(t) ? 'hog' : /support/.test(t) ? 'sup' : /party|government/.test(t) ? 'gov' : ''; };
@@ -839,7 +764,7 @@ function buildGovernment(rows, cfg, parties, alliances) {
     if (seat) out.filter((r) => (r.hos || r.hog) && r.name === seat.name).forEach((r) => { r.sticker = 'European Council'; });
   }
   const govRows = current.filter((o) => kind(o) === 'gov'), supRows = current.filter((o) => kind(o) === 'sup');
-  const govParties = expand(govRows);
+  const govParties = govRows.map((o) => ({ o, p: byEid(g(o, 'Entity ID')) }));
   if (govParties.length) {
     const pills = [...new Set(govParties.map(({ p }) => (p ? label(p) : 'Unaffiliated')))];
     const since = Math.max(...govRows.map((o) => boundDate(g(o, 'Start Date'))));
@@ -854,11 +779,11 @@ function buildGovernment(rows, cfg, parties, alliances) {
     else if (S && total) n = govParties.reduce((a, { p }) => { const v = p && S.parties[p.abbr]; return a + (v ? v[v.length - 1] || 0 : 0); }, 0);
     void n; void total;  // seat counts are not shown in the government box
     if (since > -Infinity) notes.push('since ' + new Date(since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
-    out.push({ label: 'Government', pills, parties: govParties.map(({ p, name, via }) => ({ text: p ? `${p.english} (${p.abbr})` : name, via, color: p ? p.color : NONE, cstyle: p ? p.colorStyle : 'solid' })), note: notes.join(' · ') });
+    out.push({ label: 'Government', pills, parties: govParties.map(({ o, p }) => ({ text: p ? `${p.english} (${p.abbr})` : g(o, 'Entity / Person'), color: p ? p.color : NONE })), note: notes.join(' · ') });
     // Single-party government: the head of government (if no party is given on that row) is from that party.
     if (govParties.length === 1 && govParties[0].p) out.filter((r) => r.hog && !r.tag).forEach((r) => { r.pill = label(govParties[0].p); r.tag = `${govParties[0].p.english} (${govParties[0].p.abbr})`; });
   }
-  if (supRows.length) out.push({ label: 'Supported by', parties: expand(supRows).map(({ p, name, via }) => ({ text: p ? `${p.english} (${p.abbr})` : name, via, color: p ? p.color : NONE, cstyle: p ? p.colorStyle : 'solid' })) });
+  if (supRows.length) out.push({ label: 'Supported by', parties: supRows.map((o) => { const p = byEid(g(o, 'Entity ID')); return p ? `${p.english} (${p.abbr})` : g(o, 'Entity / Person'); }) });
   // Governing parties for the "In government" tags on the party tiles
   out.govIds = new Set(govParties.map(({ p }) => p && p.entityId).filter(Boolean));
   return out;
@@ -866,7 +791,7 @@ function buildGovernment(rows, cfg, parties, alliances) {
 function viewHeader(cfg) {
   const rows = (cfg.government || []).map((r) => `<div class="lead-row${r.label ? '' : ' cont'}">${r.label ? `<span class="label">${esc(r.label)}</span>` : ''}<div class="row">
     ${r.pill ? pill(r.pill) : ''}${(r.pills || []).map(pill).join('')}${r.name ? `<span class="name">${esc(r.name)}</span>` : ''}
-    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${r.sticker ? `<span class="euco" title="Member of the European Council">★ ${esc(r.sticker)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;${swatch(p.color, p.cstyle)}"></span>${esc(p.text)}${p.via ? ` <span class="muted" style="font-weight:500">· ${esc(p.via)}</span>` : ''}</span>`)).join('')}
+    ${r.tag ? `<span class="tagb">${esc(r.tag)}</span>` : ''}${r.sticker ? `<span class="euco" title="Member of the European Council">★ ${esc(r.sticker)}</span>` : ''}${(r.parties || []).map((p) => (typeof p === 'string' ? `<span class="partyb">${esc(p)}</span>` : `<span class="partyb"><span class="dot" style="width:9px;height:9px;margin-right:5px;background:${p.color}"></span>${esc(p.text)}</span>`)).join('')}
     ${r.note ? `<span class="muted" style="font-size:14px">${esc(r.note)}</span>` : ''}</div></div>`).join('');
   return `<header class="head"><h1 class="sr-only">Europe Elects – ${esc(cfg.name)}</h1>
     ${rows ? `<div class="card lead">${rows}</div>` : `<div class="card lead"><div class="lead-row"><span class="label">Government</span><span class="muted">Government data not yet available</span></div></div>`}</header>`;
@@ -1030,47 +955,35 @@ function buildProjection(rows, countryName, parties) {
   const abbrOf = (name) => { const br = String(name).match(/\(([^)]{2,12})\)/); if (br && !/^(EPP|S&D|RE|ECR|PfE|ESN|LEFT|NI|G\/EFA|Greens\/EFA)$/.test(br[1])) return br[1];
     const words = String(name).replace(/\([^)]*\)/g, '').split(/[\s–—-]+/).filter((w) => w && !/^(of|for|and|the|in|de|du|des|la|le|et|und|für|der|die|das|na|za|i|a)$/i.test(w));
     return words.length > 1 ? words.map((w) => w[0].toUpperCase()).join('') : String(name); };
+  const groupCount = {};
   const series = mine.map((o) => {
     const group = g(o, 'EU Parliament group', 'European Parliament group', 'EP group');
     const party = g(o, 'Party');
     const eid = g(o, 'Europe Elects Entity ID');
     const match = (eid && (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid))) || byName(party, g(o, 'Party Name + Group'), g(o, 'Prev. Name'));
-    // Colour: the shared rule (affiliationAt) for each month; the sheet's projected group is not used for colour.
-    const at = (i) => { const a = affiliationAt(match, months[i].d.getTime()); return { color: a.color, style: a.style, reason: a.reason }; };
-    const nowAff = affiliationAt(match, months[months.length - 1].d.getTime());
-    const color = nowAff.color;
+    const ep = GROUP_TO_EUROPARTY[group] || group;
+    const color = match && match.color !== NONE ? match.color : (EUROPARTY_COLORS[ep] || NONE);
+    groupCount[color] = (groupCount[color] || 0) + 1;
     const values = months.map(({ k }) => { const v = String(o[k] || '').replace(',', '.').trim(); return v === '' || isNaN(+v) ? null : +v; });
     const fullName = (g(o, 'Party Name + Group') || party).replace(/\s*\([^)]*\)\s*$/, '');
-    // Members: Europarty + projected group. Non-members: their interest (e.g. →EPP), else their orientation (~EPP), else "unaffiliated";
-    // the group the projection sheet assigns to a non-member is not shown.
-    const member = match && (match.europartyShort || match.epGroup);
-    const tag = member ? fullTag(match.europartyShort || '', group, match)
-      : (match && interestTag(match) ? fullTag('', '', match) : ((softAffiliation(match && match.orientation) || {}).label || 'unaffiliated'));
-    return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, interest: interestTag(match), interestNote: match ? epName(match.interestNote) : '', group,
-      color, at, reason: nowAff.reason, alt: false, ide: ideoOf(match), values };
+    // Members: Europarty + projected group. Non-members with a stated interest: the interest arrows (e.g. →EPP–→EPP).
+    const tag = match && !match.europartyShort && !match.epGroup && interestTag(match) ? fullTag('', '', match)
+      : fullTag(match && match.europartyShort ? match.europartyShort : (GROUP_TO_EUROPARTY[group] || ''), group, match);
+    return { key: party + '|' + group, party, short: match ? match.abbr : (party.length > 10 ? abbrOf(party) : party), label: fullName, tag, interest: interestTag(match), interestNote: match ? epName(match.interestNote) : '', group, color, dash: groupCount[color] > 1 ? '7 4' : '', values };
   }).filter((sr) => sr.values.some((v) => v != null));
   if (!series.length) return null;
-  applyColorMode(series, 'proj');
   return { months: months.map((m) => m.d), series, hidden: new Set() };
 }
 let PROJ = null;
-const dotStyle = (sr, i) => { const st = sr.at(i == null ? sr.values.length - 1 : i); return swatch(st.color, st.style === 'none' ? 'solid' : st.style); };
-// SVG fill for a marker in a given style (fine / normal stripes as patterns, matching the dots).
-const svgPats = {};
-const svgFill = (c, style) => { if (style !== 'thin' && style !== 'soft') return c;
-  const id = 'pat-' + style + '-' + c.replace('#', ''); svgPats[id] = style === 'thin'
-    ? `<pattern id="${id}" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="3" fill="#fff"/><rect width="1.1" height="3" fill="${c}"/></pattern>`
-    : `<pattern id="${id}" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="3" fill="#fff"/><rect width="1.8" height="3" fill="${c}"/></pattern>`;
-  return `url(#${id})`; };
 function viewProjection(proj, cfg) {
   PROJ = proj; if (!proj) return '';
   const last = proj.months.length - 1;
   const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
   const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  return bar('European Parliament projection', `<span class="bar-r">${modeToggle()}<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a></span>`) + `<section class="card proj">
-    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + (sr.reason ? ' · Colour: ' + sr.reason : ''))}"><span class="dot" style="${dotStyle(sr)}"></span>${esc(sr.short)}</button>`).join('')}</div>
+  return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
+    <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}</button>`).join('')}</div>
     <div class="proj-chart" id="proj-chart"></div>
-    ${modeNote()}<p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}.${COLOR_MODE === 'aff' ? ' Solid line: Europarty member · dashed: EP group or orientation only · thin line: not a member, interested in joining · grey: none.' : ''} Hover over a party label for its full name and colour reason, or over the chart for earlier months.</p></section>`;
+    <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
 }
 function drawProjection() {
   const host = document.getElementById('proj-chart'); if (!host || !PROJ) return;
@@ -1089,22 +1002,17 @@ function drawProjection() {
   // x ticks: January of each year (or first month)
   months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="ax">${d.toLocaleDateString('en-GB', { month: 'short' })} ’${String(d.getFullYear()).slice(2)}</text><line x1="${x(i)}" x2="${x(i)}" y1="${m.t + ih}" y2="${m.t + ih + 5}" stroke="#1A1D23"/>`; });
   // lines (broken at gaps)
-  // Same styles as the polling chart: solid = member, dashed = EP group / orientation only, thin = interest to join, grey = none.
-  const strokeOf = (st) => (st.style === 'soft' ? 'stroke-width="2" stroke-dasharray="6 4"' : st.style === 'thin' || st.style === 'none' ? 'stroke-width="1.4"' : 'stroke-width="2.2"');
   series.forEach((sr) => {
-    for (let i = 1; i < sr.values.length; i++) {
-      if (sr.values[i] == null || sr.values[i - 1] == null) continue;
-      const st = sr.at(i);
-      svg += `<line x1="${x(i - 1).toFixed(1)}" y1="${y(sr.values[i - 1]).toFixed(1)}" x2="${x(i).toFixed(1)}" y2="${y(sr.values[i]).toFixed(1)}" stroke="${st.color}" ${strokeOf(st)} stroke-linecap="round"/>`;
-    }
-    sr.values.forEach((v, i) => { if (v == null) return; const st = sr.at(i), r = months.length > 30 ? 1.6 : 2.2;
-      svg += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${st.style === 'thin' ? r - 0.6 : r}" fill="${st.color}"/>`; });
+    let d = '', pen = false;
+    sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ${sr.dash ? `stroke-dasharray="${sr.dash}"` : ''}/>`;
+    sr.values.forEach((v, i) => { if (v != null) svg += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${months.length > 30 ? 1.6 : 2.2}" fill="${sr.color}"/>`; });
   });
   // end labels with simple collision avoidance
   // Parties that dropped out before the latest month get an end dot but no label (they stay in the legend and pop-up).
   const inkOf = (c) => (c === '#FFD700' || c === '#90ee90' || c === '#F2C300' ? '#8A6D00' : c);
   // Parties that dropped out before the latest month: dot + abbreviation at their last point.
-  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${svgFill(sr.at(i).color, sr.at(i).style)}" stroke="${sr.at(i).color}" stroke-width="1"/><text x="${x(i) + 6}" y="${y(sr.values[i]) - 6}" class="lab" style="font-size:12px;cursor:help" fill="${inkOf(sr.color)}"><title>${esc(sr.label)}</title>${esc(sr.short)}</text>`; });
+  series.forEach((sr) => { let i = sr.values.length - 1; while (i >= 0 && sr.values[i] == null) i--; if (i >= 0 && i < sr.values.length - 1) svg += `<circle cx="${x(i)}" cy="${y(sr.values[i])}" r="3.5" fill="${sr.color}"/><text x="${x(i) + 6}" y="${y(sr.values[i]) - 6}" class="lab" style="font-size:12px;cursor:help" fill="${inkOf(sr.color)}"><title>${esc(sr.label)}</title>${esc(sr.short)}</text>`; });
   const lastIdx = months.length - 1;
   const ends = series.filter((sr) => sr.values[lastIdx] != null).map((sr) => ({ sr, i: lastIdx, v: sr.values[lastIdx], yy: y(sr.values[lastIdx]) })).sort((a, b) => a.yy - b.yy);
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
@@ -1112,18 +1020,17 @@ function drawProjection() {
     `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
   const lastI = months.length - 1;
   const summary = series.map((sr) => `${sr.short} ${sr.values[lastI] ?? '–'}`).join(', ');
-  series.forEach((sr) => sr.values.forEach((v, i) => { if (v != null) { const st = sr.at(i); svgFill(st.color, st.style); } }));
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, ${esc(months[lastI].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}: ${esc(summary)}">${svg}
-    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="proj-marks"></g><defs>${Object.values(svgPats).join('')}</defs>
+    <line id="proj-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="proj-marks"></g>
     <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="proj-hit"/></svg><div class="proj-tip" id="proj-tip" hidden></div>`;
   const hit = document.getElementById('proj-hit'), cross = document.getElementById('proj-x'), tip = document.getElementById('proj-tip');
   const show = (evt) => {
     const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
     let best = 0; months.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
     cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
-    document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => { const st = sr.at(best); return `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${svgFill(st.color, st.style)}" stroke="${st.style === 'thin' || st.style === 'soft' ? st.color : '#fff'}" stroke-width="${st.style === 'thin' || st.style === 'soft' ? 1 : 2}"/>`; }).join('');
+    document.getElementById('proj-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(best)}" cy="${y(sr.values[best])}" r="4.5" fill="${sr.color}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v != null).sort((a, b) => b.v - a.v)
-      .map((o) => `<div><span class="dot" style="${dotStyle(o.sr, best)}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag))}</span><strong>${o.v}</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag))}</span><strong>${o.v}</strong></div>`).join('');
     tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
@@ -1174,8 +1081,8 @@ const electionLabel = (k) => { if (k === 'current') return 'Current'; const m = 
   return m ? new Date(+m[1], +m[2] - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : k; };
 const electionSort = (k) => (k === 'current' ? 1e9 : (+k.slice(0, 4)) * 100 + (k.length > 4 ? +k.slice(5, 7) : 50));
 // Left-to-right order in the seat bar by Europarty family (or EP group when there is no Europarty);
-// unaffiliated parties and independents, then non-attached (NI), sit between the liberals (RE) and the EPP.
-const FAMILY_ORDER = ['ECA', 'PEL', 'ELA', 'DiEM25', 'Animal Politics EU', 'EGP', 'EFA', 'Volt', 'PPEU', 'PES', 'ALDE', 'EDP', '(none)', 'NI', 'EPP', 'ECPP', 'ECR', 'Patriots.eu', 'ESN', 'APF'];
+// unaffiliated and non-attached (NI) parties and independents sit between the liberals (RE) and the EPP.
+const FAMILY_ORDER = ['ECA', 'PEL', 'ELA', 'DiEM25', 'Animal Politics EU', 'EGP', 'EFA', 'Volt', 'PPEU', 'PES', 'ALDE', 'EDP', '(none)', 'EPP', 'ECPP', 'ECR', 'Patriots.eu', 'ESN', 'APF'];
 function buildChambers(rows, cfg, parties, alliances) {
   const mine = (rows || []).filter((o) => String(g(o, 'ISO-2')).toUpperCase() === ISO || sameCountry(g(o, 'Country'), cfg.name));
   const byEid = (eid) => eid ? (parties.find((p) => p.entityId === eid && p.latest) || parties.find((p) => p.entityId === eid)
@@ -1195,19 +1102,14 @@ function buildChambers(rows, cfg, parties, alliances) {
       let famKey = eu || GROUP_TO_EUROPARTY[String(grp).split(/[|;,]/)[0].trim()] || '(none)';
       let tag = ent ? partyTag(eu, IS_EU ? String(grp).split(/[|;,]/)[0].trim() : '') : '';
       // Soft affiliation ("Orientation", e.g. ~ALDE) for parties with no Europarty or EP group: striped segment in that colour.
-      let soft = '', color = ent ? ent.color : NONE, cstyle = '';
-      // No Europarty: an EP group (NI included) counts as a soft affiliation too (striped, group colour)
+      let soft = '', color = ent ? ent.color : NONE;
+      // No Europarty: an EP group (not NI) counts as a soft affiliation too (striped, group colour)
       const g1 = String(grp).split(/[|;,]/)[0].trim(), gEu = IS_EU && !eu ? GROUP_TO_EUROPARTY[g1] : '';
       const ori = ent && !eu && !gEu ? softAffiliation(ent.orientation) : null;
-      if (ent && !isAlliance) {
-        const a = affiliationAt(ent, NOW);
-        color = a.color; famKey = a.color === NONE ? '(none)' : a.fam; soft = a.style === 'soft' || a.style === 'thin' ? a.color : ''; cstyle = a.style;
-        if (a.style === 'thin') tag = fullTag('', '', ent); else if (a.style === 'soft' && !gEu && ori) tag = ori.label;
-      } else if (isAlliance && ent.lean) { color = ent.lean.color; famKey = ent.lean.fam; soft = color; cstyle = ent.lean.style; if (!tag) tag = ent.lean.tag; }
-      else if (gEu && EUROPARTY_COLORS[gEu]) { famKey = gEu; soft = EUROPARTY_COLORS[gEu]; color = soft; }
+      if (gEu && EUROPARTY_COLORS[gEu]) { famKey = gEu; soft = EUROPARTY_COLORS[gEu]; color = soft; }
       else if (ori) { famKey = ori.europarty; soft = ori.color; color = ori.color; tag = ori.label; }
       return { ide: ideoOf(ent), a: toLatin(ent ? ent.abbr : (g(o, 'Abbreviation') || g(o, 'Party (as given)'))), title: ent ? ent.english : g(o, 'Party (as given)'),
-        color, soft: !!soft, cstyle: cstyle || (soft ? 'soft' : 'solid'), eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
+        color, soft: !!soft, eu: famKey, tag, entityId: ent ? ent.entityId : '', vals: keys.map((k) => num(o, k)),
         memberIds: ent && ent.members ? ent.members.map((m) => m.party && m.party.entityId).filter(Boolean) : [] };
     }).filter((sg) => sg.vals.some((v) => v > 0));
     const fam = (sg) => { const i = FAMILY_ORDER.indexOf(sg.eu); return i < 0 ? FAMILY_ORDER.indexOf('(none)') : i; };
@@ -1222,21 +1124,15 @@ function buildChambers(rows, cfg, parties, alliances) {
 }
 // Dependent / autonomous territories: their legislature is just "Parliament", not a national one.
 const DEPENDENCIES = ['AX', 'FO', 'GL', 'GG', 'JE', 'IM', 'GI'];
-// "Orientation" column: ~ALDE, ~EPP, ~PES, ~ECR, ~Left, ~EGP, ~PfE, ~NI / ~NR (non-attached, a group of its own); unaffiliated = none.
+// "Orientation" column: ~ALDE, ~EPP, ~PES, ~ECR, ~Left, ~EGP, ~PfE (~NI / unaffiliated = none).
 const ORIENTATION = { ALDE: ['ALDE', 'RE'], EPP: ['EPP', 'EPP'], PES: ['PES', 'S&D'], ECR: ['ECR', 'ECR'], LEFT: ['PEL', 'LEFT'],
-  EGP: ['EGP', 'G/EFA'], PFE: ['Patriots.eu', 'PfE'], ESN: ['ESN', 'ESN'], EFA: ['EFA', 'G/EFA'], NI: ['NI', 'NI'], NR: ['NI', 'NR'] };
+  EGP: ['EGP', 'G/EFA'], PFE: ['Patriots.eu', 'PfE'], ESN: ['ESN', 'ESN'], EFA: ['EFA', 'G/EFA'] };
 function softAffiliation(v) {
   const k = String(v || '').replace(/^~/, '').trim().toUpperCase(); const o = ORIENTATION[k];
   if (!o || !EUROPARTY_COLORS[o[0]]) return null;
   return { europarty: o[0], color: EUROPARTY_COLORS[o[0]], label: '~' + (IS_EU ? o[1] : epName(o[0])) };
 }
 const stripes = (c) => `repeating-linear-gradient(135deg,${c} 0 4px,#fff 4px 7px)`;
-// Dots, chips and seat segments use the same three looks everywhere (matching the chart lines):
-// solid = Europarty member · striped = EP group or orientation only · finely striped = only an interest to join.
-// Interest only: the same stripes, but fine (thin lines, more white), i.e. a weaker link than an EP group or orientation.
-const fineStripes = (c) => `repeating-linear-gradient(135deg,${c} 0 1.5px,#fff 1.5px 4px)`;
-const swatch = (c, style) => (style === 'thin' ? `background:${fineStripes(c)}` : style === 'soft' ? `background:${stripes(c)}` : `background:${c}`);
-const KEY_TXT = 'Solid: Europarty member · striped/dashed: EP group or (~) orientation only · finely striped/thin line: not a member, interested in joining · grey: none';
 /* ---------- Colour mode: affiliation (Europarty / EP group) or ideology ("Ideological Orientation") ---------- */
 let COLOR_MODE = 'aff';
 try { if (localStorage.getItem('ee-color-mode') === 'ideo') COLOR_MODE = 'ideo'; } catch (e) { /* storage unavailable */ }
@@ -1256,14 +1152,12 @@ function ideoOf(ent) {
 // Keeps the affiliation styling of polling series / seat segments and swaps in the ideology styling when needed.
 function applyColorMode(list, kind) {
   (list || []).forEach((x) => {
-    if (!x.aff) x.aff = kind === 'poll' ? { color: x.color, colorAt: x.colorAt, thinAt: x.thinAt, dashAt: x.dashAt, tag: x.tag, soft: x.soft, interest: x.interest, reason: x.reason }
-      : kind === 'proj' ? { color: x.color, at: x.at, tag: x.tag, reason: x.reason, alt: x.alt }
-      : { color: x.color, soft: x.soft, cstyle: x.cstyle, tag: x.tag };
+    if (!x.aff) x.aff = kind === 'poll' ? { color: x.color, colorAt: x.colorAt, thinAt: x.thinAt, dashAt: x.dashAt, tag: x.tag, soft: x.soft, interest: x.interest }
+      : { color: x.color, soft: x.soft, tag: x.tag };
     const ide = x.ide || { name: '', color: NONE };
     if (COLOR_MODE === 'ideo') {
-      x.color = ide.color; x.tag = ide.name; x.soft = false; x.cstyle = 'solid';
-      if (kind === 'poll') { x.colorAt = () => ide.color; x.thinAt = () => false; x.dashAt = () => false; x.interest = ''; x.reason = ide.name ? 'Ideology: ' + ide.name : ''; }
-      if (kind === 'proj') { x.at = () => ({ color: ide.color, style: 'solid' }); x.reason = ide.name ? 'Ideology: ' + ide.name : ''; x.alt = false; }
+      x.color = ide.color; x.tag = ide.name; x.soft = false;
+      if (kind === 'poll') { x.colorAt = () => ide.color; x.thinAt = () => false; x.dashAt = () => false; x.interest = ''; }
     } else Object.assign(x, x.aff);
   });
   // Seats: ideology order in Ideology mode (largest party first within an ideology), affiliation order otherwise.
@@ -1280,7 +1174,7 @@ const IDEOLOGY_ORDER = ['Far-left', 'Left-wing', 'Animal rights', 'Green politic
 const ideoRank = (name) => { const k = norm(name).replace(/-/g, ' '); const i = IDEOLOGY_ORDER.findIndex((x) => norm(x).replace(/-/g, ' ') === k); return i < 0 ? IDEOLOGY_ORDER.length : i; };
 const modeToggle = () => `<span class="cmode" role="group" aria-label="Colour parties by"><span class="cm-l">Colour by</span><button type="button" data-m="aff" aria-pressed="${COLOR_MODE === 'aff'}">Affiliation</button><button type="button" data-m="ideo" aria-pressed="${COLOR_MODE === 'ideo'}">Ideology</button></span>`;
 const modeNote = () => (COLOR_MODE === 'ideo' ? `<p class="note-s" style="margin:0">Colours show each party's main ideology (first entry in our party database); alliances take the most common ideology of their members. See the ideology legend below.</p>` : '');
-const segCss = (sg) => swatch(sg.color, sg.cstyle || (sg.soft ? 'soft' : 'solid'));
+const segBg = (sg) => (sg.soft ? stripes(sg.color) : sg.color);
 let PARLS = [];
 function viewParliament(cfg, parties) {
   const chambers = (cfg.chambers || []).slice();
@@ -1315,12 +1209,12 @@ function viewParliament(cfg, parties) {
     return `<section class="card parl" data-c="${ci}">
     <div class="meta"><span>${typeLabel(c.type) && chambers.length > 1 ? `<span class="label">${esc(typeLabel(c.type))}</span> ` : ''}<strong>${esc(c.name)}</strong> · <span class="parl-seats">${c.totals[last]}</span> seats · <span class="parl-when"></span></span><span class="muted parl-maj"></span></div>
     ${controls}
-    <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;${segCss(sg)}"></div>`).join('')}</div>
+    <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${segBg(sg)}"></div>`).join('')}</div>
     <div class="majline" aria-hidden="true"></div></div>
     <div class="keys" aria-live="polite"></div>
-    ${c.segs.some((sg) => sg.soft) && COLOR_MODE === 'aff' ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dot" style="${swatch('#8A9099', 'soft')}"></span>Striped: no Europarty, but an EP group or (~) orientation${c.segs.some((sg) => sg.cstyle === 'thin') ? `<span class="dot" style="${swatch('#8A9099', 'thin')};margin-left:8px"></span>Finely striped: not a member, interested in joining` : ''}</p>` : ''}
+    ${c.segs.some((sg) => sg.soft) ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot" style="background:${stripes('#8A9099')}"></span>Striped: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
     <div class="parl-hist" hidden>${c.elections.map((e, i) => { const tot = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0), maj = Math.floor(tot / 2) + 1;
-      return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;${segCss(sg)}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
+      return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;background:${segBg(sg)}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
   }).join('');
 }
 function setParlYear(ci, i) {
@@ -1328,9 +1222,9 @@ function setParlYear(ci, i) {
   const e = c.elections[i], total = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0);
   const barEl = el.querySelector('.seatbar');
   barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}${sg.tag ? ' (' + sg.tag + ')' : ''} – ${sg.title}: ${n}`; });
-  const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, css: segCss(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, bg: segBg(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
   barEl.setAttribute('aria-label', `Seats ${e.label}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
-  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? ' · not a Europarty member (EP group, stated interest or orientation only)' : ''}"><span class="dot" style="${x.css}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
+  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? ' · no Europarty (EP group or related organisation only)' : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
   const majority = Math.floor(total / 2) + 1;
   el.querySelector('.parl-seats').textContent = total;
   el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
@@ -1389,51 +1283,7 @@ const interestColor = (p) => { if (!p) return ''; const e = p.euInterest;  // Eu
 const interestFrom = (p) => { const m = String(p && p.interestNote || '').match(/\b(19|20)\d{2}\b/g); return m ? Date.UTC(Math.min(...m.map(Number)), 0, 1) : -Infinity; };
 const seriesLabel = (abbr, tag) => `${abbr}${tag ? ' (' + tag + ')' : ''}`;
 const interestTitle = (sr) => (sr.interest ? ` · interested in joining: ${sr.interestNote}` : '');
-/* ---------- One colour rule for every view (cards, seat bars, polling, EP projection) ----------
-   At time t, the first that applies:
-   1. Europarty membership in force          -> solid,  Europarty colour
-   2. EP group membership (EU only; NI counts as a group) -> soft, colour of the group's Europarty family (NI: dark grey)
-   3. Stated interest to join (Europarty first, else EP group), from its year on -> thin, colour of the target
-   4. "Orientation" column (e.g. ~ALDE)       -> soft,   that family's colour
-   5. otherwise                               -> none,   grey
-   The EP projection sheet's own group assignment is never used for colour (only shown in the label). */
-const LAST_EP_ELECTION = Date.UTC(2024, 5, 6);
-// Set to true to ignore interests dated before the latest EP election (e.g. an "EPP (2019)" interest in 2026).
-const INTEREST_EXPIRES = false;
-const interestTarget = (p) => {
-  if (!p) return null;
-  const eu = String(p.euInterest || '').split(/[|;,]/)[0].trim();
-  if (eu && EUROPARTY_COLORS[eu]) return { fam: eu, color: EUROPARTY_COLORS[eu], label: epName(eu) };
-  const grp = IS_EU ? String(p.epInterest || '').split(/[|;,]/)[0].trim() : '';
-  const fam = grp ? (GROUP_TO_EUROPARTY[grp] || (EUROPARTY_COLORS[grp] ? grp : '')) : '';
-  if (fam && EUROPARTY_COLORS[fam]) return { fam, color: EUROPARTY_COLORS[fam], label: groupLabel(grp) };
-  return null;
-};
-function affiliationAt(p, t) {
-  if (!p) return { color: NONE, style: 'none', fam: '(none)', reason: 'No affiliation' };
-  const h = p.history || { ep: [], grp: [] };
-  const pick = (list) => { const hit = list.filter((i) => t >= i.a && t <= i.b).sort((p1, p2) => (p1.a - p2.a) || (p1.ver - p2.ver)); return hit.length ? hit[hit.length - 1] : undefined; };
-  // 1. Europarty
-  const e = h.ep.length ? pick(h.ep) : (p.europartyShort ? { v: p.europartyShort } : undefined);
-  if (e && e.v) return { color: EUROPARTY_COLORS[e.v] || NONE, style: 'solid', fam: e.v, reason: `Member of ${epName(e.v)}` };
-  // 2. EP group without a Europarty
-  if (IS_EU) {
-    const g1 = h.grp.length ? pick(h.grp) : (p.epGroup ? { v: String(p.epGroup).split(/[|;,]/)[0].trim() } : undefined);
-    const fam = g1 && g1.v ? GROUP_TO_EUROPARTY[g1.v] : '';
-    if (fam && EUROPARTY_COLORS[fam]) return { color: EUROPARTY_COLORS[fam], style: 'soft', fam, reason: `Sits in EP group ${groupLabel(g1.v)} (no Europarty)` };
-  }
-  // 3. Stated interest to join
-  const tgt = interestTarget(p), from = interestFrom(p);
-  const expired = INTEREST_EXPIRES && from !== -Infinity && from < LAST_EP_ELECTION;
-  if (tgt && t >= from && !expired) return { color: tgt.color, style: 'thin', fam: tgt.fam, reason: `Not a member; interested in joining ${epName(p.interestNote) || tgt.label}` };
-  // 4. Orientation
-  const ori = softAffiliation(p.orientation);
-  if (ori) return { color: ori.color, style: 'soft', fam: ori.europarty, reason: `No Europarty; orientation ${ori.label}` };
-  return { color: NONE, style: 'none', fam: '(none)', reason: 'No Europarty, EP group or stated interest' };
-}
-const NOW = Date.now();
 let POLL = null;
-const polStyleAt = (sr, t) => (sr.thinAt(t) ? 'thin' : sr.dashAt(t) ? 'soft' : 'solid');
 // Poll-chart abbreviations are always in Latin script, like the party database: the database abbreviation when the
 // party is matched, else the poll file's romanisation (•R), else a transliteration (Cyrillic, Greek).
 const TRANSLIT = Object.fromEntries([...'абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ'].map((c, i) => [c, ['a','b','v','g','d','e','yo','zh','z','i','y','k','l','m','n','o','p','r','s','t','u','f','h','ts','ch','sh','sht','a','y','','e','yu','ya','ye','i','yi','g'][i]])
@@ -1504,12 +1354,9 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const keys = names(pp);
     let joint = null;  // joint list not in the alliance sheet ("DK+MSZP+P"): its member parties
     let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
-    // Matched by the Europe Elects Entity ID documented in the poll file (•EEID on the party's legend line),
-    // else an Entity ID used as the poll file's own ID, else by name.
-    const eid = pp.eeid || pp.id;
-    const byId = eid ? (parties.find((x) => x.entityId === eid && x.latest !== false) || parties.find((x) => x.entityId === eid)) : null;
+    const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
     const m = byId || findParty(keys) || findLoose(pp);
-    const al = m ? null : ((eid && ((alliances || []).find((x) => x.entityId === eid && !x.inactive) || (alliances || []).find((x) => x.entityId === eid))) || findAlliance(keys));
+    const al = m ? null : ((pp.id && (alliances || []).find((x) => x.entityId === pp.id)) || findAlliance(keys));
     if (m) {
       color = m.color;  // polling lines follow the Europarty only (no EP-group fallback)
       // abbreviation strictly from the party database (most recent version)
@@ -1520,9 +1367,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       tag = al.europarty === 'None' ? (IS_EU ? groupLabel(al.epGroup || '') : '') : (al.europarty.includes('|') ? epName(al.europarty) : partyTag(al.europarty, al.epGroup));
     } else {
       // Joint lists without an alliance record ("A/B", "A–B"): use the first member party found.
-      // Each part is looked up by the •EEID of the poll-file party with that key (PLAID+SNP -> PLAID, SNP), else by name.
-      const partById = (x) => { const q = data.parties.find((o) => o.key === x && o.eeid); return q ? (parties.find((y) => y.entityId === q.eeid && y.latest !== false) || parties.find((y) => y.entityId === q.eeid)) : null; };
-      const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => partById(x) || findParty([normKey(x)]));
+      const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => findParty([normKey(x)]));
       const part = parts.find(Boolean);
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
       if (parts.length > 1 && parts.every(Boolean)) { abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }  // e.g. VOLYA+KB
@@ -1548,19 +1393,8 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     if (iCol && color === NONE) color = iCol;
     else if (color === NONE && (curGrpCol || ori)) color = curGrpCol || ori.color;
     abbr = toLatin(abbr, pp.roman);
-    const ide = ideoOf(m || al || (joint && joint[0]) || null);
-    const base = { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', curve, ide };
-    if (m) {  // a party: the shared rule (affiliationAt), month by month
-      const now = affiliationAt(m, NOW);
-      return { ...base, color: now.color, reason: now.reason, soft: now.style === 'soft',
-        colorAt: (t) => affiliationAt(m, t).color, thinAt: (t) => affiliationAt(m, t).style === 'thin', dashAt: (t) => affiliationAt(m, t).style === 'soft' };
-    }
-    if (al && al.lean) {  // alliance without an affiliation of its own: its members' common family (see allianceLean)
-      const own = (t) => (al.history ? colourAt(al.history, t, NONE) : NONE), L = al.lean;
-      return { ...base, tag: base.tag || L.tag, color: L.color, reason: al.colorReason, soft: L.style === 'soft',
-        colorAt: (t) => (own(t) !== NONE ? own(t) : L.color), thinAt: (t) => own(t) === NONE && L.style === 'thin', dashAt: (t) => own(t) === NONE && L.style === 'soft' };
-    }
-    return { ...base, color, soft: !!(curGrpCol || ori) && !iCol, colorAt: (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt };
+    return { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
+      soft: !!(curGrpCol || ori) && !iCol, colorAt: (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, v: { ...p.v } })).filter((p) => p.t >= from);
@@ -1664,6 +1498,8 @@ function viewPolling(cfg, poll) {
   const right = `<a href="${esc(DATA_ACCESS_URL)}" target="_blank" rel="noopener">Get the data →</a>`;
   const note = `This polling average is the result of a smoothing LOESS fitted to our dataset of all national polls collected in ${cfg.name}. If data is too sparse, no average is produced.`;
   if (POLL) {
+    // No average line at all (too few polls): show the individual polls as solid dots.
+    POLL.bold = !POLL.series.some((sr) => sr.curve && sr.curve.some((seg) => seg && seg.length > 1));
     const spanYears = (POLL.full.b - POLL.full.a) / (365.25 * 864e5);
     const ranges = RANGES.filter(([r]) => r === 'all' || +r < spanYears);
     const latest = (sr) => { const seg = sr.curve[sr.curve.length - 1]; return seg ? seg[seg.length - 1].v : 0; };
@@ -1672,12 +1508,12 @@ function viewPolling(cfg, poll) {
     const byKey = Object.fromEntries(POLL.series.map((sr) => [sr.key, sr]));
     const chipHtml = (sr) => {
       const gi = POLL.groups.findIndex((g0) => g0.alliance === sr.key);
-      if (gi < 0) return `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + (sr.reason ? ' · Colour: ' + sr.reason : interestTitle(sr) + (sr.soft ? ' · no Europarty (EP group or related organisation only)' : '')))}"><span class="dot" style="${swatch(sr.colorAt(NOW), polStyleAt(sr, NOW))}"></span>${esc(sr.abbr)}</button>`;
+      if (gi < 0) return `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr) + (sr.soft ? ' · no Europarty (EP group or related organisation only)' : ''))}"><span class="dot" style="background:${sr.soft ? stripes(sr.color) : sr.color}"></span>${esc(sr.abbr)}</button>`;
       // Alliance vs its member parties: one toggle, never both at once (click the active side to hide all).
       const g0 = POLL.groups[gi], mem = g0.members.map((k) => byKey[k]);
       return `<span class="pseg" role="group" aria-label="${esc(sr.abbr)}: alliance or member parties">`
-        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="a" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="${swatch(sr.colorAt(NOW), polStyleAt(sr, NOW))}"></span>${esc(sr.abbr)}</button>`
-        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="m" aria-pressed="${mem.some((m) => !POLL.hidden.has(m.key))}" title="${esc(mem.map((m) => m.name).join(' · '))}">${mem.map((m) => `<span class="dot" style="${swatch(m.colorAt(NOW), polStyleAt(m, NOW))}"></span>`).join('')}${esc(mem.map((m) => m.abbr).join(' + '))}</button></span>`;
+        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="a" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name)}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.abbr)}</button>`
+        + `<button type="button" class="pchip poll-seg" data-g="${gi}" data-mode="m" aria-pressed="${mem.some((m) => !POLL.hidden.has(m.key))}" title="${esc(mem.map((m) => m.name).join(' · '))}">${mem.map((m) => `<span class="dot" style="background:${m.color}"></span>`).join('')}${esc(mem.map((m) => m.abbr).join(' + '))}</button></span>`;
     };
     return (VIEW === 'polling' ? nextHead(cfg) : bar('Polling average', `<span class="bar-r">${modeToggle()}${right}</span>`)) + `<section class="card poll">
       <div class="poll-ctl">
@@ -1686,11 +1522,10 @@ function viewPolling(cfg, poll) {
         <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map(chipHtml).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
-      ${COLOR_MODE === 'aff' && POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no Europarty, but an EP group or (~) orientation</p>` : ''}
-      ${COLOR_MODE === 'aff' && POLL.series.some((sr) => sr.thinAt(NOW)) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="1.4"/></svg> Thin line, finely striped dot: not a member, interested in joining</p>` : ''}
+      ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
       ${modeNote()}
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
-      <p>${esc(note)}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
+      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll.' : ''}${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
   }
   const id = POLLING_CHARTS[ISO];
   const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
@@ -1788,9 +1623,13 @@ function drawPolling() {
     <line id="poll-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="poll-marks"></g>
     <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="poll-hit" style="cursor:crosshair"/></svg><div class="proj-tip" id="poll-tip" hidden></div>`;
   const cv = document.getElementById('poll-dots'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
-  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip(); ctx.globalAlpha = 0.14;
-  const r = small ? 1.2 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2 : 1.5);
-  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); } });
+  ctx.scale(dpr, dpr); ctx.beginPath(); ctx.rect(m.l, 0, iw, H); ctx.clip();
+  // Normally faint small dots behind the averages; with no average at all, larger solid dots with a white rim.
+  const bold = !!POLL.bold;
+  ctx.globalAlpha = bold ? 0.9 : 0.14;
+  const r = bold ? (small ? 3.2 : 4.2) : (small ? 1.2 : (t1 - t0 < 2.5 * 365 * 864e5 ? 2 : 1.5));
+  if (bold) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; }
+  polls.forEach((p) => { const xx = x(p.t.getTime()); for (const k in p.v) { if (!shownKeys.has(k)) continue; ctx.fillStyle = byKey[k].colorAt(p.t.getTime()); ctx.beginPath(); ctx.arc(xx, y(p.v[k]), r, 0, 6.283); ctx.fill(); if (bold) ctx.stroke(); } });
   // hover / tap pop-up, drag to zoom
   const hit = document.getElementById('poll-hit'), cross = document.getElementById('poll-x'), tip = document.getElementById('poll-tip'), sel = document.getElementById('poll-sel');
   const pxOf = (evt) => { const rc = host.getBoundingClientRect(); return Math.max(m.l, Math.min(m.l + iw, (evt.touches ? evt.touches[0].clientX : evt.clientX) - rc.left)); };
@@ -1802,7 +1641,7 @@ function drawPolling() {
     document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
       .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
-      .map((o) => `<div><span class="dot" style="${swatch(o.sr.colorAt(t), polStyleAt(o.sr, t))}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = px + 12; if (left + tw > W) left = px - tw - 12;
@@ -1827,12 +1666,12 @@ window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize =
 function viewAlliances(alliances) {
   if (!alliances.length) return '';
   return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
-    <article class="al${a.colorStyle === 'soft' || a.colorStyle === 'thin' ? ' c-' + a.colorStyle : ''}" style="border-top-color:${a.color}" title="${esc(a.native + (a.colorReason ? ' · Colour: ' + a.colorReason : ''))}">
+    <article class="al" style="border-top-color:${a.color}" title="${esc(a.native)}">
       <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
       <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
-      <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}${a.lean && !a.epGroup ? `<div><span>Via members</span><span>${esc(a.lean.tag)} (${esc(a.members.filter((m) => m.party && m.party.colorFam === a.lean.fam && m.party.colorStyle !== 'none').map((m) => m.abbr).join(', '))})</span></div>` : ''}</div>
+      <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
       ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
-      <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english + (m.party && m.party.colorReason ? ' · Colour: ' + m.party.colorReason : ''))}"><span class="dot" style="width:9px;height:9px;${swatch(m.color, m.cstyle)}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
+      <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
     </article>`).join('')}</div><div id="al-more-wrap" hidden><button type="button" class="toggle" id="al-more" aria-expanded="false" aria-controls="al-grid"></button></div>`;
 }
 // Alliances: show one row of cards, the rest behind "Show all".
@@ -1870,27 +1709,24 @@ const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
   ? `<p class="native">${esc(p.native)}${isLatin(p.native) || String(p.native).split(/\s+\/\s+/).some(isLatin) ? '' : ` <span class="translit">(${esc(transliterate(p.native))})</span>`}</p>` : '');
 // Secondary affiliations (PACE, CoR, CLRAE, Benelux, Nordic Council, international federation)
 const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
-const partyKey = () => (COLOR_MODE === 'aff' ? `<p class="note-s" style="margin:0">Card top border, dots and seat bars: ${esc(KEY_TXT)}.</p>` : '');
-const tileCls = (p) => (p.colorStyle === 'soft' || p.colorStyle === 'thin' ? ' c-' + p.colorStyle : '');
-const tileTitle = (p) => esc(p.native + (p.colorReason ? ' · Colour: ' + p.colorReason : ''));
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
   if (!p.seats) { const affs0 = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile${tileCls(p)}" style="border-top-color:${p.color}" title="${tileTitle(p)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
+    return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
   const affs = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
-  return `<article class="tile${tileCls(p)}" style="border-top-color:${p.color}" title="${tileTitle(p)}">
+  return `<article class="tile" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div>
     <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs)}${kv2(p)}
     <div class="seats"><span class="lbl">SEATS ${years[years.length - 1]}</span><span class="num">${p.seatsNow}</span>
-      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;${v ? swatch(p.color, p.colorStyle) : 'background:#E4E2DB'}"></i></div>`).join('')}</div>
+      <div class="mini" role="img" aria-label="Seats ${esc(hist)}">${p.seats.map((v) => `<div><i style="height:${v ? Math.max(3, Math.round(v / max * 34)) : 2}px;background:${v ? p.color : '#E4E2DB'}"></i></div>`).join('')}</div>
       <div class="yrs" aria-hidden="true">${yy.map((y) => `<span>${y}</span>`).join('')}</div></div></article>`;
 }
 function smallTile(p, years) {
   const past = p.seats ? p.seats.map((v, i) => ({ v, y: years[i] })).filter((x) => x.v) : [];
-  return `<article class="tile small${tileCls(p)}" style="border-top-color:${p.color}" title="${tileTitle(p)}">
+  return `<article class="tile small" style="border-top-color:${p.color}" title="${esc(p.native)}">
     <div class="top"><span class="nm">${logoImg(p, 24)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${esc(p.founded)}</span></div>
     <h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(p.affs)}${kv2(p)}
     ${past.length ? `<span class="note-s">${past.map((x) => `${x.v} seat${x.v > 1 ? 's' : ''} in ${x.y}`).join(', ')}</span>` : ''}</article>`;
@@ -1907,7 +1743,7 @@ function viewParties(parties, cfg, activeOnly) {
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
   const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
     <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
-  return bar(hasSeats ? 'In national parliament' : 'Parties with European or international affiliations', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + partyKey() + filter +
+  return bar(hasSeats ? 'In national parliament' : 'Parties with European or international affiliations', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
     bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European or international affiliation'} · hover for the native name</span>`) +
     `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
@@ -2019,7 +1855,7 @@ async function main() {
     parties.forEach((p) => { const own = [p.abbr, ...(p.abbrs || [])]; p.seats = own.map((a) => S.parties[a]).find(Boolean) || null; p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0; });
   }
   // Government box from the sheet (falls back to cfg.government if the country has no rows there)
-  const gov = buildGovernment(governmentRows, cfg, parties, alliances);
+  const gov = buildGovernment(governmentRows, cfg, parties);
   if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
   const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
   alliances.filter((a) => !a.inactive).forEach((a) => a.members.forEach((m) => { if (m.party && !m.party.affs.some((x) => x[0] === 'Alliance')) m.party.affs.push(['Alliance', a.abbr]); }));
@@ -2029,7 +1865,6 @@ async function main() {
     COLOR_MODE = m; try { localStorage.setItem('ee-color-mode', m); } catch (e) { /* ignore */ }
     if (POLL) applyColorMode(POLL.series, 'poll');
     (cfg.chambers || []).forEach((c) => applyColorMode(c.segs, 'seat'));
-    if (PROJ) applyColorMode(PROJ.series, 'proj');
     const y = window.scrollY; render(); window.scrollTo(0, y);
   };
   const bindMode = () => document.querySelectorAll('.cmode button').forEach((b) => { b.onclick = () => setMode(b.dataset.m); });
@@ -2037,9 +1872,8 @@ async function main() {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
       viewAlliances(alliances.filter((a) => !a.inactive)) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer>
-      <p>Party colours follow one rule everywhere: Europarty membership (solid), else EP group (dashed/striped; non-attached NI/NR counts as a group, dark grey), else a stated interest to join (thin/finely striped), else the orientation column (dashed/striped), else grey. Alliances without a Europarty or EP group take the family their member parties share (striped, or finely striped if the members only state an interest); grey if members point different ways. The EP seat projection's group assignment is not used for colours or labels.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
+      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
-    mountContact(cfg);
     postHeight();
   };
   const bindLegend = () => {
@@ -2069,72 +1903,6 @@ async function main() {
       bindFilter(); postHeight();
     }).catch((e) => { console.warn('Logos not loaded', e); if (LOGO_DEBUG) { app.insertAdjacentHTML('beforeend', viewLogoReport([], e.message)); postHeight(); } });
   }
-}
-
-/* ---------- contact form ---------- */
-// Built once and re-attached after every render, so a half-written message survives colour-mode switches etc.
-let contactEl = null;
-const contactSections = () => {
-  const seen = new Set(), out = ['Overview (top of page)'];
-  document.querySelectorAll('#app .bar h2').forEach((h) => {
-    const t = h.textContent.replace(/\s*·\s*\d+\s*$/, '').trim();
-    if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
-  });
-  out.push('Other');
-  return out;
-};
-function mountContact(cfg) {
-  if (!CONTACT.enabled) return;
-  const country = (cfg && cfg.name) || ISO;
-  if (!contactEl) {
-    contactEl = document.createElement('details');
-    contactEl.className = 'card contact';
-    contactEl.id = 'contact';
-    contactEl.innerHTML = `<summary><span>Contact us <span class="sub">· report an error, suggest a correction or send a source</span></span><span class="chev" aria-hidden="true"></span></summary>
-      <form novalidate>
-        <div class="f"><label for="ct-section">Section</label><select id="ct-section" name="section" required></select></div>
-        <div class="f" id="ct-other-wrap" hidden><label for="ct-other">Topic</label><input id="ct-other" name="other" type="text" maxlength="120" placeholder="What is it about?"></div>
-        <div class="f full"><label for="ct-source">Source</label><input id="ct-source" name="source" type="text" maxlength="500" required placeholder="Link or reference (e.g. official results page, article, law)"><span class="hint">Please give a link or a precise reference so we can verify the information.</span></div>
-        <div class="f full"><label for="ct-message">Message</label><textarea id="ct-message" name="message" maxlength="5000" required placeholder="What should we add, correct or know?"></textarea></div>
-        <div class="f full"><label for="ct-email">Your email <span class="opt">(optional, only if you'd like a reply)</span></label><input id="ct-email" name="email" type="email" maxlength="200" autocomplete="email"></div>
-        <div class="hp" aria-hidden="true"><label for="ct-hp">Leave empty</label><input id="ct-hp" name="_honey" type="text" tabindex="-1" autocomplete="off"></div>
-        <div class="actions"><button type="submit">Send</button><span class="msg" role="status" aria-live="polite"></span></div>
-      </form>`;
-    const form = contactEl.querySelector('form'), sel = form.querySelector('#ct-section'), otherWrap = form.querySelector('#ct-other-wrap'), msg = form.querySelector('.msg'), btn = form.querySelector('button');
-    const say = (t, cls) => { msg.className = 'msg' + (cls ? ' ' + cls : ''); msg.innerHTML = t; postHeight(); };
-    sel.addEventListener('change', () => { otherWrap.hidden = sel.value !== 'Other'; postHeight(); });
-    contactEl.addEventListener('toggle', () => { postHeight(); if (contactEl.open) sel.focus({ preventScroll: true }); });
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const v = (n) => (form.elements[n].value || '').trim();
-      if (v('_honey')) return; // bot
-      const missing = [['section', sel], ['source', form.elements.source], ['message', form.elements.message]].find(([n]) => !v(n));
-      if (missing) { say('Please fill in the section, a source and your message.', 'err'); missing[1].focus(); return; }
-      if (v('email') && !form.elements.email.checkValidity()) { say('That email address doesn’t look right.', 'err'); form.elements.email.focus(); return; }
-      const section = v('section') === 'Other' && v('other') ? 'Other: ' + v('other') : v('section');
-      const page = (() => { try { return window.top.location.href; } catch (e) { return document.referrer || location.href; } })();
-      const data = { Country: country, Section: section, Source: v('source'), Message: v('message'), Page: page,
-        _subject: `Europe Elects ${country} page – ${section}`, _template: 'table', _captcha: 'false' };
-      if (v('email')) { data.email = v('email'); data._replyto = v('email'); }
-      btn.disabled = true; say('Sending…');
-      try {
-        const r = await fetch(CONTACT.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok || String(j.success) === 'false') throw new Error(j.message || 'HTTP ' + r.status);
-        form.reset(); otherWrap.hidden = true;
-        say('Thank you, your message has been sent to the Europe Elects team.', 'ok');
-      } catch (e) {
-        console.warn('Contact form', e);
-        const body = `Country: ${country}\nSection: ${section}\nSource: ${v('source')}\nPage: ${page}\n\n${v('message')}`;
-        const href = `mailto:${CONTACT.to}?subject=${encodeURIComponent(data._subject)}&body=${encodeURIComponent(body)}`;
-        say(`The message couldn’t be sent from here. <a href="${esc(href)}" target="_top">Open it in your email app</a> or write to <a href="mailto:${esc(CONTACT.to)}" target="_top">${esc(CONTACT.to)}</a>.`, 'err');
-      } finally { btn.disabled = false; }
-    });
-  }
-  // Refresh the section list from what is actually on the page (sections differ per country), keeping the choice.
-  const sel = contactEl.querySelector('#ct-section'), cur = sel.value;
-  sel.innerHTML = '<option value="">Choose a section…</option>' + contactSections().map((s) => `<option${s === cur ? ' selected' : ''}>${esc(s)}</option>`).join('');
-  app.appendChild(contactEl);
 }
 
 /* ---------- iframe height: works with the standard Datawrapper resize snippet ---------- */
