@@ -144,15 +144,16 @@ def loess_se(xs, ys, x0, k, span=SPAN_DAYS):
     den = sw * swxx - swx * swx
     if abs(den) < 1e-9:
         a, b = swy / sw, 0.0
-        ls = [w / sw for w, _, _ in pts]                       # contribution of each poll to the value at x0
     else:
         b = (sw * swxy - swx * swy) / den
         a = (swy - b * swx) / sw
-        ls = [w * ((swxx - x0 * swx) + x * (sw * x0 - swx)) / den for w, x, _ in pts]
-    # weighted scatter of the polls around the local line; variance of the value = scatter x sum of squared contributions
+    # Uncertainty of the average: weighted scatter of the polls around the local line, divided by the effective
+    # number of polls in the window (as for a weighted mean). This stays stable next to gaps in the data, where the
+    # contributions of a local line would blow up. It is capped at the scatter of single polls: the range of the
+    # average is never wider than the spread of the polls themselves.
     n_eff = sw * sw / sum(w * w for w, _, _ in pts)
-    resid = sum(w * (y - (a + b * x)) ** 2 for w, x, y in pts) / sw
-    var = resid * n_eff / max(n_eff - 2, 1.0) * sum(l * l for l in ls)
+    resid = sum(w * (y - (a + b * x)) ** 2 for w, x, y in pts) / sw * n_eff / max(n_eff - 2, 1.0)
+    var = min(resid / n_eff, resid)
     # Guard against runaway slopes where the polls lie on one side of x0 (e.g. a polling pause after an
     # election): the local line may not leave the range of the polls it was fitted to.
     used = [y for _, _, y in pts]
