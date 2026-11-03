@@ -1,0 +1,542 @@
+<!-- ============================================================
+     Africa Elects – home page (built from the Europe Elects home page)
+     Paste this whole block into ONE "Custom HTML" block in WordPress.
+     Settings you may want to change are at the top of the last <script>.
+     ============================================================ -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+#ee-home{--navy:#1C1C1C;--navy2:#000000;--gold:#FFE500;--red:#D04848;--green:#0B6B2E;--ink:#1A1D23;--muted:#5f5e5a;--line:#e4e3de;--soft:#f6f5f1;--sky:#0085ff;
+  font-family:'Advent Pro',system-ui,sans-serif;color:var(--ink);line-height:1.35;max-width:1180px;margin:0 auto;padding:24px 0 32px}
+#ee-home *,#ee-home *::before,#ee-home *::after{box-sizing:border-box}
+#ee-home section,#ee-home aside,#ee-home header,#ee-home footer,#ee-home nav,#ee-home form{margin:0;padding:0;max-width:none;width:auto}
+#ee-home h1,#ee-home h2,#ee-home h3,#ee-home ul,#ee-home li{font-family:inherit;letter-spacing:normal}
+#ee-home li{margin:0}
+#ee-home a{text-decoration:none}
+#ee-home button,#ee-home input,#ee-home select,#ee-home textarea{font-family:inherit;text-transform:none;letter-spacing:normal;box-shadow:none}
+#ee-home p{margin:0}
+#ee-home a{color:inherit}
+#ee-home [hidden]{display:none!important}
+
+/* ---------- layout ---------- */
+#ee-home .eeh-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(290px,1fr);gap:22px;align-items:stretch;margin-top:26px}
+#ee-home .eeh-row.top{align-items:start}
+
+/* ---------- panels: navy headline bar + white body ---------- */
+#ee-home .eeh-panel{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,25,54,.06)}
+#ee-home .eeh-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy);
+  padding:12px 18px;text-decoration:none;border-bottom:3px solid var(--red);flex:none}
+#ee-home .eeh-bar span{font-family:'Advent Pro',system-ui,sans-serif;font-size:16.5px}
+#ee-home .eeh-bar .t{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#fff}
+#ee-home .eeh-bar.live .t::before{content:"";width:8px;height:8px;border-radius:50%;flex:none}
+#ee-home .eeh-bar .m{color:var(--gold);white-space:nowrap;font-weight:700}
+#ee-home a.eeh-bar:hover .m{text-decoration:underline}
+#ee-home .eeh-bar.live .t::before{background:#ff3b30;box-shadow:0 0 0 3px rgba(255,59,48,.25);animation:eeh-pulse 1.4s ease-in-out infinite}
+@keyframes eeh-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+#ee-home .eeh-body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;min-width:0}
+#ee-home .eeh-body.flush{padding:0}
+#ee-home .eeh-sub{font-size:14.5px;color:var(--muted);margin:0 0 14px}
+#ee-home .eeh-intro{font-size:15.5px;line-height:1.45;color:var(--ink);padding-bottom:12px;border-bottom:1px solid var(--line)}
+#ee-home .eeh-h{font-size:14.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px}
+#ee-home .eeh-status{padding:30px;text-align:center;color:var(--muted);font-size:14.5px}
+#ee-home .eeh-status.err{color:#c00}
+
+/* ---------- featured dashboard ---------- */
+#ee-home .eeh-feat{display:flex;align-items:stretch;min-height:96px;border-radius:6px;overflow:hidden;text-decoration:none;color:#fff;
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);border:1px solid var(--gold);transition:box-shadow .15s}
+#ee-home .eeh-feat:hover{box-shadow:0 6px 18px rgba(26,43,74,.3)}
+#ee-home .eeh-feat-im{flex:0 0 190px;position:relative;background:#f4f1e8;overflow:hidden}
+#ee-home .eeh-feat-im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:left top}
+#ee-home .eeh-feat-tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:14px 22px}
+#ee-home .eeh-feat-k{font-family:'Advent Pro',system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+#ee-home .eeh-feat-t{font-size:20px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.15}
+#ee-home .eeh-feat-go{display:flex;align-items:center;padding:0 22px;color:var(--gold);font-size:22px;font-weight:800}
+@media (max-width:600px){#ee-home .eeh-feat-im{flex-basis:110px}#ee-home .eeh-feat-t{font-size:16px}#ee-home .eeh-feat-go{padding:0 14px}}
+
+/* ---------- support band ---------- */
+#ee-home .eeh-support{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:18px 26px;align-items:center;
+  padding:20px 22px;border-radius:6px;background:var(--navy);color:#fff;border-top:2px solid var(--gold)}
+#ee-home .eeh-support .k{font-family:'Advent Pro',system-ui,sans-serif;font-size:14.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+#ee-home .eeh-support h2{margin:4px 0 6px;font-size:21px;line-height:1.2;font-weight:700;color:#fff}
+#ee-home .eeh-support p{font-size:15.5px;color:rgba(255,255,255,.78);line-height:1.4}
+#ee-home .eeh-btns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:relative;z-index:1}
+#ee-home .eeh-s{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;padding:14px 8px 12px;background:#fff;border-radius:4px;
+  text-decoration:none;color:var(--ink);border-top:3px solid var(--c);transition:background .15s,box-shadow .15s}
+#ee-home .eeh-s:hover,#ee-home .eeh-s:focus-visible{background:#f6f5f1;box-shadow:0 0 0 2px var(--gold)}
+#ee-home .eeh-s .ic{width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center}
+#ee-home .eeh-s b{font-size:16px;line-height:1.1}
+#ee-home .eeh-s small{font-size:13.5px;color:var(--muted);line-height:1.2}
+
+/* ---------- EP projection ---------- */
+#ee-home .eeh-bars .r{display:grid;grid-template-columns:200px 1fr 44px 48px;align-items:center;gap:10px;margin-bottom:8px;font-size:15px;font-variant-numeric:tabular-nums}
+#ee-home .eeh-bars .r:last-of-type{margin-bottom:0}
+#ee-home .eeh-bars .l{font-weight:700}
+#ee-home .eeh-bars .tr{height:14px;background:#f0f0ec;border-radius:2px;overflow:hidden}
+#ee-home .eeh-bars .f{height:100%;border-radius:2px;transition:width .25s}
+#ee-home .eeh-bars .v{text-align:right;font-weight:700}
+#ee-home .eeh-bars .c{text-align:right;font-weight:700;font-size:13px}
+#ee-home .pos{color:#009900}#ee-home .neg{color:#990000}#ee-home .neu{color:#8a8a86}
+#ee-home .eeh-maj{font-size:13px;color:var(--muted);margin-top:10px}
+#ee-home .eeh-trend{position:relative;margin-top:16px;padding-top:14px;border-top:1px solid #efeee9}
+#ee-home .eeh-trend svg{display:block;width:100%;height:auto;touch-action:pan-y}
+#ee-home .eeh-trend-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);margin-bottom:4px}
+#ee-home .eeh-trend-h b{color:var(--ink);font-size:14.5px}
+#ee-home .eeh-map{position:relative;margin-top:16px;padding-top:6px;border-top:1px solid #efeee9}
+#ee-home .eeh-map svg{width:100%;display:block}
+#ee-home .eeh-maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:var(--muted);margin-top:6px}
+#ee-home .eeh-maplegend span{display:inline-flex;align-items:center;gap:6px}
+#ee-home .eeh-maplegend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+#ee-home .eeh-maplegend .note{margin-left:auto;font-style:italic}
+#ee-home .eeh-map .country{cursor:pointer;stroke:#fff;stroke-width:.5;transition:opacity .15s}
+#ee-home .eeh-map .country:hover{opacity:.75;stroke:#001936;stroke-width:1.5}
+#ee-home .eeh-map .none{fill:#e6e4dc;stroke:#fff;stroke-width:.5}
+#ee-home .eeh-tip{position:absolute;pointer-events:none;display:none;background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:14.5px;min-width:190px;line-height:1.6;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#ee-home .eeh-tip strong{display:block;font-size:16.5px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.2)}
+#ee-home .eeh-tip i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;vertical-align:-1px}
+#ee-home .eeh-tip .tot{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.15);font-size:13px;opacity:.75}
+
+/* ---------- live feed (Bluesky) ---------- */
+#ee-home .eeh-live{position:relative;flex:1;min-height:460px;background:#f0f7ff;border-top:3px solid var(--sky)}
+#ee-home .eeh-live-scroll{position:absolute;inset:0;overflow:auto;padding:12px;font-size:14.5px}
+#ee-home .eeh-follow{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;font-size:15.5px;font-weight:700;color:var(--sky);text-decoration:none;border-top:1px solid #d9e9fb;background:#fff;flex:none}
+#ee-home .eeh-follow:hover{text-decoration:underline}
+
+/* ---------- polling ---------- */
+#ee-home .eeh-poll iframe{display:block;width:0;min-width:100%;border:0}
+
+/* ---------- electoral calendar ---------- */
+#ee-home .eeh-cal{list-style:none;margin:0;padding:0}
+#ee-home .eeh-cal li{display:grid;grid-template-columns:56px 1fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #efeee9}
+#ee-home .eeh-cal li:first-child{padding-top:0}
+#ee-home .eeh-cal li:last-child{border-bottom:0}
+#ee-home .eeh-date{border-radius:4px;text-align:center;padding:6px 0 7px;color:#fff;line-height:1}
+#ee-home .eeh-date b{display:block;font-size:21px}
+#ee-home .eeh-date small{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+#ee-home .eeh-date.tbc{background:#fff!important;border:1.5px dashed currentColor}
+#ee-home .eeh-cal .n{font-weight:700;font-size:16px}
+#ee-home .eeh-cal .d{font-size:14.5px;color:var(--muted)}
+#ee-home .eeh-key{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin-top:auto;padding-top:12px;border-top:1px solid #efeee9}
+#ee-home .eeh-key span{display:inline-flex;align-items:center;gap:5px}
+#ee-home .eeh-key i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* ---------- podcast ---------- */
+#ee-home .eeh-pod{display:block;border:0;width:100%;border-radius:6px}
+
+@media (max-width:900px){
+  #ee-home .eeh-support{grid-template-columns:1fr}
+}
+@media (max-width:860px){
+  #ee-home .eeh-row{grid-template-columns:1fr;margin-top:20px}
+  #ee-home .eeh-live{min-height:0}
+  #ee-home .eeh-live-scroll{position:static;max-height:560px}
+}
+@media (max-width:600px){
+  #ee-home .eeh-btns{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #ee-home .eeh-support{padding:18px 16px}
+  #ee-home .eeh-body{padding:14px}
+  #ee-home .eeh-bars .r{grid-template-columns:1fr 40px 44px;gap:4px 8px}
+  #ee-home .eeh-bars .l{grid-column:1/-1}
+  #ee-home .eeh-bars .tr{grid-column:1/2}
+}
+/* ---------- hero ---------- */
+#ee-home .eeh-sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#ee-home .eeh-hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 28px;padding:4px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+#ee-home .eeh-hero .k{font-family:'Advent Pro',system-ui,sans-serif;font-size:14.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8a6d00}
+#ee-home .eeh-hero h1{margin:4px 0 6px;font-size:32px;line-height:1.1;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+#ee-home .eeh-hero p{font-size:16px;color:var(--muted);max-width:620px}
+#ee-home .eeh-quick{display:flex;flex-wrap:wrap;gap:8px}
+#ee-home .eeh-quick a{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:15.5px;font-weight:700;text-decoration:none;color:var(--navy)}
+#ee-home .eeh-quick a:hover{border-color:var(--navy);background:var(--soft)}
+#ee-home .eeh-quick a.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+#ee-home .eeh-quick a.pri:hover{background:var(--navy2)}
+
+/* ---------- full-width panels ---------- */
+#ee-home .eeh-wide{margin-top:26px}
+#ee-home .eeh-col-stack{display:flex;flex-direction:column;gap:22px;min-width:0}
+
+/* ---------- latest analysis ---------- */
+#ee-home .eeh-posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+#ee-home .eeh-post{display:flex;flex-direction:column;gap:8px;min-width:0;padding:14px 16px 13px;background:var(--soft);border-radius:4px;border-top:3px solid var(--navy);text-decoration:none;color:var(--ink);transition:border-color .15s,background .15s}
+#ee-home .eeh-post:hover{border-top-color:var(--gold);background:#efeee8}
+#ee-home .eeh-post .kk{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy)}
+#ee-home .eeh-post .kk .iso{font-size:12px;letter-spacing:0;color:#fff;background:var(--navy);border-radius:3px;padding:2px 5px}
+#ee-home .eeh-post h3{margin:0;font-size:20px;line-height:1.2;font-weight:700}
+#ee-home .eeh-post:hover h3{text-decoration:underline}
+#ee-home .eeh-post p{margin:0;font-size:15.5px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#ee-home .eeh-post .dt{margin-top:auto;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d00}
+
+/* ---------- countries ---------- */
+#ee-home .eeh-find{width:100%;max-width:none;padding:9px 12px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:16.5px;margin-bottom:14px}
+#ee-home .eeh-find:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--navy)}
+#ee-home .eeh-countries{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;list-style:none;margin:0;padding:0}
+#ee-home .eeh-countries a{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:16.5px;text-decoration:none;color:var(--ink);border-bottom:1px solid #f0efea}
+#ee-home .eeh-countries a:hover{color:#0B6B2E}
+#ee-home .eeh-countries .iso{font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:3px;padding:2px 5px;min-width:26px;text-align:center}
+#ee-home .eeh-countries a.eu .iso{background:#003399;color:var(--gold)}
+
+/* ---------- newsletter / follow ---------- */
+#ee-home .eeh-social{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+#ee-home .eeh-social a{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:4px;font-size:15.5px;font-weight:700;text-decoration:none;color:var(--navy)}
+#ee-home .eeh-social a:hover{border-color:var(--navy);background:var(--soft)}
+#ee-home .eeh-sub-frame{display:block;width:100%;height:150px;border:1px solid var(--line);border-radius:4px;background:#fff}
+
+/* ---------- data access form ---------- */
+#ee-home .eeh-data{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:26px}
+#ee-home .eeh-data h3{margin:0 0 8px;font-size:20px;line-height:1.2}
+#ee-home .eeh-path{margin-top:14px;padding:12px 14px;background:var(--soft);border-left:3px solid var(--gold);border-radius:3px;display:flex;flex-direction:column;gap:4px}
+#ee-home .eeh-path b{font-size:17px;color:var(--navy)}
+#ee-home .eeh-path span{font-size:16px;color:var(--muted);line-height:1.4}
+#ee-home .eeh-path a{font-weight:700;color:#0B6B2E}
+#ee-home .eeh-hint{margin:0;padding:9px 12px;background:#fff8d6;border-radius:3px;font-size:15.5px;color:var(--ink)}
+#ee-home .eeh-data ul{margin:12px 0 0;padding:0;list-style:none;font-size:16px}
+#ee-home .eeh-data li{padding:7px 0 7px 22px;border-bottom:1px solid #f0efea;position:relative}
+#ee-home .eeh-data li::before{content:"";position:absolute;left:4px;top:13px;width:8px;height:8px;border-radius:2px;background:var(--gold)}
+#ee-home .eeh-form{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+#ee-home .eeh-form label{display:flex;flex-direction:column;gap:4px;font-size:14.5px;font-weight:700;color:var(--navy)}
+#ee-home .eeh-form .full{grid-column:1/-1}
+#ee-home .eeh-form input,#ee-home .eeh-form select,#ee-home .eeh-form textarea{font:inherit;font-size:16.5px;font-weight:400;color:var(--ink);padding:9px 11px;border:1px solid #d5d3cc;border-radius:4px;background:#fff;width:100%}
+#ee-home .eeh-form textarea{min-height:96px;resize:vertical}
+#ee-home .eeh-form input:focus,#ee-home .eeh-form select:focus,#ee-home .eeh-form textarea:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--navy)}
+#ee-home .eeh-form .chk{flex-direction:row;align-items:flex-start;gap:8px;font-weight:400;color:var(--muted)}
+#ee-home .eeh-form .chk input{width:auto;margin-top:3px}
+#ee-home .eeh-form button{justify-self:start;padding:11px 22px;border:0;border-radius:4px;background:var(--navy);color:#fff;font:inherit;font-size:16.5px;font-weight:700;cursor:pointer;border-bottom:2px solid var(--gold)}
+#ee-home .eeh-form button:hover{background:var(--navy2)}
+#ee-home .eeh-form .msg{font-size:15.5px;align-self:center}
+#ee-home .eeh-hp{position:absolute;left:-9999px}
+
+/* ---------- footer ---------- */
+#ee-home .eeh-foot{margin-top:30px;padding:18px 0 0;border-top:2px solid var(--navy);display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;font-size:15.5px;color:var(--muted)}
+#ee-home .eeh-foot nav{display:flex;flex-wrap:wrap;gap:6px 18px}
+#ee-home .eeh-foot a{color:var(--navy);text-decoration:none;font-weight:700}
+#ee-home .eeh-foot a:hover{text-decoration:underline}
+@media (max-width:860px){
+  #ee-home .eeh-posts{grid-template-columns:1fr 1fr}
+  #ee-home .eeh-data{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  #ee-home .eeh-hero h1{font-size:26px}
+  #ee-home .eeh-posts{grid-template-columns:1fr}
+  #ee-home .eeh-form{grid-template-columns:1fr}
+  #ee-home .eeh-countries{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* ---------- party database ---------- */
+#ee-home .eeh-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+#ee-home .eeh-stat{background:var(--soft);border-radius:4px;padding:10px 12px;border-left:3px solid var(--gold)}
+#ee-home .eeh-stat b{display:block;font-size:28px;line-height:1;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+#ee-home .eeh-stat span{display:block;font-size:14.5px;color:var(--muted);margin-top:4px;line-height:1.2}
+#ee-home .eeh-db-list{list-style:none;margin:0;padding:0}
+#ee-home .eeh-db-list li > a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f0efea;text-decoration:none;color:var(--ink)}
+#ee-home .eeh-db-list li > a:hover .nm{text-decoration:underline}
+#ee-home .eeh-db-list .iso{font-size:12px;font-weight:700;color:#fff;background:var(--navy);border-radius:3px;padding:3px 0;text-align:center}
+#ee-home .eeh-db-list .nm{font-size:17px;font-weight:700;line-height:1.15}
+#ee-home .eeh-db-list .ab{font-weight:600;color:var(--muted)}
+#ee-home .eeh-db-list .meta{display:block;font-size:14.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ee-home .eeh-pill{padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+#ee-home .eeh-db-eu{margin-top:18px;padding-top:14px;border-top:1px solid #efeee9}
+#ee-home .eeh-eubar{display:flex;height:22px;border-radius:3px;overflow:hidden;margin:8px 0}
+#ee-home .eeh-eubar i{display:block;height:100%}
+#ee-home .eeh-eukey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14.5px;color:var(--muted)}
+#ee-home .eeh-eukey span{display:inline-flex;align-items:center;gap:6px}
+#ee-home .eeh-eukey i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#ee-home .eeh-more{margin-top:10px;align-self:flex-start;padding:8px 14px;border:1px solid var(--line);border-radius:4px;background:#fff;font:inherit;font-size:15.5px;font-weight:700;color:var(--navy);cursor:pointer}
+#ee-home .eeh-more:hover{border-color:var(--navy);background:var(--soft)}
+@media (max-width:600px){#ee-home .eeh-stats{grid-template-columns:1fr 1fr}#ee-home .eeh-db-list li > a{grid-template-columns:30px minmax(0,1fr)}#ee-home .eeh-db-list .eeh-pill{grid-column:2;justify-self:start}}
+/* ---------- calmer layout: plain sections (no navy bar) ---------- */
+#ee-home .eeh-plain{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 18px 18px}
+#ee-home .eeh-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 0 9px;margin-bottom:14px;border-bottom:2px solid var(--gold);text-decoration:none}
+#ee-home .eeh-head .t{font-size:18px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--navy)}
+#ee-home .eeh-head .m{font-size:15.5px;font-weight:700;color:#0B6B2E;white-space:nowrap}
+#ee-home a.eeh-head:hover .m{text-decoration:underline}
+#ee-home .eeh-plain .eeh-key{margin-top:auto}
+/* support: one line */
+#ee-home .eeh-supline{margin-top:26px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:14px 18px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:6px}
+#ee-home .eeh-supline p{font-size:16.5px;color:var(--muted)}
+#ee-home .eeh-supline b{color:var(--navy)}
+#ee-home .eeh-sbtns{display:flex;flex-wrap:wrap;gap:8px}
+#ee-home .eeh-sbtns a{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;font-size:15.5px;font-weight:700;color:var(--navy)}
+#ee-home .eeh-sbtns a:hover{border-color:var(--c);background:var(--soft)}
+#ee-home .eeh-sbtns i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+/* data access strip */
+#ee-home .eeh-datastrip{margin-top:14px;padding:14px 18px;background:var(--navy);color:#fff;border-radius:6px;border-bottom:2px solid var(--gold)}
+#ee-home .eeh-ds-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+#ee-home .eeh-ds-row p{font-size:16.5px;color:rgba(255,255,255,.8)}
+#ee-home .eeh-ds-row b{color:#fff}
+#ee-home .eeh-ds-btns{display:flex;flex-wrap:wrap;gap:8px}
+#ee-home .eeh-btn{display:inline-flex;align-items:center;padding:8px 14px;border-radius:4px;border:1px solid var(--gold);background:var(--gold);color:var(--navy);font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
+#ee-home .eeh-btn.ghost{background:transparent;color:var(--gold)}
+#ee-home .eeh-btn:hover{filter:brightness(1.06)}
+#ee-home #eeh-form-wrap{background:#fff;color:var(--ink);border-radius:4px;padding:2px 16px 16px;margin-top:14px}
+#ee-home .eeh-datastrip .eeh-sub a{color:#0B6B2E;font-weight:700}
+</style>
+
+<div id="ee-home">
+
+  <h1 class="eeh-sr">Africa Elects – elections, polls and parties across Africa</h1>
+
+  <!-- ===== Lead: electoral calendar | live feed ===== -->
+  <div class="eeh-row">
+    <section class="eeh-panel">
+      <a class="eeh-bar" href="https://africaelects.com/calendar/"><span class="t">Upcoming Elections</span><span class="m">Full calendar →</span></a>
+      <div class="eeh-body">
+        <p class="eeh-sub eeh-intro">National, regional and local elections and referendums across Africa in the coming months.</p>
+        <ul id="eeh-cal" class="eeh-cal"><li class="eeh-status" style="display:block">Loading the calendar…</li></ul>
+        <button type="button" class="eeh-more" id="eeh-cal-more" hidden></button>
+        <div class="eeh-key" id="eeh-cal-key"></div>
+        <p class="eeh-h" style="margin-top:18px" id="eeh-recent-h" hidden>Recent results</p>
+        <ul id="eeh-recent" class="eeh-cal" hidden></ul>
+      </div>
+    </section>
+    <aside class="eeh-panel">
+      <a class="eeh-bar live" href="https://bsky.app/profile/africaelects.bsky.social" target="_blank" rel="noopener"><span class="t">Live</span><span class="m">Bluesky →</span></a>
+      <div class="eeh-live"><div class="eeh-live-scroll"><bsky-embed username="africaelects.bsky.social" limit="8" custom-styles="*, *::before, *::after { font-family: 'Advent Pro', system-ui, sans-serif !important; } p, span, a, div { letter-spacing: .01em; }"></bsky-embed></div></div>
+      <a class="eeh-follow" href="https://bsky.app/profile/africaelects.bsky.social" target="_blank" rel="noopener">
+        <svg width="16" height="14" viewBox="0 0 600 530" aria-hidden="true"><path fill="currentColor" d="M136 44c66 50 138 151 164 205 26-54 98-155 164-205 48-36 126-63 126 25 0 17-10 147-16 168-20 73-95 92-162 80 117 20 147 86 82 152-122 126-176-32-189-72l-5-15-5 15c-13 40-67 198-189 72-65-66-35-132 82-152-67 12-142-7-162-80C20 216 10 86 10 69c0-88 78-61 126-25z"/></svg>
+        Follow @africaelects.bsky.social</a>
+    </aside>
+  </div>
+
+  <!-- ===== Latest analysis (WordPress posts) ===== -->
+  <section class="eeh-plain eeh-wide" id="eeh-posts-panel" hidden>
+    <a class="eeh-head" href="https://africaelects.com/articles/"><span class="t">Latest Analysis</span><span class="m">All articles →</span></a>
+    <div class="eeh-posts" id="eeh-posts"></div>
+  </section>
+
+  <!-- ===== Party database | countries ===== -->
+  <div class="eeh-row top">
+    <section class="eeh-plain">
+      <a class="eeh-head" href="__PARTY_DB_URL__"><span class="t">Party Database</span><span class="m">Full database →</span></a>
+      <div class="eeh-stats" id="eeh-db-stats"></div>
+      <input class="eeh-find" id="eeh-db-find" type="search" placeholder="Search parties by name or abbreviation…" aria-label="Search the party database">
+      <p class="eeh-h" id="eeh-db-h">Members of international party federations</p>
+      <ul class="eeh-db-list" id="eeh-db-list"><li class="eeh-status">Loading the party database…</li></ul>
+      <div id="eeh-db-eu" style="margin-top:14px"></div>
+    </section>
+    <aside class="eeh-plain">
+      <div class="eeh-head"><span class="t">Countries</span></div>
+      <input class="eeh-find" id="eeh-find" type="search" placeholder="Find a country…" aria-label="Find a country">
+      <ul class="eeh-countries" id="eeh-countries"></ul>
+    </aside>
+  </div>
+
+  <p class="eeh-sub" style="margin-top:26px;text-align:center">Found a mistake or a missing election? Write to <a href="mailto:contact@europeelects.eu" style="color:#0B6B2E;font-weight:700">contact@europeelects.eu</a>.</p>
+
+</div>
+
+<script async src="https://cdn.jsdelivr.net/npm/bsky-embed/dist/bsky-embed.es.js" type="module"></script>
+<script>
+(function () {
+/* ================= Settings ================= */
+// Electoral calendar: data.json of the African calendar (built from the calendar Sheet by its GitHub Action).
+const CALENDAR_DATA = 'https://europe-elects.github.io/african-calendar/data.json';
+const CALENDAR_ROWS = 8;          // upcoming elections listed at first; "Show more" adds this many each time
+const RECENT_ROWS = 3;            // latest past elections with a result
+// Party database: the party sheet as published by the country pages' Action (African rows are picked by country code).
+const SHEETS_BASE = 'https://europe-elects.github.io/country-pages/sheets/';
+const PARTY_DB_URL = SHEETS_BASE + 'parties.csv';
+const PARTY_NEW_ROWS = 6;
+// Where a party in the list links to: the African Party Atlas, filtered to that party.
+const PARTY_URL = 'https://europe-elects.github.io/african-party-atlas/#q={q}&country={iso}';
+// Latest articles: WordPress REST API of the site (hidden if it can't be reached).
+const POSTS_API = 'https://africaelects.com/wp-json/wp/v2/posts?per_page=3&_embed=wp:term';
+// Country links. {iso} = ISO-2 code, {slug} = country name in lower case with dashes (e.g. south-africa).
+const COUNTRY_URL = 'https://africaelects.com/{slug}/';
+// Countries whose page address differs from their name (name in lower case with dashes → address).
+const COUNTRY_SLUGS = {};
+const COUNTRIES = [["Algeria", "DZ"], ["Angola", "AO"], ["Benin", "BJ"], ["Botswana", "BW"], ["Burkina Faso", "BF"], ["Burundi", "BI"], ["Cabo Verde", "CV"], ["Cameroon", "CM"], ["Central African Republic", "CF"], ["Chad", "TD"], ["Comoros", "KM"], ["Côte d'Ivoire", "CI"], ["Democratic Republic of the Congo", "CD"], ["Djibouti", "DJ"], ["Egypt", "EG"], ["Equatorial Guinea", "GQ"], ["Eritrea", "ER"], ["Eswatini", "SZ"], ["Ethiopia", "ET"], ["Gabon", "GA"], ["The Gambia", "GM"], ["Ghana", "GH"], ["Guinea", "GN"], ["Guinea-Bissau", "GW"], ["Kenya", "KE"], ["Lesotho", "LS"], ["Liberia", "LR"], ["Libya", "LY"], ["Madagascar", "MG"], ["Malawi", "MW"], ["Mali", "ML"], ["Mauritania", "MR"], ["Mauritius", "MU"], ["Morocco", "MA"], ["Mozambique", "MZ"], ["Namibia", "NA"], ["Niger", "NE"], ["Nigeria", "NG"], ["Republic of the Congo", "CG"], ["Rwanda", "RW"], ["Sahrawi Republic", "EH"], ["São Tomé and Príncipe", "ST"], ["Senegal", "SN"], ["Seychelles", "SC"], ["Sierra Leone", "SL"], ["Somalia", "SO"], ["South Africa", "ZA"], ["South Sudan", "SS"], ["Sudan", "SD"], ["Tanzania", "TZ"], ["Togo", "TG"], ["Tunisia", "TN"], ["Uganda", "UG"], ["Zambia", "ZM"], ["Zimbabwe", "ZW"]];
+const AFRICA = new Set(COUNTRIES.map((c) => c[1]).concat(['IC', 'EA', 'YT', 'RE', 'SH']));
+
+/* ================= Shared ================= */
+const root = document.getElementById('ee-home');
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+// Resize embedded frames (country pages and Datawrapper both send "datawrapper-height").
+window.addEventListener('message', (e) => {
+  const d = e.data && e.data['datawrapper-height']; if (!d) return;
+  document.querySelectorAll('iframe').forEach((f) => { if (f.contentWindow === e.source) for (const k in d) f.style.height = d[k] + 'px'; });
+});
+
+/* ================= Electoral calendar ================= */
+const KIND_COLORS = { parliament: '#0F7591', president: '#B35600', european: '#2A5DB0', regional: '#4E7A2A', local: '#A8459A', referendum: '#5B6170', other: '#8A9099' };
+const KIND_LABELS = { parliament: 'National parliament', president: 'Presidential', european: 'European', regional: 'Regional', local: 'Local', referendum: 'Referendum' };
+function kindOf(type) {
+  const t = String(type || '').toLowerCase();
+  if (/europ/.test(t)) return 'european';
+  if (/region|provinc|subnational|state (parliament|assembly|election)/.test(t)) return 'regional';
+  if (/referend/.test(t)) return 'referendum';
+  if (/local|municipal/.test(t)) return 'local';
+  if (/presiden|head of state/.test(t)) return 'president';
+  if (/parliament|legislat|national/.test(t)) return 'parliament';
+  return 'other';
+}
+function parseDate(raw) {
+  const t = String(raw || '').trim(); let m;
+  const mi = (w) => MON.indexOf(String(w).slice(0, 3).toLowerCase());
+  if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return { d: new Date(+m[1], +m[2] - 1, +m[3]), p: 'day' };
+  if ((m = t.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/))) return { d: new Date(+m[3], +m[2] - 1, +m[1]), p: 'day' };
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/)) && mi(m[1]) >= 0) return { d: new Date(+m[3], mi(m[1]), +m[2]), p: 'day' };
+  if ((m = t.match(/^(\d{1,2})\.?\s+([A-Za-z]+)\.?,?\s+(\d{4})$/)) && mi(m[2]) >= 0) return { d: new Date(+m[3], mi(m[2]), +m[1]), p: 'day' };
+  if ((m = t.match(/^([A-Za-z]+)\.?\s+(\d{4})$/)) && mi(m[1]) >= 0) return { d: new Date(+m[2], mi(m[1]) + 1, 0), p: 'month' };
+  if ((m = t.match(/^(\d{4})$/))) return { d: new Date(+m[1], 11, 31), p: 'year' };
+  return null;
+}
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  const head = (rows.shift() || []).map((h) => h.trim().toLowerCase());
+  return rows.filter((r) => r.some((x) => x.trim())).map((r) => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()])));
+}
+// One event per row of data.json: {c: country, t: type, p: [{d, l, ok}], s: [{n}], r: result}
+async function loadCalendar() {
+  const list = document.getElementById('eeh-cal');
+  try {
+    const res = await fetch(CALENDAR_DATA, { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const events = (await res.json()).events || [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const day = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+    const rows = events.map((e) => ({ e, d: day(e.p[0].d), last: day(e.p[e.p.length - 1].e || e.p[e.p.length - 1].d) }));
+    const upcoming = rows.filter((x) => x.last >= today && !/by-election/.test(x.e.t)).sort((a, b) => a.d - b.d);
+    const line = (x, past) => {
+      const e = x.e, kind = kindOf(e.t), col = KIND_COLORS[kind];
+      const confirmed = !e.p.some((p) => p.ok === 0), d = x.d;
+      const type = e.t.replace(/\s*\((bicameral|unicameral)\)/i, '').replace(/^head of state\/presidential/i, 'Presidential').replace(/^./, (c) => c.toUpperCase());
+      const specs = (e.s || []).map((z) => z.n), spec = specs.length > 2 ? `${specs.length} ${kind === 'regional' ? 'regions' : 'votes'}` : specs.join(', ');
+      const rounds = e.p.length > 1 ? e.p.map((p) => (p.l || '') + ' ' + day(p.d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })).join(' · ') : '';
+      const detail = past && e.r ? `${type} · <b>${esc(e.r)}</b>` : esc([type + (spec ? ` (${spec})` : ''), rounds, confirmed ? '' : 'date not confirmed'].filter(Boolean).join(' · '));
+      return `<li><span class="eeh-date${confirmed ? '' : ' tbc'}" style="background:${col};color:${col}" title="${confirmed ? 'Date confirmed' : 'Expected date, not confirmed'}"><b style="color:${confirmed ? '#fff' : col}">${d.getDate()}</b><small style="color:${confirmed ? '#fff' : col}">${esc(d.toLocaleDateString('en-GB', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2))}</small></span>
+        <span><span class="n">${esc(e.c)}</span><br><span class="d">${detail}</span></span></li>`;
+    };
+    let shown = CALENDAR_ROWS;
+    const render = () => {
+      const show = upcoming.slice(0, shown);
+      list.innerHTML = show.length ? show.map((x) => line(x)).join('') : '<li class="eeh-status" style="display:block">No upcoming elections listed.</li>';
+      const kinds = [...new Set(show.map((x) => kindOf(x.e.t)))].filter((k) => KIND_LABELS[k]);
+      document.getElementById('eeh-cal-key').innerHTML = kinds.map((k) => `<span><i style="background:${KIND_COLORS[k]}"></i>${KIND_LABELS[k]}</span>`).join('')
+        + '<span><i style="border:1.5px dashed #5f5e5a"></i>Expected date</span>';
+      const more = document.getElementById('eeh-cal-more');
+      more.hidden = shown >= upcoming.length;
+      more.textContent = `Show more elections (${upcoming.length - shown} more)`;
+    };
+    document.getElementById('eeh-cal-more').onclick = () => { shown += CALENDAR_ROWS; render(); };
+    render();
+    // Latest results (column "Result" of the calendar sheet)
+    const recent = rows.filter((x) => x.last < today && x.e.r).sort((a, b) => b.d - a.d).slice(0, RECENT_ROWS);
+    if (recent.length) {
+      const ul = document.getElementById('eeh-recent'); ul.innerHTML = recent.map((x) => line(x, true)).join('');
+      ul.hidden = false; document.getElementById('eeh-recent-h').hidden = false;
+    }
+  } catch (e) {
+    list.innerHTML = `<li class="eeh-status err" style="display:block">Couldn't load the calendar (${esc(e.message)}).</li>`;
+  }
+}
+
+/* ================= Party database ================= */
+// International party federations (column "International Party Federation"), coloured by political family.
+const FED_COLORS = { 'SI': '#E2001A', 'PA': '#FF6B6B', 'LI': '#FFD700', 'IDU': '#1F5FBF', 'CDI': '#3399FF', 'GG': '#009900' };
+const FED_NAMES = { 'SI': 'Socialist International', 'PA': 'Progressive Alliance', 'LI': 'Liberal International', 'IDU': 'International Democracy Union', 'CDI': 'Centrist Democrat International', 'GG': 'Global Greens' };
+const EUROPARTY_COLORS = { 'PES': '#FF0000', 'EPP': '#3399FF', 'EDP': '#fa8c00', 'ECPP': '#a16585', 'ELA': '#fb1d79', 'Volt': '#502379', 'ECL': '#7c0000', 'ESN': '#70463A', 'EGP': '#009900', 'PEL': '#990000', 'ALDE': '#FFD700', 'ECR': '#0000FF', 'PPEU': '#9c36b8', 'EFA': '#008080', 'Patriots.eu': '#000000', 'Animal Politics EU': '#009076' };
+const epName = (x) => String(x || '').replace(/Patriots\.eu/g, 'PfE');
+const textOn = (hex) => { const h = hex.replace('#', ''); const l = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.25 ? '#1A1D23' : '#FFFFFF'; };
+const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+async function loadPartyDb() {
+  const list = document.getElementById('eeh-db-list');
+  let rows = null;
+  for (const url of [PARTY_DB_URL]) {
+    try { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) continue; const t = parseCSV(await r.text()); if (t.length && 'europe elects entity id' in t[0]) { rows = t.filter((o) => AFRICA.has((o['iso-2'] || '').toUpperCase())); break; } } catch (e) { /* try the next source */ }
+  }
+  if (!rows) { list.innerHTML = '<li class="eeh-status err">Couldn\'t load the party database.</li>'; return; }
+  const year = (v) => { const m = String(v || '').match(/(\d{4})/); return m ? +m[1] : 0; };
+  // One row per party: the newest version (column "Latest" = Yes, else the highest version number).
+  const byId = {};
+  rows.forEach((o) => { const id = o['europe elects entity id']; if (!id) return;
+    const v = parseFloat(o['europe elects entity version']) || 0, cur = byId[id];
+    if (!cur || /^yes$/i.test(o['latest']) || (!/^yes$/i.test(cur.o['latest']) && v > cur.v)) byId[id] = { o, v }; });
+  const all = Object.values(byId).map(({ o }) => {
+    const eu = String(o['international party federation'] || '').split(/[|;,]/)[0].trim();
+    return { id: o['europe elects entity id'], iso: (o['iso-2'] || '').toUpperCase(), country: o['country'], native: o['name (native)'], english: o['name (english)'] || o['name (native)'],
+      abbr: o['abbreviation'], ideo: o['ideological orientation'], status: (o['status'] || '').toLowerCase(),
+      eu: /^(unaffiliated|none|)$/i.test(eu) ? '' : eu,
+      since: Math.max(year(o['political activity started']), year(o['legal entity registration'])),
+      seq: parseInt(String(o['europe elects entity id']).replace(/^\D+/, ''), 10) || 0,
+      key: fold([o['name (native)'], o['name (english)'], o['abbreviation']].join(' ')) };
+  });
+  const active = all.filter((p) => p.status === 'active');
+  const countries = new Set(active.map((p) => p.iso).filter(Boolean));
+  const members = active.filter((p) => p.eu);
+  const thisYear = new Date().getFullYear();
+  const fresh = active.filter((p) => p.since >= thisYear - 1);
+  document.getElementById('eeh-db-stats').innerHTML = [[active.length, 'active parties'], [countries.size, 'countries'], [members.length, 'in an international federation']]
+    .map(([n, l]) => `<div class="eeh-stat"><b>${n.toLocaleString('en-GB')}</b><span>${esc(l)}</span></div>`).join('');
+  document.getElementById('eeh-db-find').placeholder = `Search ${active.length.toLocaleString('en-GB')} parties by name or abbreviation…`;
+  const url = (p) => PARTY_URL.replace('{q}', encodeURIComponent(p.abbr || p.english || '')).replace('{iso}', encodeURIComponent(p.iso || ''));
+  const pill = (eu) => { if (!eu) return ''; const c = FED_COLORS[eu] || '#5B6170'; return `<span class="eeh-pill" title="${esc(FED_NAMES[eu] || eu)}" style="background:${c};color:${textOn(c)}">${esc(eu)}</span>`; };
+  const item = (p) => `<li><a href="${esc(url(p))}"><span class="iso" title="${esc(p.country)}">${esc(p.iso)}</span>
+    <span><span class="nm">${esc(p.english)}</span>${p.abbr ? ` <span class="ab">${esc(p.abbr)}</span>` : ''}
+    <span class="meta">${esc([p.native !== p.english ? p.native : '', p.ideo, p.since ? 'since ' + p.since : ''].filter(Boolean).join(' · '))}</span></span>${pill(p.eu)}</a></li>`;
+  // Default list: a different handful of federation members on every visit (founding dates are mostly not recorded yet).
+  const newest = [...members].sort(() => Math.random() - 0.5).slice(0, PARTY_NEW_ROWS);
+  const head = document.getElementById('eeh-db-h');
+  const showNewest = () => { head.textContent = 'Members of international party federations'; list.innerHTML = newest.map(item).join(''); };
+  showNewest();
+  document.getElementById('eeh-db-find').addEventListener('input', (e) => {
+    const q = fold(e.target.value.trim()); if (q.length < 2) return showNewest();
+    const hits = all.filter((p) => p.key.includes(q)).sort((a, b) => (fold(b.abbr) === q) - (fold(a.abbr) === q) || (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1) || a.english.localeCompare(b.english));
+    head.textContent = hits.length ? `${hits.length} ${hits.length === 1 ? 'party' : 'parties'} found` + (hits.length > 10 ? ' · showing 10' : '') : 'No party found';
+    list.innerHTML = hits.slice(0, 10).map(item).join('');
+  });
+  // Europarty membership among active parties
+  const cnt = {}; members.forEach((p) => { cnt[p.eu] = (cnt[p.eu] || 0) + 1; });
+  const eus = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
+  const euBox = document.getElementById('eeh-db-eu'); if (euBox && eus.length) euBox.innerHTML = `<p class="eeh-h" style="margin:0">International party federations in our database</p>
+    <div class="eeh-eubar" role="img" aria-label="${esc(eus.map(([k, n]) => `${FED_NAMES[k] || k} ${n}`).join(', '))}">${eus.map(([k, n]) => `<i title="${esc(FED_NAMES[k] || k)}: ${n}" style="width:${n / members.length * 100}%;background:${FED_COLORS[k] || '#5B6170'}"></i>`).join('')}</div>
+    <div class="eeh-eukey">${eus.map(([k, n]) => `<span title="${esc(FED_NAMES[k] || k)}"><i style="background:${FED_COLORS[k] || '#5B6170'}"></i>${esc(k)} <b>${n}</b></span>`).join('')}</div>`;
+}
+
+/* ================= Latest analysis ================= */
+async function loadPosts() {
+  try {
+    const res = await fetch(POSTS_API); if (!res.ok) return;
+    const posts = await res.json(); if (!Array.isArray(posts) || !posts.length) return;
+    const txt = (h) => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent.trim(); };
+    // No header photos: a typographic card with the country (from the title, else the first category).
+    const clean = (t) => t.replace(/\s+/g, ' ').replace(/([a-z0-9)])([A-Z][a-z])/g, '$1 $2').trim();
+    const byLen = [...COUNTRIES].sort((a, b) => b[0].length - a[0].length);
+    document.getElementById('eeh-posts').innerHTML = posts.map((p) => {
+      const title = txt(p.title && p.title.rendered);
+      const hit = byLen.find(([n]) => new RegExp('(^|[^\\p{L}])' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^\\p{L}])', 'u').test(title));
+      const cats = ((p._embedded && p._embedded['wp:term']) || []).flat().filter((t) => t && t.taxonomy === 'category' && !/uncategori[sz]ed/i.test(t.name));
+      const kicker = hit ? `<span class="iso">${esc(hit[1])}</span>${esc(hit[0])}` : (cats[0] ? esc(txt(cats[0].name)) : 'Analysis');
+      return `<a class="eeh-post" href="${esc(p.link)}"><span class="kk">${kicker}</span>
+        <h3>${esc(title)}</h3><p>${esc(clean(txt(p.excerpt && p.excerpt.rendered)))}</p>
+        <span class="dt">${esc(new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))} · Read →</span></a>`;
+    }).join('');
+    document.getElementById('eeh-posts-panel').hidden = false;
+  } catch (e) { /* section stays hidden */ }
+}
+
+/* ================= Countries ================= */
+function renderCountries() {
+  const ul = document.getElementById('eeh-countries');
+  const url = (name, iso) => { const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return COUNTRY_URL.replace('{iso}', iso).replace('{slug}', COUNTRY_SLUGS[slug] || slug); };
+  ul.innerHTML = COUNTRIES.map(([n, iso]) => `<li data-n="${esc(n.toLowerCase())}"><a href="${esc(url(n, iso))}"><span class="iso">${esc(iso)}</span>${esc(n)}</a></li>`).join('');
+  document.getElementById('eeh-find').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    ul.querySelectorAll('li').forEach((li) => { li.hidden = !!q && !li.dataset.n.includes(q); });
+  });
+}
+
+renderCountries();
+loadPosts();
+loadPartyDb();
+loadCalendar();
+})();
+</script>
