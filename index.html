@@ -1315,10 +1315,12 @@ function bindParl() {
 const EUROPARTY_TO_GROUP = { 'EPP': 'EPP', 'PES': 'S&D', 'ECR': 'ECR', 'ALDE': 'RE', 'EDP': 'RE', 'EGP': 'G/EFA', 'EFA': 'G/EFA', 'Volt': 'G/EFA', 'PPEU': 'G/EFA',
   'PEL': 'LEFT', 'ELA': 'LEFT', 'Patriots.eu': 'PfE', 'ESN': 'ESN', 'ECPP': 'ECR', 'Animal Politics EU': 'LEFT' };
 const groupLabel = (g2) => ({ 'Greens/EFA': 'G/EFA', 'Renew': 'RE' }[g2] || g2);
-// Chart label format: ABBR (EUROPARTY–EP GROUP). Outside the EU the group follows from the Europarty.
+// Chart label format: ABBR (EUROPARTY–EP GROUP). The group part is the party's actual EP group only: a party in a
+// Europarty but without MEPs / unaffiliated in the EP shows just the Europarty (e.g. Resni.ca (ESN), not ESN–ESN).
+// Outside the EU only the Europarty is shown.
 const partyTag = (europarty, epGroup) => {
   if (!IS_EU) return epName(europarty);
-  const grp = groupLabel(epGroup || EUROPARTY_TO_GROUP[europarty || ''] || '');
+  const grp = groupLabel(epGroup || '');
   const ep = epName(europarty);
   return ep && grp ? `${ep}–${grp}` : (ep || grp);
 };
@@ -1331,7 +1333,6 @@ const fullTag = (europarty, epGroup, p) => {
   if (!IS_EU) return eu;
   let grp = groupLabel(epGroup || '');
   if (grpI && groupLabel(grpI) !== grp) grp = grp ? `${grp}→${groupLabel(grpI)}` : `→${groupLabel(grpI)}`;
-  if (!grp) grp = groupLabel(EUROPARTY_TO_GROUP[europarty || ''] || '');
   return eu && grp ? `${eu}–${grp}` : (eu || grp);
 };
 const interestTag = (p) => (p && (p.euInterest || (IS_EU && p.epInterest)) ? 'y' : '');
