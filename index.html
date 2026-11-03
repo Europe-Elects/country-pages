@@ -540,7 +540,7 @@ function buildParties(rows, iso, cfg) {
     const epLink = gStarts(o, 'Documented Links');
     const intl = g(o, 'International Party Federation'), intlStart = g(o, 'International Affiliation Start'), intlEnd = g(o, 'International Affiliation End');
     const affs = [];
-    if (!isNone(europarty)) affs.push(['Europarty', epName(europarty) + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
+    if (!isNone(europarty)) affs.push([AFF_WORD(), epName(europarty) + (europartyEnd ? ` (until ${year(europartyEnd)})` : '')]);
     if (IS_EU && !isNone(epGroup)) affs.push(['EP group', epGroup]);
     if (IS_EU && !isNone(epLink)) affs.push(['EP group link', epLink]);
     // Secondary affiliations (related organisations), listed separately on the cards
@@ -1270,7 +1270,7 @@ function viewParliament(cfg, parties) {
     <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${segBg(sg)}"></div>`).join('')}</div>
     <div class="majline" aria-hidden="true"></div></div>
     <div class="keys" aria-live="polite"></div>
-    ${c.segs.some((sg) => sg.soft) ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot" style="background:${stripes('#8A9099')}"></span>Striped: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
+    ${c.segs.some((sg) => sg.soft) ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot" style="background:${stripes('#8A9099')}"></span>Striped: no ${AFF_WORD_L()}, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
     <div class="parl-hist" hidden>${c.elections.map((e, i) => { const tot = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0), maj = Math.floor(tot / 2) + 1;
       return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;background:${segBg(sg)}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
   }).join('');
@@ -1282,7 +1282,7 @@ function setParlYear(ci, i) {
   barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}${sg.tag ? ' (' + sg.tag + ')' : ''} – ${sg.title}: ${n}`; });
   const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, bg: segBg(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
   barEl.setAttribute('aria-label', `Seats ${e.label}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
-  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? ' · no Europarty (EP group or related organisation only)' : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
+  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? (' · no ' + AFF_WORD_L() + ' (EP group or related organisation only)') : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
   const majority = Math.floor(total / 2) + 1;
   el.querySelector('.parl-seats').textContent = total;
   el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
@@ -1575,7 +1575,7 @@ function viewPolling(cfg, poll) {
     const byKey = Object.fromEntries(POLL.series.map((sr) => [sr.key, sr]));
     const chipHtml = (sr) => {
       const gi = POLL.groups.findIndex((g0) => g0.alliance === sr.key);
-      if (gi < 0) return `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr) + (sr.soft ? ' · no Europarty (EP group or related organisation only)' : ''))}"><span class="dot" style="background:${sr.soft ? stripes(sr.color) : sr.color}"></span>${esc(sr.abbr)}</button>`;
+      if (gi < 0) return `<button type="button" class="pchip poll-chip" data-k="${esc(sr.key)}" aria-pressed="${!POLL.hidden.has(sr.key)}" title="${esc(sr.name + interestTitle(sr) + (sr.soft ? (' · no ' + AFF_WORD_L() + ' (EP group or related organisation only)') : ''))}"><span class="dot" style="background:${sr.soft ? stripes(sr.color) : sr.color}"></span>${esc(sr.abbr)}</button>`;
       // Alliance vs its member parties: one toggle, never both at once (click the active side to hide all).
       const g0 = POLL.groups[gi], mem = g0.members.map((k) => byKey[k]);
       return `<span class="pseg" role="group" aria-label="${esc(sr.abbr)}: alliance or member parties">`
@@ -1589,7 +1589,7 @@ function viewPolling(cfg, poll) {
         <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map(chipHtml).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
-      ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no Europarty, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
+      ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no ${AFF_WORD_L()}, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
       ${modeNote()}
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
       <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures, with each party’s margin of error (95%).' : ' The shaded band is the 95% uncertainty range of the average, based on how much the polls scatter around it.'} Larger dots are polls with larger samples. Margins of error cover random sampling only; real polling error, including differences between pollsters, is typically larger.${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
@@ -1756,10 +1756,10 @@ window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize =
 function viewAlliances(alliances) {
   if (!alliances.length) return '';
   return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
-    <article class="al" style="${a.soft ? `border-top:5px dashed ${a.color}` : `border-top-color:${a.color}`}" title="${esc(a.native)}${a.soft ? ` · no Europarty of its own; colour ${esc(a.softLabel)}` : ''}">
+    <article class="al" style="${a.soft ? `border-top:5px dashed ${a.color}` : `border-top-color:${a.color}`}" title="${esc(a.native)}${a.soft ? ` · no ${AFF_WORD_L()} of its own; colour ${esc(a.softLabel)}` : ''}">
       <div class="top" style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="abbr" style="font-size:22px">${esc(a.abbr)}</span><span class="yr">${a.since ? 'since ' + a.since : ''}</span></div>
       <div><h3 style="margin:0;font-size:16px;font-weight:700;line-height:1.25">${esc(a.english)}</h3><span class="muted" style="font-size:14px">${esc(a.native)}</span></div>
-      <div class="kv"><div><span>Europarty</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
+      <div class="kv"><div><span>${AFF_WORD()}</span><span>${esc(a.europartyLabel)}</span></div>${a.epGroup ? `<div><span>EP group</span><span>${esc(a.epGroup)}</span></div>` : ''}</div>
       ${a.types.length ? `<div class="tags">${a.types.map((t) => `<span class="tag type">${esc(t)}</span>`).join('')}</div>` : ''}
       <div class="members"><span class="mlabel">${a.members.length} member parties</span><div class="chips">${a.members.map((m) => `<span class="chip" title="${esc(m.english)}"><span class="dot" style="width:9px;height:9px;background:${m.color}"></span>${esc(m.abbr)}</span>`).join('')}</div></div>
     </article>`).join('')}</div><div id="al-more-wrap" hidden><button type="button" class="toggle" id="al-more" aria-expanded="false" aria-controls="al-grid"></button></div>`;
@@ -1804,7 +1804,7 @@ const nativeLine = (p) => (p.native && normKey(p.native) !== normKey(p.english)
 const tileEdge = (p) => { if (p.color !== NONE) return `border-top-color:${p.color}`; const so = softOf(p);
   if (!so) return `border-top-color:${p.color}`;
   return so.kind === 'group' ? `border-top:5px dashed ${so.color}` : so.kind === 'interest' ? `border-top:5px dotted ${so.color}` : `border-top:3px dashed ${so.color};padding-top:13px`; };
-const tileTitle = (p) => { const so = p.color === NONE ? softOf(p) : null; return esc(p.native) + (so ? ` · no Europarty; ${so.kind === 'interest' ? '' : 'related to '}${esc(so.label)}` : ''); };
+const tileTitle = (p) => { const so = p.color === NONE ? softOf(p) : null; return esc(p.native) + (so ? ` · no ${AFF_WORD_L()}; ${so.kind === 'interest' ? '' : 'related to '}${esc(so.label)}` : ''); };
 const barFill = (p) => { if (p.color !== NONE) return p.color; const so = softOf(p); return so ? stripes(so.color) : p.color; };
 // Secondary affiliations (PACE, CoR, CLRAE, Benelux, Nordic Council, international federation)
 const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
@@ -1842,9 +1842,9 @@ function viewParties(parties, cfg, activeOnly) {
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
   const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
     <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
-  return bar(hasSeats ? 'In national parliament' : 'Parties with European or international affiliations', `<span class="note">Top colour = Europarty${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+  return bar(hasSeats ? 'In national parliament' : (IS_EUROPE ? 'Parties with European or international affiliations' : 'Parties with international affiliations'), `<span class="note">Top colour = ${AFF_WORD_L()}${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
-    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : 'No European or international affiliation'} · hover for the native name</span>`) +
+    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : (IS_EUROPE ? 'No European or international affiliation' : 'No international affiliation')} · hover for the native name</span>`) +
     `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
 }
 function viewLegend(parties, showAll) {
@@ -1876,6 +1876,34 @@ if (VIEW) document.documentElement.classList.add('v-' + VIEW);
 // Outside the EU, parties are labelled and coloured strictly by Europarty; EP groups are not shown.
 const EU_MEMBERS = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'AX', 'EU'];
 let IS_EU = EU_MEMBERS.includes(ISO);
+// Countries outside Europe (Africa etc.): the affiliation in every section (tiles, polling, seats, alliances,
+// government) is the "International Party Federation" column instead of the Europarty; EP columns don't apply.
+const EUROPE = ['AL','AD','AM','AT','AZ','BY','BE','BA','BG','HR','CY','CZ','DK','EE','FO','FI','FR','GE','DE','GI','GR','GL','GG','HU','IS','IE','IM','IT','JE','XK','LV','LI','LT','LU','MT','MD','MC','ME','NL','MK','NO','PL','PT','RO','RU','SM','RS','SK','SI','ES','SE','CH','TR','UA','GB','VA','AX','EU','KZ','SJ'];
+let IS_EUROPE = EUROPE.includes(ISO);
+const AFF_WORD = () => (IS_EUROPE ? 'Europarty' : 'International federation');
+const AFF_WORD_L = () => (IS_EUROPE ? 'Europarty' : 'international party federation');
+// International party federations: short label used in the sheet → colour (same families as the Europarties).
+const FEDERATION_COLORS = { 'SI': '#E2001A', 'PA': '#FF6B6B', 'LI': '#FFD700', 'IDU': '#1F5FBF', 'CDI': '#3399FF', 'GG': '#009900',
+  'IMCWP': '#7c0000', 'PPI': '#9c36b8', 'PI': '#9c36b8', 'PftAIM': '#70463A' };
+const FEDERATION_ALIAS = { 'SOCIALIST INTERNATIONAL': 'SI', 'PROGRESSIVE ALLIANCE': 'PA', 'LIBERAL INTERNATIONAL': 'LI', 'INTERNATIONAL DEMOCRACY UNION': 'IDU',
+  'INTERNATIONAL DEMOCRAT UNION': 'IDU', 'CENTRIST DEMOCRAT INTERNATIONAL': 'CDI', 'GLOBAL GREENS': 'GG', 'PIRATE PARTIES INTERNATIONAL': 'PPI' };
+const fedKey = (v) => { const t = String(v || '').split(/[|;,]/)[0].trim(); return FEDERATION_ALIAS[t.toUpperCase()] || t; };
+// Rewrites the party/alliance rows so the Europarty columns hold the federation (first one listed, e.g. "SI; PA" → SI).
+function useFederations(rows) {
+  if (IS_EUROPE) return rows;
+  Object.assign(EUROPARTY_COLORS, FEDERATION_COLORS);
+  rows.forEach((o) => {
+    const fed = g(o, 'International Party Federation');
+    // all federations are listed on the cards ("SI; PA"); the first one sets the colour and the chart label
+    o[norm('Europarty Affiliation')] = fed && !isNone(fed) ? String(fed).split(/[|;,]/).map((x) => fedKey(x)).filter(Boolean).join('; ') : (fed || '');
+    o[norm('Europarty Start')] = g(o, 'International Affiliation Start');
+    o[norm('Europarty End')] = g(o, 'International Affiliation End');
+    o[norm('Europarty Interest to Join')] = '';
+    ['European Parliament Group', 'EP Group Start', 'EP Group End', 'EP Interest to Join', 'Orientation', 'PACE Group'].forEach((k) => { o[norm(k)] = ''; });
+    o[norm('International Party Federation')] = '';   // now shown as the main affiliation, not again as a secondary one
+  });
+  return rows;
+}
 const app = document.getElementById('app');
 let state = { activeOnly: true, showAllIdeo: false, allAlliances: false };
 
@@ -1897,12 +1925,13 @@ async function main() {
   try { partyRows = await loadWithFallback(SOURCES.parties); }
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
   allianceRows = await early.alliances;
+  useFederations(partyRows); useFederations(allianceRows);
   let calendarRows = await early.calendar, projectionRows = [], teamRows = [];
   let pollData = await early.polling;
   if (ISO === 'NEXT') {
     NEXT = await pickNext(calendarRows, partyRows);
     if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
-    ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
+    ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); IS_EUROPE = EUROPE.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
   }
   if (VIEW === 'polling') {
     if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
@@ -1971,7 +2000,7 @@ async function main() {
     app.innerHTML = viewHeader(cfg) + viewElections(cfg, elections) + viewParliament(cfg, current) + viewPolling(cfg, poll) + viewProjection(projection, cfg) +
       viewAlliances(alliances.filter((a) => !a.inactive)) + `<div id="parties" style="display:contents">${viewParties(parties, cfg, state.activeOnly)}</div>` + `<div id="legend" style="display:contents">${viewLegend(parties, state.showAllIdeo)}</div>` +
       `<footer>
-      <p>Party labels show Europarty, EP group, documented EP group links and international affiliations; the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
+      <p>${IS_EUROPE ? 'Party labels show Europarty, EP group, documented EP group links and international affiliations;' : 'Party labels and colours show the international party federation (column "International Party Federation");'} the EP seat projection assignment and orientation columns are not used.${merged.length ? ' Duplicate records merged: ' + esc(merged.join('; ')) + '.' : ''}<span id="logo-credit"></span></p>${team.length ? `<p class="team">This page is maintained by ${team.map((t) => `<strong>${esc(t.name)}</strong>${t.since ? ` <span class="muted">(since ${esc(t.since)})</span>` : ''}`).join(', ')}, Europe Elects.</p>` : ''}</footer>`;
     bindFilter(); bindLegend(); bindParl(); bindTimeline(); bindAlliances(); bindProjection(); drawProjection(); bindPolling(); drawPolling(); bindMode();
     mountContact(cfg);
     postHeight();
