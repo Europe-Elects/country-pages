@@ -594,7 +594,9 @@ function buildParties(rows, iso, cfg) {
   Object.values(groups).forEach((ps) => {
     if (ps.length < 2) return;
     ps.sort((a, b) => b.affs.length - a.affs.length);
-    ps.slice(1).forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
+    // Same name but a different abbreviation = a different party (e.g. CON and CON (NI)), not a duplicate.
+    ps.slice(1).filter((d) => !d.abbr || !ps[0].abbr || normKey(d.abbr) === normKey(ps[0].abbr))
+      .forEach((d) => { d.duplicateOf = ps[0]; merged.push(`${d.abbr} (${d.versionId}) into ${ps[0].versionId}`); });
   });
   list = list.filter((p) => !p.duplicateOf);
   const seatData = (cfg.seats && cfg.seats.parties) || {};
