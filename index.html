@@ -296,7 +296,9 @@ const TEAM_COLUMNS = { country: ['Area of Designated Responsibility', 'ISO-2', '
 const POLLING_YEARS = 10; // show at most this many years of polls
 // Alliances whose member parties keep their own lines (shown as a toggle: alliance | members), by Entity ID or abbreviation.
 // For every other alliance, member-party lines are cut while the alliance is polled.
-const ALLIANCE_TOGGLE = ['ALA001', 'CDU/CSU'];
+// A joint list from the ROPF file ("CFV+FA", by key or abbreviation) can be a toggle too: its members are the
+// lines named in its key (here the sub-alliances FA and Comp.–FV).
+const ALLIANCE_TOGGLE = ['ALA001', 'CDU/CSU', 'CFV+FA'];
 const POLL_MIN_SHOWN = 3;   // % threshold for parties starting switched on (see buildPolling)
 const POLL_SHOWN_YEARS = 5; // years: above the threshold this long in total, or the mean of the party's latest this-many years of polls
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
@@ -1448,7 +1450,8 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       const parts = String(pp.key).split(/[\/+–—-]/).filter(Boolean).map((x) => findParty([normKey(x)]));
       const part = parts.find(Boolean);
       if (part) { color = part.color; tag = partyTag(part.europartyShort, part.epGroup); }
-      if (parts.length > 1 && parts.every(Boolean)) { abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }  // e.g. VOLYA+KB
+      // e.g. VOLYA+KB. A joint list with its own line in the ROPF file keeps that line's •A abbreviation.
+      if (parts.length > 1 && parts.every(Boolean)) { if (!pp.abbr || pp.abbr === pp.key) abbr = parts.map((x) => x.abbr).join('+'); joint = [...new Set(parts)]; }
     }
     const curve = (pp.curve || []).map((seg) => seg.map(([d, v, e]) => ({ t: new Date(d), v, e: e == null ? null : +e })).filter((q) => q.t >= from)).filter((seg) => seg.length);
     const history = m ? m.history : (al && al.history ? al.history : null);
@@ -1529,10 +1532,20 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
   // Shown as one toggle in the legend: [CDU/CSU | CDU + CSU].
   const groups = [];
   series.forEach((al) => {
-    if (!al.alliance || !isToggle(al.alliance)) return;
-    const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
-    const members = series.filter((sr) => sr.party && memberParties.includes(sr.party) && !groups.some((g0) => g0.members.includes(sr.key))).map((sr) => sr.key);
-    if (members.length) groups.push({ alliance: al.key, members });
+    const taken = (sr) => groups.some((g0) => g0.members.includes(sr.key));
+    if (al.alliance && isToggle(al.alliance)) {
+      const memberParties = al.alliance.members.map((x) => x.party).filter(Boolean);
+      const members = series.filter((sr) => sr.party && memberParties.includes(sr.party) && !taken(sr)).map((sr) => sr.key);
+      if (members.length) groups.push({ alliance: al.key, members });
+    } else if (ALLIANCE_TOGGLE.includes(al.key) || ALLIANCE_TOGGLE.includes(al.abbr)) {
+      // Joint list → the lines named in its key, e.g. CFV+FA → FA and CFV (shown in the alliance's order: FA + Comp.–FV).
+      const parts = String(al.key).split('+');
+      const members = series.filter((sr) => sr.key !== al.key && parts.includes(sr.key) && !taken(sr)).map((sr) => sr.key);
+      const order = String(al.abbr || '').split('+').map(normKey);
+      const pos = (k) => { const sr = series.find((x) => x.key === k); const i = Math.max(order.indexOf(normKey(sr.key)), order.indexOf(normKey(sr.abbr))); return i < 0 ? 99 : i; };
+      members.sort((k1, k2) => pos(k1) - pos(k2));
+      if (members.length > 1) groups.push({ alliance: al.key, members });
+    }
   });
   groups.forEach((g0) => {
     if (!stale.includes(g0.alliance)) g0.members.forEach((mk) => { if (!stale.includes(mk)) stale.push(mk); });  // default: the alliance
