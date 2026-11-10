@@ -1429,9 +1429,12 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const keys = names(pp);
     let joint = null;  // joint list not in the alliance sheet ("DK+MSZP+P"): its member parties
     let color = NONE, tag = '', abbr = latinAbbr(pp.abbr || pp.key, pp.roman), name = pp.english || pp.native || pp.key;
-    const byId = pp.id ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
-    const m = byId || findParty(keys) || findLoose(pp);
-    const al = m ? null : ((pp.id && (alliances || []).find((x) => x.entityId === pp.id)) || findAlliance(keys));
+    // A line linked to an alliance (•I: ALA…) is always that alliance: no name matching against single parties,
+    // and its abbreviation comes from the alliance sheet (Abbreviation column), not from the ROPF file.
+    const alById = pp.id ? (alliances || []).find((x) => x.entityId === pp.id) : null;
+    const byId = pp.id && !alById ? (parties.find((x) => x.entityId === pp.id && x.latest !== false) || parties.find((x) => x.entityId === pp.id)) : null;
+    const m = alById ? null : (byId || findParty(keys) || findLoose(pp));
+    const al = m ? null : (alById || findAlliance(keys));
     if (m) {
       color = m.color;  // polling lines follow the Europarty only (no EP-group fallback)
       // abbreviation strictly from the party database (most recent version)
