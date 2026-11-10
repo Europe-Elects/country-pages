@@ -104,11 +104,12 @@ def parse_ropf(text):
                 key = m.group(1)
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
                 abbr = attrs.pop('A', key)
-                # •EE: Europe Elects Entity ID of the party or alliance (e.g. •EE: PT283159). When given, the country
+                # •I: (also •EE: / •ID:) Europe Elects Entity ID of the party or alliance (e.g. •I: PT283159). When given, the country
                 # page matches the line to the party database by this ID instead of by name or abbreviation.
                 # The second column is the poll repository's own number, which can coincide with an unrelated
                 # Entity ID, so it is not passed on.
-                ee = attrs.pop('EE', '') or attrs.pop('ID', '')
+                ids = [attrs.pop(k, '') for k in ('I', 'EE', 'ID')]
+                ee = next((x for x in ids if x), '')
                 en = attrs.pop('EN', '')
                 roman = attrs.pop('R', '')  # romanised abbreviation (•R), used where the abbreviation is not in Latin script
                 native = next(iter(attrs.values()), '')
