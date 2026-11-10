@@ -507,6 +507,8 @@ async function loadSheet(src) {
 function boundDate(v, isEnd) {
   const t = String(v || '').trim(); if (!t) return isEnd ? Infinity : -Infinity;
   if (/^\d{4}$/.test(t)) return (isEnd ? new Date(+t, 11, 31) : new Date(+t, 0, 1)).getTime();
+  const dmy = t.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);  // the database writes DD-MM-YYYY (17-10-2023)
+  if (dmy && +dmy[2] >= 1 && +dmy[2] <= 12) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1]).getTime();
   const r = parseElectionDate(t); return r ? r.date.getTime() : (isEnd ? Infinity : -Infinity);
 }
 function affiliationHistory(versions) {
@@ -515,10 +517,17 @@ function affiliationHistory(versions) {
     const a = v.aff || {};
     const epVal = isNone(a.ep) ? null : a.ep.split(/[|;,]/)[0].trim();
     if (epVal || a.epS || a.epE) ep.push({ a: boundDate(a.epS), b: boundDate(a.epE, true), v: epVal, ver: v.version });
-    const gVal = isNone(a.grp) || /^NI$/i.test(String(a.grp).trim()) ? null : a.grp.split(/[;,]/)[0].trim();
+    // NI (non-attached) is kept as a group of its own: grey, but a solid line of regular thickness.
+    const gVal = isNone(a.grp) ? null : /^NI$/i.test(String(a.grp).trim()) ? 'NI' : a.grp.split(/[;,]/)[0].trim();
     if (gVal || a.grpS || a.grpE) grp.push({ a: boundDate(a.grpS), b: boundDate(a.grpE, true), v: gVal, ver: v.version });
   });
   return { ep, grp };
+}
+// EP group in force at time t (null if none on record).
+function groupAt(history, t) {
+  if (!history || !history.grp) return null;
+  const hit = history.grp.filter((i) => t >= i.a && t <= i.b).sort((p1, p2) => (p1.a - p2.a) || (p1.ver - p2.ver));
+  return hit.length ? hit[hit.length - 1].v : null;
 }
 function colourAt(history, t, fallback) {
   if (!history) return fallback;
@@ -1405,7 +1414,7 @@ const nameVariants = (p) => [p.abbr, ...(p.abbrs || []), p.native, p.english].fi
   .flatMap((n) => [n, ...String(n).split(/\s+\/\s+|\/(?=\S)/)]).map((n) => n.trim()).filter(Boolean);
 function buildPolling(data, parties, calendarRows, countryName, alliances) {
   if (!data || !data.parties || !data.polls || !data.polls.length) return null;
-  const names = (pp) => [pp.key, pp.abbr, pp.native, pp.english].filter(Boolean).map(normKey);
+  const names = (pp) => [pp.key, pp.abbr, pp.roman, pp.native, pp.english].filter(Boolean).map(normKey);  // •R romanised abbreviation too (ΑΚΕΛ → AKEL)
   const findParty = (keys) => parties.find((x) => x.latest !== false && nameVariants(x).some((n) => keys.includes(normKey(n))))
     || parties.find((x) => nameVariants(x).some((n) => keys.includes(normKey(n))));
   // Looser name key: drops articles and generic words like "Erakond"/"Party", so "Parempoolsed" = "Erakond Parempoolsed".
@@ -1454,16 +1463,19 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const curGrpCol = m && IS_EU && !m.europartyShort ? EUROPARTY_COLORS[GROUP_TO_EUROPARTY[String(m.epGroup || '').split(/[|;,]/)[0].trim()]] || '' : '';
     const grpAt = (t) => (grpHist && grpHist.grp.length ? colourAt(grpHist, t, NONE) : (curGrpCol || NONE));
     const ori = m && !m.europartyShort && !curGrpCol ? softAffiliation(m.orientation) : null;
-    const softAt = (t) => { const c = grpAt(t); return c !== NONE ? c : ori ? ori.color : NONE; };
+    // Sitting as NI (non-attached) at time t, without a Europarty: grey, solid, regular thickness.
+    const curNI = !!(m && IS_EU && /^NI$/i.test(String(m.epGroup || '').split(/[|;,]/)[0].trim()));
+    const niAt = (t) => IS_EU && baseAt(t) === NONE && !thinAt(t) && (grpHist && grpHist.grp.length ? groupAt(grpHist, t) === 'NI' : curNI);
+    const softAt = (t) => { if (niAt(t)) return NONE; const c = grpAt(t); return c !== NONE ? c : ori ? ori.color : NONE; };
     const dashAt = (t) => !thinAt(t) && baseAt(t) === NONE && softAt(t) !== NONE;
     if (ori && !tag) tag = ori.label;
     if (iCol && color === NONE) color = iCol;
-    else if (color === NONE && (curGrpCol || ori)) color = curGrpCol || ori.color;
+    else if (color === NONE && !curNI && (curGrpCol || ori)) color = curGrpCol || ori.color;
     abbr = toLatin(abbr, pp.roman);
     const alSoft = !!(al && al.soft && !m);
     if (alSoft && !tag) tag = al.softLabel;
     return { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
-      soft: alSoft || (!!(curGrpCol || ori) && !iCol), colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
+      soft: alSoft || (!!(curGrpCol || ori) && !iCol), niAt, colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
   const polls = data.polls.map((p) => ({ t: new Date(p.d), pf: p.pf, n: p.n || null, v: { ...p.v } })).filter((p) => p.t >= from);
@@ -1675,9 +1687,9 @@ function drawPolling() {
     if (pts.length < 2) return;
     // split the line where the party's affiliation (and so its colour) changed
     const runs = []; let run = null;
-    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()), th = sr.thinAt(q.t.getTime()), da = sr.dashAt(q.t.getTime()); if (!run || run.c !== c || run.th !== th || run.da !== da) { if (run) run.pts.push(q); run = { c, th, da, pts: [q] }; runs.push(run); } else run.pts.push(q); });
+    pts.forEach((q) => { const c = sr.colorAt(q.t.getTime()), th = sr.thinAt(q.t.getTime()), da = sr.dashAt(q.t.getTime()), ni = !!(sr.niAt && sr.niAt(q.t.getTime())); if (!run || run.c !== c || run.th !== th || run.da !== da || run.ni !== ni) { if (run) run.pts.push(q); run = { c, th, da, ni, pts: [q] }; runs.push(run); } else run.pts.push(q); });
     runs.forEach((rn) => { if (rn.pts.length < 2) return;
-      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${rn.c === NONE || rn.th ? 1.4 : 2}"${rn.da ? ' stroke-dasharray="6 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`; });
+      svg += `<path class="pl" data-k="${esc(sr.key)}" d="${smoothPath(rn.pts.map((q) => [x(q.t.getTime()), y(q.v)]))}" fill="none" stroke="${rn.c}" stroke-width="${(rn.c === NONE && !rn.ni) || rn.th ? 1.4 : 2}"${rn.da ? ' stroke-dasharray="6 4"' : ''} stroke-linejoin="round" stroke-linecap="round"/>`; });
   }));
   svg += '</g>';
   const valueAt = (sr, t) => { for (const seg of sr.curve) { if (t < seg[0].t.getTime() - 5 * 864e5 || t > seg[seg.length - 1].t.getTime() + 5 * 864e5) continue;
