@@ -1473,7 +1473,10 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     const grpAt = (t) => (grpHist && grpHist.grp.length ? colourAt(grpHist, t, NONE) : (curGrpCol || NONE));
     const ori = m && !m.europartyShort && !curGrpCol ? softAffiliation(m.orientation) : null;
     // Sitting as NI (non-attached) at time t, without a Europarty: grey, solid, regular thickness.
-    const curNI = !!(m && IS_EU && /^NI$/i.test(String(m.epGroup || '').split(/[|;,]/)[0].trim()));
+    const isNIgrp = (gp) => /^NI$/i.test(String(gp || '').split(/[|;,]/)[0].trim());
+    // An alliance without a Europarty is NI when the sheet says so (EP group column) or its lead member party sits as NI.
+    const alLead = al && !m ? (al.members || []).map((x) => x.party).find(Boolean) : null;
+    const curNI = !!(IS_EU && (m ? isNIgrp(m.epGroup) : al && memberColor === NONE && (isNIgrp(al.epGroup) || (alLead && isNIgrp(alLead.epGroup)))));
     const niAt = (t) => IS_EU && baseAt(t) === NONE && !thinAt(t) && (grpHist && grpHist.grp.length ? groupAt(grpHist, t) === 'NI' : curNI);
     const softAt = (t) => { if (niAt(t)) return NONE; const c = grpAt(t); return c !== NONE ? c : ori ? ori.color : NONE; };
     const dashAt = (t) => !thinAt(t) && baseAt(t) === NONE && softAt(t) !== NONE;
