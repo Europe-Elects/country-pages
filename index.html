@@ -298,10 +298,11 @@ const POLLING_YEARS = 10; // show at most this many years of polls
 // For every other alliance, member-party lines are cut while the alliance is polled.
 // A joint list from the ROPF file ("CFV+FA", by key or abbreviation) can be a toggle too: its members are the
 // lines named in its key (here the sub-alliances FA and Comp.–FV).
-const ALLIANCE_TOGGLE = ['ALA001', 'CDU/CSU', 'CFV+FA', 'PLAID+SNP'];
+const ALLIANCE_TOGGLE = ['ALA001', 'CDU/CSU', 'CFV+FA', 'PLAID+SNP', 'KÚ+S+ZĽ'];
 // Joint lists whose member lines are not named in their key: key or abbreviation -> member lines (key or
 // abbreviation), in the order shown in the legend. E.g. PLAID+SNP -> SNP and PC: [PLAID+SNP | SNP + PC].
-const TOGGLE_MEMBERS = { 'PLAID+SNP': ['SNP', 'PC'] };
+// One member is allowed: an alternative line-up polled as a scenario, e.g. Slovakia [S+KÚ+ZĽ | S+ZĽ].
+const TOGGLE_MEMBERS = { 'PLAID+SNP': ['SNP', 'PC'], 'KÚ+S+ZĽ': ['S+ZĽ'] };
 const POLL_MIN_SHOWN = 3;   // % threshold for parties starting switched on (see buildPolling)
 const POLL_SHOWN_YEARS = 5; // years: above the threshold this long in total, or the mean of the party's latest this-many years of polls
 // Countries that never show a polling average (neither the built-in chart nor a Datawrapper embed).
@@ -1548,7 +1549,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       // Joint list with listed members, e.g. PLAID+SNP → SNP and PC (in the listed order).
       const members = (TOGGLE_MEMBERS[al.key] || TOGGLE_MEMBERS[al.abbr]).map((n) => series.find((sr) => sr !== al && !taken(sr)
         && (normKey(sr.key) === normKey(n) || normKey(sr.abbr) === normKey(n)))).filter(Boolean).map((sr) => sr.key);
-      if (members.length > 1) groups.push({ alliance: al.key, members: [...new Set(members)] });
+      if (members.length) groups.push({ alliance: al.key, members: [...new Set(members)] });
     } else if (isListToggle(al)) {
       // Joint list → the lines named in its key, e.g. CFV+FA → FA and CFV (shown in the alliance's order: FA + Comp.–FV).
       const parts = String(al.key).split('+');
