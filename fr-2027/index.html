@@ -102,6 +102,51 @@ p{margin:.5em 0}
 .heat tr:hover td.g{color:var(--tagInk)}
 .heatwrap{overflow-x:auto;margin-top:10px}
 .gsel{margin:12px 0 4px}
+.muted{color:var(--muted)}
+.clist{padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:0 22px}
+.crow{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-bottom:1px solid var(--line2)}
+.more{border:1px solid #DAD7CE;background:#F3F1EB;border-radius:999px;padding:3px 10px;font:600 14px 'Advent Pro',system-ui,sans-serif;color:var(--tagInk);cursor:pointer}
+.cg{font-weight:700;font-size:15px;line-height:1.2;padding-left:10px;border-left:4px solid;padding-top:3px}
+.cg small{font-weight:500;color:var(--muted);font-size:13px;margin-left:6px}
+.ccs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cc{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #6B6E76;background:#fff;border-radius:999px;padding:3px 10px 3px 7px;font:600 15px 'Advent Pro',system-ui,sans-serif;color:var(--ink);cursor:pointer;line-height:1.15}
+.cc i{width:11px;height:11px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.25)}
+.cc em{font-style:normal;font-weight:500;color:var(--muted);font-size:13px}
+.cc.big{font-size:16.5px;font-weight:700}
+.cc.st-registered{border-style:solid;border-width:2px;border-color:#1A1D23}
+.cc.st-declared{border-style:dashed}
+.cc.st-potential{border-style:dotted;border-color:#8A8D95}
+.cc.st-withdrawn{border-style:dashed;border-color:#B5B2A9;color:#8A8D95;text-decoration:line-through;background:#F3F1EB}
+.cc.demo{cursor:default;padding:1px 9px}
+.cc[aria-expanded="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.cc[aria-expanded="true"] em{color:#D6DCE8}
+.subg{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px dashed #CFCCC3;border-radius:12px;padding:4px 6px}
+.subg>b{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.cdet{grid-column:1/-1;background:#F7F6F2;border-radius:8px;padding:10px 14px;font-size:15px}
+.cdet h4{margin:0 0 2px;font-size:18px}
+.cdet .aff{color:var(--muted);font-size:14px;margin-bottom:6px}
+.scx{margin:8px 0 0;font-size:14px;color:var(--muted)}
+.scx button{border:0;background:none;padding:0;font:600 14px 'Advent Pro',system-ui,sans-serif;color:var(--tagInk);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.scx button[aria-pressed="true"]{color:var(--ink);text-decoration:none}
+.mu{border-bottom:1px solid var(--line2)}
+.mu:last-child{border-bottom:0}
+.muh{display:grid;grid-template-columns:150px minmax(0,1fr) 150px;align-items:center;gap:10px;width:100%;border:0;background:none;padding:10px 4px;cursor:pointer;font:inherit;color:inherit;text-align:left;border-radius:8px}
+.muh:hover{background:#F7F6F2}
+.muh .n{font-weight:700;font-size:16px;line-height:1.15}
+.muh .n small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.muh .n.r{text-align:right}
+.dv{position:relative;height:26px;display:flex;border-radius:6px;overflow:hidden;background:#EFEDE7}
+.dv b{display:flex;align-items:center;font-size:14px;font-weight:700;color:#fff;padding:0 8px;white-space:nowrap}
+.dv b.R{justify-content:flex-end}
+.dv i{position:absolute;left:50%;top:-3px;bottom:-3px;border-left:2px dashed #fff;opacity:.9}
+.mmeta{grid-column:2/3;font-size:12.5px;color:var(--muted);text-align:center;margin-top:-4px}
+.mu.dated .muh{opacity:.55}
+.mubody{padding:4px 4px 14px}
+.ptable{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.ptable th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding:4px 6px}
+.ptable td{padding:4px 6px;border-bottom:1px solid var(--line2)}
+.ptable td.v{text-align:right;font-weight:600}
+@media (max-width:620px){.muh{grid-template-columns:1fr 1fr}.muh .dv{grid-column:1/-1;order:3}.mmeta{grid-column:1/-1;order:4}}
 </style>
 </head>
 <body>
@@ -122,14 +167,32 @@ p{margin:.5em 0}
   </div>
 </details>
 
+<div class="bar"><h2>Pre-election polling averages</h2></div>
+<div id="polls" class="card pollcard"><p class="empty">Loading polling averages…</p></div>
+<div class="bar"><h2>Second-round polling</h2></div>
+<div class="card pollcard">
+  <p class="psub" style="margin-top:0">Head-to-head polls against the Rassemblement National candidate. Bars show each matchup’s polling average (smoothed like the first-round average) at its latest poll. Click a matchup for its polls over time.</p>
+  <div class="seg" id="ro-range" role="group" aria-label="Period" style="margin-bottom:8px"></div>
+  <div class="chart" id="runoff-chart"></div>
+  <p class="note" style="margin-bottom:12px">Lines: each challenger’s polling average against Le Pen, as a share of the two-candidate vote (Le Pen’s share is the rest up to 100%). Above 50% = ahead of Le Pen. Shaded bands: spread of the polls. Click a name to show or hide it.</p>
+  <div class="chips" id="runoff-chips"></div>
+  <div id="runoff"></div>
+  <details class="faq" id="runoff-old-box"><summary>Matchups with Jordan Bardella (no longer the RN candidate)</summary>
+    <p class="note">Bardella was polled as the likely RN candidate in 2025 and 2026, when it appeared that Marine Le Pen’s legal problems would prevent her from running.</p>
+    <div id="runoff-old"></div></details>
+</div>
+
 <div class="bar"><h2>Possible candidates</h2></div>
 <div class="ctl">
   <label for="genderFilter">Gender</label>
   <select id="genderFilter"><option value="all">All candidates</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select>
   <label for="statusFilter">Status</label>
   <select id="statusFilter"><option value="all">All statuses</option><option value="declared">Declared candidates</option><option value="potential">Potential candidates</option><option value="registered">Registered candidates</option><option value="withdrawn">Withdrawn candidates</option></select>
+  <span id="ccount" class="muted"></span>
+  <div class="seg" id="cand-view" role="group" aria-label="View" style="margin-left:auto"><button type="button" data-v="bubbles" aria-pressed="true">Bubbles</button><button type="button" data-v="list" aria-pressed="false">List</button></div>
 </div>
-<div class="card" style="padding:10px">
+<div id="clist" class="card clist" hidden></div>
+<div class="card" id="bubblecard" style="padding:10px">
   <div id="wrap" style="position:relative;width:100%;">
     <svg id="svg" style="width:100%;display:block;"></svg>
     <div id="tip" class="tip" style="max-width:250px">
@@ -141,16 +204,9 @@ p{margin:.5em 0}
 </div>
 <div class="legend">
   <span style="font-weight:600;color:var(--ink)">Candidacy status</span>
-  <span><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:-4px"><circle cx="9" cy="9" r="7" fill="none" stroke="#000" stroke-width="1.6" stroke-dasharray="5,3"/></svg> Declared</span>
-  <span><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:-4px"><circle cx="9" cy="9" r="7" fill="none" stroke="#000" stroke-width="1.6" stroke-dasharray="1,3"/></svg> Potential</span>
-  <span><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:-4px"><circle cx="9" cy="9" r="7" fill="none" stroke="#000" stroke-width="1.6"/></svg> Registered</span>
-  <span><svg width="18" height="18" viewBox="0 0 18 18" style="vertical-align:-4px"><defs><pattern id="legend-hatch-withdrawn" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#B0B0B0"/><path d="M0,0 H4 M0,0 V4" stroke="#000" stroke-width="0.7"/></pattern></defs><circle cx="9" cy="9" r="7" fill="url(#legend-hatch-withdrawn)" stroke="#000" stroke-width="1.6" stroke-dasharray="5,3"/></svg> Withdrawn</span>
-  <span>· Hover or tap a candidate for more information.</span>
+  <span class="cc st-registered demo">Registered</span><span class="cc st-declared demo">Declared</span><span class="cc st-potential demo">Potential</span><span class="cc st-withdrawn demo">Withdrawn</span>
+  <span>· Click a candidate for details.</span>
 </div>
-
-<div class="bar"><h2>Pre-election polling averages</h2></div>
-<div id="polls" class="card pollcard"><p class="empty">Loading polling averages…</p></div>
-<div><a class="btn" href="https://bsky.app/profile/europeelects.bsky.social" target="_blank" rel="noopener">View all run-off polls on Bluesky →</a></div>
 
 <div class="bar"><h2>Exit polls</h2></div>
 <details class="faq">
@@ -473,6 +529,17 @@ const CAND = {
   kazib:        ['Kazib', 'RP', '', '#7C0000'],
   asselineau:   ['Asselineau', 'UPR', '', '#999999'],
   philippot:    ['Philippot', 'LP', '', '#777777'],
+  knafo:        ['Knafo', 'REC', 'ESN', '#9A6B5E'],
+  lemaire:      ['Le Maire', 'RE', 'RE', '#F2C94C'],
+  poutou:       ['Poutou', 'NPA', '', '#7C0000'],
+  wauquiez:     ['Wauquiez', 'LR', 'EPP', '#5AA5F0'],
+  faure:        ['Faure', 'PS', 'S&D', '#FF7A7A'],
+  jadot:        ['Jadot', 'LÉ', 'G/EFA', '#4CAF50'],
+  polony:       ['Polony', '', '', '#8C8C8C'],
+  lagarde:      ['Lagarde', '', 'EPP', '#7FB8F0'],
+  riner:        ['Riner', '', '', '#8C8C8C'],
+  lassalle:     ['Lassalle', 'RES', '', '#A0A0A0'],
+  cazeneuve:    ['Cazeneuve', 'CONV', '', '#E05A5A'],
 };
 const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 function candOf(col){
@@ -480,7 +547,13 @@ function candOf(col){
   if (c) return { key: k, name: c[0], party: c[1], ep: c[2], color: c[3] };
   return { key: k, name: String(col).toLowerCase().replace(/(^|[\s-])\S/g, (m) => m.toUpperCase()), party: '', ep: '', color: '#9A9A9A' };
 }
-const candTag = (c) => c.party ? `${c.party}${c.ep ? '–' + c.ep : ''}` : '';
+// National party → [Europarty, EP group]; '*' = none. Shown as e.g. RN (PfE–PfE), LFI (ELA–LEFT), HOR (*–RE).
+const PARTY_AFF = {
+  RN: ['PfE', 'PfE'], LFI: ['ELA', 'LEFT'], PCF: ['PEL', 'LEFT'], 'LÉ': ['EGP', 'G/EFA'], PS: ['PES', 'S&D'], PP: ['*', 'S&D'],
+  HOR: ['*', 'RE'], RE: ['*', 'RE'], LR: ['EPP', 'EPP'], REC: ['ESN', 'ESN'], DLF: ['*', 'ECR'], UDB: ['EFA', 'G/EFA'], GRS: ['PEL', 'LEFT'],
+};
+const affTag = (party) => { const a = PARTY_AFF[party] || ['*', '*']; return `${party} (${a[0]}–${a[1]})`; };
+const candTag = (c) => c.party ? affTag(c.party) : '';
 const candLabel = (c) => c.party ? `${c.name} (${candTag(c)})` : c.name;
 function scenarioInfo(tab){
   const parts = tab.replace(/^R_/i, '').split('_').filter(Boolean);
@@ -532,32 +605,37 @@ function parseTab(tab){
 }
 const valueAt = (line, t) => { if (!line.length) return null; const i = d3.bisector((p) => p.t).center(line, t); return line[i]; };
 
-let SCEN = [], UPDATED = '', CUR = 0, HIDDEN = new Set(), HL = null;
+let SCEN = [], UPDATED = '', CUR = 0, HL = null, RANGE = 365;  // RANGE: days shown (last year / month / week)
+const OVR = new Map();  // candidate key → true (shown) / false (hidden), set by clicking a name
+const isHidden = (s) => OVR.has(s.c.key) ? !OVR.get(s.c.key) : s.minor;
 function renderPolls(){
   const box = document.getElementById('polls');
   if (!SCEN.length) return;
   const sc = SCEN[CUR];
-  box.innerHTML = (SCEN.length > 1 ? `<div class="seg" id="scen-seg" role="group" aria-label="Candidate scenario">${SCEN.map((s, i) =>
-      `<button type="button" data-i="${i}" aria-pressed="${i === CUR}">${esc(s.short)}</button>`).join('')}</div>` : '')
-    + `<p class="ptitle">${esc(sc.title)}</p><p class="psub">Polling average for this candidate scenario${UPDATED ? ' · updated ' + esc(UPDATED) : ''}</p>`
-    + `<div class="pgrid"><div><div class="chart" id="pchart"></div><div class="chips" id="pchips"></div></div><div class="rank" id="prank"></div></div>`
-    + `<p class="note">Lines: LOESS-smoothed average of our dataset of presidential polls for this scenario. Dots: single polls. Click a name to hide or show it; hover the chart for exact values.</p>`;
-  box.querySelectorAll('#scen-seg button').forEach((b) => b.addEventListener('click', () => { CUR = +b.dataset.i; HL = null; renderPolls(); postHeight(); }));
+  const mainS = SCEN.map((x, i) => [x, i]).filter(([x]) => x.main !== false), otherS = SCEN.map((x, i) => [x, i]).filter(([x]) => x.main === false);
+  box.innerHTML = (mainS.length > 1 || otherS.length ? `<div class="seg" id="scen-seg" role="group" aria-label="Candidate scenario">${mainS.map(([x, i]) =>
+      `<button type="button" data-i="${i}" aria-pressed="${i === CUR}">${esc(x.short)}</button>`).join('')}</div>` : '')
+    + (otherS.length ? `<p class="scx">Earlier scenario${otherS.length > 1 ? 's' : ''} without Le Pen: ${otherS.map(([x, i]) => `<button type="button" data-i="${i}" aria-pressed="${i === CUR}">${esc(x.short)}</button>`).join(' · ')}</p>` : '')
+    + `<p class="ptitle">${esc(sc.title)}</p><p class="psub">Polling average for this candidate scenario · ${sc.n} poll questions${UPDATED ? ' · ' + esc(UPDATED) : ''}</p>`
+    + `<div class="pgrid"><div><div class="seg" id="range-seg" role="group" aria-label="Period" style="margin-bottom:8px">${[[365, 'Last year'], [31, 'Last month'], [7, 'Last week']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RANGE === d}">${l}</button>`).join('')}</div><div class="chart" id="pchart"></div><div class="chips" id="pchips"></div></div><div class="rank" id="prank"></div></div>`
+    + `<p class="note">Lines: smoothed average (tricube-weighted, LOESS-type) of the published first-round polls that test this candidate line-up, over up to the last 12 months. Dots: single polls. Candidates below 5% are switched off by default: click a name to show or hide it. Shaded bands: how much the polls behind the average disagree (± one standard deviation). Hover the chart for exact values.</p>`;
+  box.querySelectorAll('#range-seg button').forEach((b) => b.addEventListener('click', () => { RANGE = +b.dataset.d; renderPolls(); postHeight(); }));
+  box.querySelectorAll('#scen-seg button, .scx button').forEach((b) => b.addEventListener('click', () => { CUR = +b.dataset.i; HL = null; renderPolls(); postHeight(); }));
   // Chips
   const chips = document.getElementById('pchips');
-  chips.innerHTML = sc.series.map((s) => `<button type="button" class="chip" data-k="${s.c.key}" aria-pressed="${!HIDDEN.has(s.c.key)}"><i style="background:${s.c.color}"></i>${esc(s.c.name)}</button>`).join('');
+  chips.innerHTML = sc.series.map((s) => `<button type="button" class="chip" data-k="${s.c.key}" aria-pressed="${!isHidden(s)}"><i style="background:${s.c.color}"></i>${esc(s.c.name)}</button>`).join('');
   chips.querySelectorAll('.chip').forEach((b) => {
-    b.addEventListener('click', () => { const k = b.dataset.k; HIDDEN.has(k) ? HIDDEN.delete(k) : HIDDEN.add(k); renderPolls(); });
+    b.addEventListener('click', () => { const sr = sc.series.find((x) => x.c.key === b.dataset.k); OVR.set(sr.c.key, isHidden(sr)); renderPolls(); });
     b.addEventListener('mouseenter', () => setHL(b.dataset.k)); b.addEventListener('mouseleave', () => setHL(null));
   });
   // Ranking
   const rank = document.getElementById('prank');
   const maxV = Math.max(...sc.series.map((s) => (s.last || {}).v || 0));
-  rank.innerHTML = '<h4>Latest average</h4>' + sc.series.filter((s) => s.last).map((s, i) => {
+  rank.innerHTML = '<h4>Latest average</h4>' + sc.series.filter((s) => s.last && s.recent).map((s, i) => {
     const prev = valueAt(s.line, new Date(+s.last.t - 30 * 864e5));
     const d = prev && +s.last.t - prev.t > 20 * 864e5 ? s.last.v - prev.v : null;
     const ch = d == null ? '' : Math.abs(d) < 0.25 ? '<span class="flat">● 0.0 in 30 days</span>' : d > 0 ? `<span class="up">▲ ${d.toFixed(1)} in 30 days</span>` : `<span class="down">▼ ${(-d).toFixed(1)} in 30 days</span>`;
-    return `<div class="rk${i === 2 ? ' cut' : ''}" data-k="${s.c.key}" style="${HIDDEN.has(s.c.key) ? 'opacity:.4' : ''}">
+    return `<div class="rk${i === 2 ? ' cut' : ''}" data-k="${s.c.key}" style="${isHidden(s) ? 'opacity:.45' : ''}">
       <div class="nm"><i style="width:10px;height:10px;border-radius:50%;background:${s.c.color};flex:none"></i>${esc(s.c.name)} <span class="p">${esc(candTag(s.c))}</span>${i < 2 ? ' <span class="ro">Run-off</span>' : ''}</div>
       <div class="val">${pct(s.last.v, 1)}</div>
       <div class="trk"><b style="width:${(s.last.v / maxV * 100).toFixed(1)}%;background:${s.c.color}"></b></div><div class="ch">${ch}</div></div>`;
@@ -573,18 +651,25 @@ function setHL(k){
 function drawScenario(el, sc){
   el.innerHTML = '';
   const W = el.clientWidth || 640, narrow = W < 520;
-  const m = { t: 14, r: narrow ? 36 : 46, b: 30, l: 34 }, H = narrow ? 320 : 400;
-  const vis = sc.series.filter((s) => !HIDDEN.has(s.c.key));
-  const all = sc.series.flatMap((s) => [...s.pts, ...s.line]);
-  const x = d3.scaleUtc().domain(d3.extent(all, (p) => p.t)).range([m.l, W - m.r]);
+  const m = { t: 14, r: narrow ? 44 : 54, b: 30, l: 34 }, H = narrow ? 320 : 400;
+  // Period filter: only the last RANGE days up to the latest poll of this scenario.
+  const tMax = d3.max(sc.series.flatMap((s) => s.pts), (p) => p.t), cut = new Date(+tMax - RANGE * 864e5);
+  const inR = (p) => p.t >= cut;
+  const vis = sc.series.filter((s) => !isHidden(s)).map((s) => ({ ...s, pts: s.pts.filter(inR), line: s.line.filter(inR), last: s.recent && s.last && s.last.t >= cut ? s.last : null })).filter((s) => s.pts.length || s.line.length);
+  const all = vis.flatMap((s) => [...s.pts, ...s.line]);
+  const x = d3.scaleUtc().domain([cut, tMax]).range([m.l, W - m.r]);
   const ymax = Math.max(10, Math.ceil((d3.max(vis.flatMap((s) => [...s.pts, ...s.line]), (p) => p.v) || 10) / 5) * 5 + (narrow ? 0 : 0));
   const y = d3.scaleLinear().domain([0, ymax]).range([H - m.b, m.t]);
   const s = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'Polling average: ' + sc.title);
   gridY(s, y, m.l, W - m.r, y.ticks(narrow ? 5 : 7));
-  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 7).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat('%-d %b')));
+  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 7).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(RANGE > 60 ? '%b %Y' : '%-d %b')));
   xa.selectAll('text').attr('font-size', 12).attr('fill', '#8A8D95').attr('font-family', FONT); xa.select('.domain').remove();
+  if (!vis.length) s.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H / 2).attr('text-anchor', 'middle').attr('fill', '#8A8D95').attr('font-size', 15).text('No polls for this scenario in this period.');
   vis.slice().reverse().forEach((sr) => {
     const g = s.append('g').attr('class', 'sr').attr('data-k', sr.c.key).style('transition', 'opacity .15s');
+    const band = sr.line.filter((p) => p.sd != null);
+    if (band.length > 1) g.append('path').datum(band).attr('fill', sr.c.color).attr('opacity', .13)
+      .attr('d', d3.area().x((p) => x(p.t)).y0((p) => y(Math.max(0, p.v - p.sd))).y1((p) => y(p.v + p.sd)).curve(d3.curveMonotoneX));
     g.selectAll('circle.pt').data(sr.pts).join('circle').attr('class', 'pt').attr('cx', (p) => x(p.t)).attr('cy', (p) => y(p.v)).attr('r', narrow ? 1.8 : 2.3).attr('fill', sr.c.color).attr('opacity', .28);
     if (sr.line.length > 1) {
       g.append('path').datum(sr.line).attr('fill', 'none').attr('stroke', '#fff').attr('stroke-width', 5).attr('stroke-linecap', 'round').attr('opacity', .8)
@@ -599,7 +684,7 @@ function drawScenario(el, sc){
   // Value labels at the line ends (spaced so they do not overlap).
   const labs = spread(vis.filter((sr) => sr.last).map((sr) => ({ sr, y: y(sr.last.v) })), 13, m.t, H - m.b);
   labs.forEach((l) => s.append('text').attr('class', 'lab').attr('x', W - m.r + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700)
-    .attr('fill', readable(l.sr.c.color)).text(Math.round(l.sr.last.v)));
+    .attr('fill', readable(l.sr.c.color)).text(Math.round(l.sr.last.v) + '%'));
   // Hover: values of the averages on the nearest day.
   const tt = chartTip(el), fmt = d3.utcFormat('%-d %B %Y');
   const guide = s.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', '#1B2A4A').attr('stroke-dasharray', '3,3').attr('opacity', 0);
@@ -618,18 +703,340 @@ function drawScenario(el, sc){
     .on('mouseleave touchend', () => { tt.hide(); guide.attr('opacity', 0); marks.selectAll('*').remove(); });
   if (HL) setHL(HL);
 }
+// First-round polls (one line per poll question/scenario): [pollster, fieldwork start, fieldwork end, sample, {candidate: %}].
+// Add new polls at the top. Candidate keys = surname without accents (see CAND).
+let POLLS1 = [
+  ["Cluster17","2026-11-09","2026-11-10",1242,{"arthaud":0.5,"melenchon":19.0,"roussel":1.5,"polony":3.0,"ruffin":2.0,"tondelier":1.0,"glucksmann":8.0,"attal":2.0,"riner":2.0,"philippe":8.0,"lagarde":8.0,"devillepin":1.0,"lisnard":8.0,"retailleau":5.0,"dupontaignan":2.0,"lepen":27.0,"asselineau":1.0,"zemmour":2.0}],
+  ["Cluster17","2026-11-09","2026-11-10",1242,{"arthaud":0.5,"melenchon":20.0,"roussel":2.0,"tondelier":1.5,"glucksmann":11.0,"philippe":13.5,"lisnard":10.0,"retailleau":5.0,"dupontaignan":3.0,"lepen":30.5,"zemmour":3.0}],
+  ["Cluster17","2026-11-09","2026-11-10",1242,{"arthaud":0.5,"melenchon":21.0,"roussel":3.0,"tondelier":1.5,"glucksmann":10.0,"lagarde":14.0,"lisnard":10.0,"retailleau":6.0,"dupontaignan":2.0,"lepen":30.5,"zemmour":3.0}],
+  ["Harris Interactive","2026-11-03","2026-11-05",2101,{"arthaud":1.0,"melenchon":19.0,"roussel":1.0,"tondelier":2.0,"glucksmann":11.0,"philippe":12.0,"devillepin":2.0,"lisnard":9.0,"retailleau":5.0,"dupontaignan":1.0,"lepen":34.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-11-03","2026-11-05",2101,{"arthaud":1.0,"melenchon":19.0,"roussel":1.0,"tondelier":2.0,"glucksmann":12.0,"attal":9.0,"devillepin":2.0,"lisnard":9.0,"retailleau":6.0,"dupontaignan":1.0,"lepen":35.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-11-03","2026-11-05",2101,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":2.0,"glucksmann":11.0,"attal":6.0,"philippe":11.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-11-03","2026-11-05",2101,{"arthaud":1.0,"melenchon":19.0,"roussel":2.0,"tondelier":2.0,"glucksmann":12.0,"philippe":14.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-11-03","2026-11-05",2101,{"arthaud":1.0,"melenchon":19.0,"roussel":2.0,"tondelier":3.0,"glucksmann":13.0,"attal":10.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Ifop","2026-10-27","2026-10-29",1928,{"arthaud":0.5,"melenchon":18.0,"roussel":2.0,"tondelier":3.0,"glucksmann":10.0,"attal":5.0,"philippe":9.5,"lisnard":7.0,"retailleau":4.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":4.5}],
+  ["Ifop","2026-10-27","2026-10-29",1928,{"arthaud":0.5,"melenchon":17.5,"roussel":2.0,"tondelier":3.0,"glucksmann":13.0,"attal":9.0,"lisnard":7.5,"retailleau":5.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.5}],
+  ["Ifop","2026-10-27","2026-10-29",1928,{"arthaud":1.0,"melenchon":17.5,"roussel":1.5,"tondelier":3.5,"glucksmann":11.5,"philippe":15.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":37.0,"zemmour":4.0}],
+  ["Ifop","2026-10-27","2026-10-29",1928,{"arthaud":0.5,"melenchon":17.5,"roussel":2.0,"tondelier":3.0,"glucksmann":11.0,"philippe":15.0,"lisnard":9.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Ipsos","2026-10-21","2026-10-22",1500,{"arthaud":0.5,"melenchon":17.0,"roussel":2.0,"tondelier":3.5,"glucksmann":13.0,"attal":4.0,"philippe":13.0,"retailleau":7.5,"dupontaignan":1.5,"lepen":33.5,"zemmour":4.5}],
+  ["Ipsos","2026-10-21","2026-10-22",1500,{"arthaud":0.5,"melenchon":17.0,"roussel":2.0,"tondelier":3.5,"glucksmann":14.0,"philippe":15.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":33.5,"zemmour":4.5}],
+  ["Ipsos","2026-10-21","2026-10-22",1500,{"arthaud":0.5,"melenchon":17.0,"roussel":2.5,"tondelier":3.5,"glucksmann":15.5,"attal":9.5,"retailleau":11.5,"dupontaignan":2.0,"lepen":33.5,"zemmour":4.5}],
+  ["Ipsos","2026-10-21","2026-10-22",1500,{"arthaud":0.5,"melenchon":17.0,"roussel":2.5,"tondelier":3.5,"glucksmann":13.0,"philippe":14.0,"lisnard":6.5,"retailleau":5.5,"dupontaignan":1.5,"lepen":32.0,"zemmour":4.0}],
+  ["OpinionWay","2026-10-21","2026-10-22",973,{"arthaud":0.25,"melenchon":16.0,"roussel":1.0,"tondelier":1.0,"bouamrane":0.25,"glucksmann":13.0,"attal":4.0,"philippe":12.0,"lisnard":6.0,"retailleau":6.0,"dupontaignan":1.0,"lepen":36.0,"zemmour":4.0}],
+  ["Cluster17","2026-10-19","2026-10-22",3000,{"arthaud":0.5,"melenchon":18.5,"roussel":2.0,"tondelier":2.0,"glucksmann":13.0,"philippe":16.0,"retailleau":8.0,"dupontaignan":3.0,"lepen":33.0,"zemmour":4.0}],
+  ["Cluster17","2026-10-19","2026-10-22",3000,{"arthaud":0.5,"melenchon":19.5,"roussel":2.0,"tondelier":2.0,"glucksmann":14.0,"attal":12.0,"retailleau":10.0,"dupontaignan":3.5,"lepen":32.5,"zemmour":4.0}],
+  ["Cluster17","2026-10-19","2026-10-22",3000,{"arthaud":0.5,"melenchon":19.5,"roussel":2.0,"tondelier":2.5,"hollande":6.5,"philippe":17.0,"lisnard":8.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":30.5,"zemmour":3.5}],
+  ["Harris Interactive","2026-10-19","2026-10-21",2094,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":2.0,"glucksmann":12.0,"philippe":15.0,"devillepin":1.0,"lisnard":7.0,"retailleau":4.0,"dupontaignan":1.0,"lepen":33.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-10-19","2026-10-21",2094,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":2.0,"glucksmann":14.0,"attal":10.0,"devillepin":2.0,"lisnard":8.0,"retailleau":5.0,"dupontaignan":1.0,"lepen":33.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-10-19","2026-10-21",2094,{"arthaud":1.0,"melenchon":17.0,"roussel":1.0,"tondelier":2.0,"glucksmann":12.0,"attal":5.0,"philippe":13.0,"retailleau":6.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":6.0}],
+  ["Harris Interactive","2026-10-19","2026-10-21",2094,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":2.0,"glucksmann":13.0,"philippe":16.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-10-19","2026-10-21",2094,{"arthaud":1.0,"melenchon":19.0,"roussel":2.0,"tondelier":2.0,"glucksmann":13.0,"attal":11.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":6.0}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":16.5,"roussel":3.0,"tondelier":3.0,"glucksmann":13.5,"attal":5.0,"philippe":12.0,"retailleau":5.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":3.5}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":16.5,"roussel":2.5,"tondelier":3.0,"glucksmann":14.0,"philippe":15.0,"retailleau":7.5,"dupontaignan":1.5,"lepen":36.0,"zemmour":3.5}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":16.0,"roussel":2.0,"tondelier":3.0,"glucksmann":16.0,"attal":13.0,"retailleau":7.0,"dupontaignan":1.5,"lepen":38.0,"zemmour":3.0}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":18.0,"glucksmann":16.0,"philippe":16.0,"retailleau":6.5,"dupontaignan":2.5,"lepen":37.0,"zemmour":3.5}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":20.0,"hollande":10.0,"attal":6.5,"philippe":14.0,"retailleau":6.0,"dupontaignan":2.0,"lepen":38.0,"zemmour":3.0}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.0,"melenchon":15.0,"roussel":2.0,"ruffin":1.5,"tondelier":2.5,"glucksmann":12.0,"attal":4.0,"philippe":12.0,"devillepin":1.5,"lisnard":5.5,"retailleau":5.5,"dupontaignan":1.5,"lepen":34.0,"zemmour":3.0}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":15.5,"roussel":2.0,"tondelier":3.0,"glucksmann":13.0,"attal":5.0,"philippe":13.0,"lisnard":7.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":3.0}],
+  ["Ifop","2026-10-17","2026-10-19",1928,{"arthaud":0.5,"melenchon":15.0,"roussel":2.0,"ruffin":2.0,"tondelier":3.0,"polony":1.0,"glucksmann":12.0,"attal":6.0,"philippe":12.0,"retailleau":6.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.5}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":1.0,"melenchon":15.0,"roussel":1.5,"tondelier":3.0,"glucksmann":15.5,"philippe":16.5,"devillepin":2.0,"retailleau":7.0,"dupontaignan":2.5,"lepen":32.5,"zemmour":3.5}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":1.0,"melenchon":16.0,"roussel":2.0,"tondelier":2.5,"glucksmann":16.5,"attal":10.5,"devillepin":3.0,"retailleau":9.5,"dupontaignan":2.0,"lepen":33.5,"zemmour":3.5}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":0.5,"melenchon":15.5,"roussel":1.5,"tondelier":2.5,"glucksmann":15.0,"philippe":15.5,"lisnard":5.5,"retailleau":6.5,"dupontaignan":3.0,"lepen":31.5,"zemmour":3.0}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":1.0,"melenchon":16.0,"roussel":1.5,"ruffin":3.0,"glucksmann":16.5,"attal":9.5,"lisnard":6.5,"retailleau":9.0,"dupontaignan":2.5,"lepen":31.0,"zemmour":3.5}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":1.5,"melenchon":15.5,"roussel":1.5,"tondelier":2.5,"glucksmann":15.5,"attal":4.5,"philippe":13.5,"retailleau":7.5,"dupontaignan":3.0,"lepen":32.5,"zemmour":3.5}],
+  ["Elabe","2026-10-14","2026-10-16",1701,{"arthaud":1.0,"melenchon":15.0,"roussel":1.0,"tondelier":2.5,"polony":1.5,"glucksmann":16.0,"philippe":16.5,"retailleau":7.5,"dupontaignan":2.5,"lepen":33.5,"zemmour":3.0}],
+  ["Cluster17","2026-10-14","2026-10-15",1263,{"arthaud":0.5,"melenchon":18.0,"roussel":1.5,"tondelier":2.0,"glucksmann":11.0,"philippe":17.0,"lisnard":7.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":3.0}],
+  ["Cluster17","2026-10-14","2026-10-15",1263,{"arthaud":0.5,"melenchon":20.0,"roussel":2.0,"tondelier":2.0,"glucksmann":12.0,"philippe":20.0,"dupontaignan":3.0,"lepen":35.5,"zemmour":5.0}],
+  ["Cluster17","2026-10-14","2026-10-15",1263,{"arthaud":1.0,"melenchon":20.0,"roussel":2.0,"tondelier":2.0,"glucksmann":16.0,"retailleau":17.5,"dupontaignan":3.0,"lepen":34.5,"zemmour":4.0}],
+  ["Cluster17","2026-10-14","2026-10-15",1263,{"arthaud":1.0,"melenchon":20.5,"roussel":2.0,"tondelier":2.0,"glucksmann":16.0,"lisnard":17.0,"dupontaignan":2.0,"lepen":35.5,"zemmour":4.0}],
+  ["Cluster17","2026-10-14","2026-10-15",1263,{"arthaud":1.0,"melenchon":20.0,"roussel":2.0,"tondelier":2.0,"glucksmann":13.5,"attal":17.0,"dupontaignan":3.5,"lepen":35.5,"zemmour":5.5}],
+  ["YouGov","2026-10-12","2026-10-15",1094,{"arthaud":0.0,"melenchon":15.0,"roussel":3.0,"tondelier":6.0,"glucksmann":12.0,"attal":6.0,"philippe":10.0,"retailleau":6.0,"dupontaignan":3.0,"lepen":36.0,"zemmour":3.0}],
+  ["YouGov","2026-10-12","2026-10-15",1094,{"arthaud":0.0,"melenchon":15.0,"roussel":3.0,"tondelier":6.0,"glucksmann":14.0,"attal":10.0,"retailleau":9.0,"dupontaignan":3.0,"lepen":37.0,"zemmour":4.0}],
+  ["YouGov","2026-10-12","2026-10-15",1094,{"arthaud":0.0,"melenchon":15.0,"roussel":3.0,"tondelier":6.0,"glucksmann":13.0,"philippe":13.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":36.0,"zemmour":3.0}],
+  ["YouGov","2026-10-12","2026-10-15",1094,{"arthaud":1.0,"melenchon":16.0,"roussel":3.0,"tondelier":6.0,"hollande":9.0,"philippe":15.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":37.0,"zemmour":4.0}],
+  ["YouGov","2026-10-12","2026-10-15",1094,{"arthaud":0.0,"melenchon":13.0,"roussel":2.0,"ruffin":2.0,"tondelier":5.0,"glucksmann":12.0,"attal":6.0,"philippe":8.0,"devillepin":1.0,"lisnard":4.0,"retailleau":5.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":4.0}],
+  ["OpinionWay","2026-10-13","2026-10-14",1043,{"arthaud":1.0,"melenchon":15.0,"roussel":1.0,"tondelier":2.0,"bouamrane":0.25,"glucksmann":13.0,"attal":5.0,"philippe":12.0,"lisnard":4.0,"retailleau":6.0,"dupontaignan":1.0,"lepen":35.0,"zemmour":5.0}],
+  ["OpinionWay","2026-10-13","2026-10-14",1043,{"arthaud":0.5,"melenchon":14.0,"roussel":3.0,"tondelier":3.0,"glucksmann":13.0,"attal":7.0,"philippe":12.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":4.0}],
+  ["OpinionWay","2026-10-13","2026-10-14",1043,{"arthaud":1.0,"melenchon":15.0,"roussel":2.0,"tondelier":3.0,"glucksmann":16.0,"attal":11.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":37.0,"zemmour":4.0}],
+  ["OpinionWay","2026-10-13","2026-10-14",1043,{"arthaud":1.0,"melenchon":15.0,"roussel":2.0,"tondelier":3.0,"glucksmann":15.0,"philippe":15.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":4.0}],
+  ["Ifop","2026-10-12","2026-10-14",1525,{"melenchon":16.0,"roussel":2.0,"ruffin":2.0,"tondelier":2.0,"glucksmann":11.5,"attal":5.0,"philippe":13.0,"devillepin":1.5,"lisnard":6.0,"retailleau":5.0,"dupontaignan":1.0,"lepen":32.0,"zemmour":3.0}],
+  ["Ifop","2026-10-12","2026-10-14",1525,{"arthaud":0.5,"melenchon":17.0,"roussel":2.5,"tondelier":2.0,"glucksmann":16.0,"attal":13.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":3.0}],
+  ["Ifop","2026-10-12","2026-10-14",1525,{"arthaud":0.5,"melenchon":16.0,"roussel":3.0,"tondelier":2.5,"glucksmann":13.5,"philippe":18.0,"retailleau":6.5,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2026-10-12","2026-10-14",1525,{"melenchon":16.0,"roussel":2.5,"tondelier":2.0,"glucksmann":14.0,"attal":6.0,"philippe":14.0,"retailleau":6.5,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-10-05","2026-10-08",2004,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":2.0,"glucksmann":10.0,"attal":5.0,"philippe":13.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-10-05","2026-10-08",2004,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":3.0,"glucksmann":10.0,"philippe":17.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-10-05","2026-10-08",2004,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":3.0,"glucksmann":11.0,"attal":12.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-10-05","2026-10-08",2004,{"arthaud":1.0,"melenchon":18.0,"roussel":3.0,"tondelier":4.0,"hollande":7.0,"philippe":17.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-10-05","2026-10-08",2004,{"arthaud":1.0,"melenchon":19.0,"roussel":2.0,"tondelier":5.0,"hollande":7.0,"attal":12.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":37.0,"zemmour":5.0}],
+  ["Odoxa","2026-09-24","2026-10-07",12005,{"arthaud":0.5,"melenchon":18.0,"roussel":2.0,"tondelier":3.0,"glucksmann":9.5,"philippe":17.0,"retailleau":6.5,"dupontaignan":2.0,"lepen":37.0,"zemmour":4.5}],
+  ["Odoxa","2026-09-24","2026-10-07",12005,{"arthaud":1.0,"melenchon":18.5,"roussel":2.0,"tondelier":3.5,"glucksmann":10.5,"attal":11.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":38.0,"zemmour":4.5}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":0.5,"melenchon":15.0,"roussel":2.5,"tondelier":3.0,"glucksmann":11.0,"attal":8.0,"philippe":16.0,"retailleau":7.0,"dupontaignan":1.0,"lepen":32.0,"zemmour":4.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":0.5,"melenchon":16.0,"roussel":2.5,"tondelier":3.0,"glucksmann":11.0,"philippe":21.0,"retailleau":8.0,"dupontaignan":1.5,"lepen":33.0,"zemmour":3.5}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":1.0,"melenchon":15.0,"roussel":2.5,"tondelier":4.0,"glucksmann":13.0,"attal":15.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.5}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":5.5,"faure":4.0,"attal":17.0,"retailleau":11.0,"dupontaignan":1.0,"lepen":36.0,"zemmour":4.5}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":1.0,"melenchon":16.0,"roussel":3.5,"tondelier":5.0,"faure":3.0,"philippe":23.0,"retailleau":8.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":4.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":0.5,"melenchon":15.0,"roussel":3.0,"tondelier":6.0,"royal":3.0,"philippe":24.0,"retailleau":8.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":4.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":1.0,"melenchon":17.0,"roussel":3.5,"tondelier":5.5,"guedj":3.0,"philippe":23.0,"retailleau":8.0,"dupontaignan":1.0,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":1.0,"melenchon":17.0,"roussel":3.5,"tondelier":6.0,"maurel":1.0,"philippe":23.0,"retailleau":9.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":0.5,"melenchon":16.0,"roussel":2.5,"tondelier":5.0,"hollande":8.0,"philippe":22.0,"retailleau":7.0,"dupontaignan":1.0,"lepen":34.0,"zemmour":4.0}],
+  ["Ifop","2026-09-25","2026-09-29",1393,{"arthaud":0.5,"melenchon":14.0,"roussel":2.0,"ruffin":3.0,"tondelier":3.0,"glucksmann":9.0,"attal":7.0,"philippe":15.0,"devillepin":2.0,"lisnard":3.5,"retailleau":5.0,"dupontaignan":1.0,"lepen":31.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-09-22","2026-09-24",1974,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":10.0,"attal":5.0,"philippe":13.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-22","2026-09-24",1974,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":3.0,"glucksmann":10.0,"philippe":16.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-22","2026-09-24",1974,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":11.0,"attal":12.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":6.0}],
+  ["Harris Interactive","2026-09-22","2026-09-24",1974,{"arthaud":1.0,"melenchon":18.0,"roussel":3.0,"tondelier":4.0,"hollande":7.0,"philippe":16.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-22","2026-09-24",1974,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":5.0,"hollande":8.0,"attal":13.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":5.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":8.0,"attal":9.0,"philippe":12.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":6.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":9.0,"lemaire":3.0,"philippe":13.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":6.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":3.0,"glucksmann":9.0,"attal":14.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":18.0,"roussel":3.0,"tondelier":7.0,"philippe":17.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":37.0,"zemmour":5.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":16.0,"roussel":2.0,"tondelier":4.0,"faure":5.0,"attal":9.0,"philippe":12.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":6.0}],
+  ["YouGov","2026-09-17","2026-09-21",1103,{"arthaud":1.0,"melenchon":15.0,"roussel":1.0,"ruffin":2.0,"tondelier":2.0,"hollande":4.0,"glucksmann":5.0,"attal":8.0,"philippe":10.0,"devillepin":2.0,"bertrand":1.0,"lisnard":2.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":5.0}],
+  ["Cluster17","2026-09-15","2026-09-16",1943,{"arthaud":0.5,"melenchon":19.0,"roussel":2.0,"tondelier":2.5,"glucksmann":12.0,"philippe":19.0,"retailleau":7.5,"dupontaignan":3.0,"lepen":31.0,"zemmour":3.5}],
+  ["Cluster17","2026-09-15","2026-09-16",1943,{"arthaud":0.5,"melenchon":20.0,"roussel":2.5,"tondelier":2.5,"glucksmann":14.0,"attal":13.5,"retailleau":9.5,"dupontaignan":3.0,"lepen":31.5,"zemmour":3.5}],
+  ["Cluster17","2026-09-15","2026-09-16",1943,{"arthaud":1.0,"melenchon":19.5,"roussel":3.0,"tondelier":3.0,"hollande":7.5,"philippe":19.5,"lisnard":5.0,"retailleau":7.5,"dupontaignan":4.0,"lepen":30.0}],
+  ["OpinionWay","2026-09-09","2026-09-10",1001,{"arthaud":1.0,"melenchon":16.0,"roussel":3.0,"tondelier":3.0,"bouamrane":1.0,"hollande":7.0,"attal":8.0,"philippe":16.0,"lisnard":2.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":2.0}],
+  ["OpinionWay","2026-09-09","2026-09-10",1001,{"arthaud":1.0,"melenchon":17.0,"roussel":4.0,"tondelier":3.0,"royal":3.0,"bouamrane":1.0,"attal":8.0,"philippe":16.0,"lisnard":2.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":33.0,"zemmour":2.0}],
+  ["OpinionWay","2026-09-09","2026-09-10",1001,{"arthaud":0.5,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"bouamrane":0.5,"glucksmann":9.0,"attal":7.0,"philippe":15.0,"lisnard":2.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":2.0}],
+  ["Harris Interactive","2026-09-08","2026-09-10",2052,{"arthaud":1.0,"melenchon":16.0,"roussel":2.0,"tondelier":3.0,"glucksmann":9.0,"attal":8.0,"philippe":14.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-08","2026-09-10",2052,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":3.0,"glucksmann":10.0,"philippe":17.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":34.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-08","2026-09-10",2052,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":12.0,"attal":14.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-08","2026-09-10",2052,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":4.0,"hollande":7.0,"philippe":19.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-09-08","2026-09-10",2052,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":4.0,"hollande":7.0,"attal":15.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":5.0}],
+  ["OpinionWay","2026-09-08","2026-09-09",1001,{"arthaud":0.5,"melenchon":15.0,"roussel":2.0,"tondelier":3.0,"glucksmann":9.0,"attal":8.0,"philippe":15.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":4.0}],
+  ["OpinionWay","2026-09-08","2026-09-09",1001,{"arthaud":1.0,"melenchon":15.0,"roussel":2.0,"tondelier":4.0,"glucksmann":12.0,"attal":14.0,"retailleau":12.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":4.0}],
+  ["OpinionWay","2026-09-08","2026-09-09",1001,{"arthaud":1.0,"melenchon":15.0,"roussel":1.0,"tondelier":3.0,"glucksmann":10.0,"philippe":19.0,"retailleau":10.0,"dupontaignan":3.0,"lepen":34.0,"zemmour":4.0}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":15.5,"roussel":2.5,"tondelier":4.0,"glucksmann":11.5,"attal":6.0,"philippe":14.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":4.0}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":15.5,"roussel":2.5,"tondelier":4.0,"glucksmann":12.5,"philippe":17.5,"retailleau":8.0,"dupontaignan":2.0,"lepen":33.5,"zemmour":4.0}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":15.5,"roussel":2.5,"tondelier":4.5,"glucksmann":13.5,"attal":13.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":4.5}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":16.5,"roussel":3.0,"tondelier":5.0,"faure":4.5,"attal":7.5,"philippe":16.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":4.0}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":16.5,"roussel":3.5,"tondelier":5.5,"faure":5.0,"philippe":21.0,"retailleau":7.5,"dupontaignan":2.0,"lepen":34.5,"zemmour":4.0}],
+  ["Ipsos","2026-09-03","2026-09-09",13060,{"arthaud":0.5,"melenchon":17.0,"roussel":3.5,"tondelier":5.5,"faure":5.5,"attal":15.5,"retailleau":10.5,"dupontaignan":2.5,"lepen":35.0,"zemmour":4.5}],
+  ["OpinionWay","2026-09-02","2026-09-03",1003,{"arthaud":1.0,"melenchon":17.0,"roussel":3.0,"tondelier":4.0,"glucksmann":13.0,"attal":13.0,"retailleau":11.0,"lepen":35.0,"zemmour":3.0}],
+  ["OpinionWay","2026-09-02","2026-09-03",1003,{"arthaud":1.0,"melenchon":16.0,"roussel":3.0,"tondelier":4.0,"glucksmann":12.0,"philippe":20.0,"retailleau":8.0,"lepen":33.0,"zemmour":3.0}],
+  ["OpinionWay","2026-09-02","2026-09-03",1003,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"tondelier":3.0,"glucksmann":11.0,"attal":7.0,"philippe":15.0,"retailleau":7.0,"lepen":34.0,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":0.5,"melenchon":15.0,"roussel":2.5,"tondelier":3.5,"glucksmann":11.5,"attal":7.5,"philippe":14.5,"retailleau":6.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":0.5,"melenchon":15.0,"roussel":2.5,"tondelier":4.0,"glucksmann":12.0,"philippe":19.0,"retailleau":7.5,"dupontaignan":2.0,"lepen":34.5,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":0.5,"melenchon":15.0,"roussel":2.5,"tondelier":4.0,"glucksmann":14.0,"attal":14.0,"retailleau":9.5,"dupontaignan":2.5,"lepen":35.0,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":1.0,"melenchon":16.0,"roussel":3.0,"tondelier":5.0,"faure":4.5,"attal":8.5,"philippe":16.5,"retailleau":6.0,"dupontaignan":2.0,"lepen":34.5,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":1.0,"melenchon":16.5,"roussel":3.5,"tondelier":5.0,"faure":4.5,"philippe":22.5,"retailleau":7.5,"dupontaignan":2.0,"lepen":34.5,"zemmour":3.0}],
+  ["Ipsos","2026-08-31","2026-09-02",1500,{"arthaud":1.0,"melenchon":17.0,"roussel":3.5,"tondelier":5.5,"faure":5.5,"attal":15.5,"retailleau":10.0,"dupontaignan":2.5,"lepen":36.0,"zemmour":3.5}],
+  ["Cluster17","2026-08-31","2026-09-01",1711,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":2.0,"glucksmann":11.5,"philippe":18.0,"devillepin":3.5,"retailleau":7.5,"dupontaignan":3.0,"lepen":30.0,"zemmour":3.5}],
+  ["Cluster17","2026-08-31","2026-09-01",1711,{"arthaud":1.0,"melenchon":18.0,"roussel":2.0,"tondelier":2.5,"glucksmann":11.5,"attal":13.5,"devillepin":4.0,"retailleau":9.0,"dupontaignan":3.0,"lepen":31.5,"zemmour":4.0}],
+  ["Cluster17","2026-08-31","2026-09-01",1711,{"arthaud":1.0,"melenchon":17.0,"roussel":2.0,"ruffin":4.0,"glucksmann":11.0,"philippe":17.0,"devillepin":3.5,"lisnard":4.0,"retailleau":6.5,"dupontaignan":2.0,"lepen":29.0,"zemmour":3.0}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":1.5,"roussel":3.0,"melenchon":14.0,"glucksmann":11.5,"tondelier":3.5,"philippe":17.0,"devillepin":2.0,"retailleau":6.5,"dupontaignan":3.0,"lepen":34.0,"zemmour":4.0}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":1.5,"roussel":3.0,"melenchon":14.0,"glucksmann":14.0,"tondelier":3.0,"attal":12.0,"devillepin":2.5,"retailleau":9.5,"dupontaignan":2.0,"lepen":34.5,"zemmour":4.0}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":2.0,"roussel":3.5,"melenchon":14.0,"hollande":7.5,"tondelier":4.0,"philippe":19.5,"retailleau":6.0,"dupontaignan":2.5,"lepen":34.0,"zemmour":4.0}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":1.5,"roussel":4.0,"melenchon":14.0,"ruffin":6.0,"hollande":8.0,"attal":12.5,"retailleau":9.0,"dupontaignan":2.5,"lepen":34.5,"zemmour":4.5}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":1.5,"roussel":4.5,"melenchon":14.5,"faure":3.5,"tondelier":4.0,"philippe":20.5,"devillepin":2.5,"retailleau":7.0,"dupontaignan":2.5,"lepen":35.5,"zemmour":4.0}],
+  ["Elabe","2026-08-26","2026-08-28",1501,{"arthaud":1.5,"roussel":3.0,"melenchon":14.5,"glucksmann":12.5,"tondelier":4.0,"attal":6.5,"philippe":14.5,"retailleau":7.0,"dupontaignan":2.5,"lepen":34.0,"zemmour":4.0}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":0.5,"roussel":3.0,"melenchon":16.0,"glucksmann":11.0,"tondelier":3.0,"attal":8.0,"philippe":14.5,"retailleau":6.0,"dupontaignan":1.5,"lepen":33.0,"zemmour":3.5}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":0.5,"roussel":3.0,"melenchon":17.0,"glucksmann":15.0,"tondelier":3.0,"attal":14.0,"retailleau":9.0,"dupontaignan":1.5,"lepen":34.0,"zemmour":3.0}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":1.0,"roussel":3.0,"melenchon":17.0,"glucksmann":12.0,"tondelier":3.0,"philippe":18.0,"retailleau":8.0,"dupontaignan":1.5,"lepen":33.0,"zemmour":3.5}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":1.0,"roussel":3.0,"melenchon":17.0,"glucksmann":18.0,"tondelier":3.0,"retailleau":12.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":1.0,"melenchon":18.0,"glucksmann":15.0,"philippe":19.0,"retailleau":8.0,"dupontaignan":2.5,"lepen":33.0,"zemmour":3.5}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":1.5,"melenchon":18.5,"glucksmann":17.0,"attal":15.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.0}],
+  ["Ifop","2026-08-24","2026-08-25",1598,{"arthaud":1.5,"melenchon":19.0,"hollande":12.0,"philippe":21.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":2.5}],
+  ["Harris Interactive","2026-08-18","2026-08-19",1764,{"arthaud":1.0,"roussel":2.0,"melenchon":16.0,"glucksmann":10.0,"tondelier":3.0,"attal":8.0,"philippe":14.0,"retailleau":6.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-08-18","2026-08-19",1764,{"arthaud":1.0,"roussel":3.0,"melenchon":17.0,"hollande":8.0,"tondelier":4.0,"attal":14.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":38.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-08-18","2026-08-19",1764,{"arthaud":1.0,"roussel":2.0,"melenchon":17.0,"glucksmann":11.0,"tondelier":3.0,"attal":15.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":37.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-08-18","2026-08-19",1764,{"arthaud":1.0,"roussel":3.0,"melenchon":17.0,"glucksmann":10.0,"tondelier":3.0,"philippe":17.0,"retailleau":7.0,"dupontaignan":3.0,"lepen":35.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-08-18","2026-08-19",1764,{"arthaud":1.0,"roussel":3.0,"melenchon":17.0,"hollande":8.0,"tondelier":4.0,"philippe":19.0,"retailleau":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":4.0}],
+  ["Cluster17","2026-07-22","2026-07-24",1506,{"arthaud":1.0,"roussel":2.0,"melenchon":18.0,"glucksmann":10.0,"tondelier":3.0,"philippe":18.0,"devillepin":3.0,"retailleau":8.0,"dupontaignan":3.0,"lepen":30.0,"zemmour":4.0}],
+  ["Cluster17","2026-07-22","2026-07-24",1506,{"arthaud":1.0,"roussel":2.0,"melenchon":18.0,"glucksmann":10.0,"tondelier":3.0,"attal":14.0,"devillepin":4.0,"retailleau":10.0,"dupontaignan":4.0,"lepen":30.0,"zemmour":4.0}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":1.0,"roussel":2.5,"melenchon":16.0,"glucksmann":10.5,"tondelier":3.5,"philippe":16.5,"devillepin":2.5,"retailleau":8.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":3.0}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":1.5,"roussel":2.5,"melenchon":14.5,"glucksmann":11.5,"tondelier":3.5,"attal":13.5,"devillepin":3.5,"retailleau":11.0,"dupontaignan":1.5,"lepen":34.0,"zemmour":3.5}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":1.5,"roussel":2.5,"melenchon":14.5,"ruffin":6.0,"hollande":9.0,"philippe":19.0,"retailleau":9.0,"dupontaignan":1.5,"lepen":35.0,"zemmour":2.5}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":1.5,"roussel":2.5,"melenchon":15.0,"ruffin":6.0,"hollande":8.0,"attal":15.5,"retailleau":11.0,"dupontaignan":1.5,"lepen":35.5,"zemmour":3.5}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":1.0,"roussel":2.5,"melenchon":14.5,"glucksmann":8.5,"tondelier":4.0,"attal":7.5,"philippe":14.0,"retailleau":8.5,"dupontaignan":1.5,"lepen":35.0,"zemmour":3.0}],
+  ["Elabe","2026-07-09","2026-07-10",1503,{"arthaud":2.0,"roussel":3.0,"melenchon":15.0,"hollande":8.0,"tondelier":4.0,"philippe":18.0,"devillepin":3.0,"retailleau":8.0,"dupontaignan":1.5,"lepen":34.5,"zemmour":3.0}],
+  ["Verian","2026-07-09","2026-07-10",1047,{"roussel":2.0,"melenchon":15.0,"glucksmann":11.0,"attal":8.0,"philippe":17.0,"retailleau":7.0,"lepen":37.0,"zemmour":3.0}],
+  ["OpinionWay","2026-07-08","2026-07-09",963,{"arthaud":0.5,"roussel":2.0,"melenchon":13.0,"glucksmann":9.0,"tondelier":5.0,"attal":7.0,"philippe":18.0,"retailleau":8.0,"lepen":35.0,"zemmour":3.0}],
+  ["OpinionWay","2026-07-08","2026-07-09",963,{"arthaud":1.0,"roussel":2.0,"melenchon":15.0,"glucksmann":9.0,"tondelier":4.0,"philippe":22.0,"retailleau":9.0,"lepen":34.0,"zemmour":4.0}],
+  ["OpinionWay","2026-07-08","2026-07-09",963,{"arthaud":1.0,"roussel":2.0,"melenchon":15.0,"glucksmann":10.0,"tondelier":5.0,"attal":16.0,"retailleau":12.0,"lepen":36.0,"zemmour":3.0}],
+  ["Harris Interactive","2026-07-07","2026-07-08",1582,{"arthaud":1.0,"roussel":2.0,"melenchon":16.0,"glucksmann":10.0,"tondelier":2.0,"attal":8.0,"philippe":14.0,"retailleau":7.0,"dupontaignan":1.0,"lepen":35.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-07-07","2026-07-08",1582,{"arthaud":1.0,"roussel":3.0,"melenchon":16.0,"hollande":8.0,"tondelier":5.0,"attal":16.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":5.0}],
+  ["Harris Interactive","2026-07-07","2026-07-08",1582,{"arthaud":1.0,"roussel":3.0,"melenchon":16.0,"glucksmann":11.0,"tondelier":3.0,"attal":16.0,"retailleau":9.0,"dupontaignan":1.0,"lepen":36.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-07-07","2026-07-08",1582,{"arthaud":1.0,"roussel":3.0,"melenchon":16.0,"hollande":8.0,"tondelier":4.0,"philippe":20.0,"retailleau":8.0,"dupontaignan":1.0,"lepen":35.0,"zemmour":4.0}],
+  ["Harris Interactive","2026-07-07","2026-07-08",1582,{"arthaud":1.0,"roussel":2.0,"melenchon":16.0,"glucksmann":11.0,"tondelier":3.0,"philippe":20.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":4.0}],
+  ["Ifop","2026-07-07","2026-07-08",984,{"arthaud":0.5,"roussel":2.0,"melenchon":15.0,"glucksmann":12.0,"tondelier":4.0,"attal":15.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":3.5}],
+  ["Ifop","2026-07-07","2026-07-08",984,{"arthaud":0.5,"roussel":3.0,"melenchon":15.0,"glucksmann":9.0,"tondelier":3.5,"philippe":19.0,"retailleau":8.0,"dupontaignan":2.0,"lepen":36.0,"zemmour":4.0}],
+  ["Ipsos","2026-05-27","2026-05-28",1500,{"arthaud":1.0,"roussel":4.0,"melenchon":13.5,"hollande":7.0,"tondelier":4.0,"attal":9.5,"philippe":14.5,"retailleau":8.5,"dupontaignan":1.5,"lepen":32.0,"knafo":4.5}],
+  ["Ipsos","2026-05-27","2026-05-28",1500,{"arthaud":1.0,"roussel":3.0,"melenchon":13.0,"glucksmann":11.0,"tondelier":4.0,"attal":8.5,"philippe":14.0,"retailleau":8.5,"dupontaignan":1.5,"lepen":31.0,"knafo":4.5}],
+  ["Ifop","2026-05-26","2026-05-28",1368,{"arthaud":0.5,"roussel":3.0,"melenchon":13.0,"glucksmann":11.5,"tondelier":3.5,"attal":16.0,"retailleau":11.5,"dupontaignan":2.0,"lepen":32.0,"knafo":4.0}],
+  ["Ifop","2026-05-26","2026-05-28",1368,{"arthaud":0.5,"roussel":3.0,"melenchon":13.0,"glucksmann":11.0,"tondelier":4.0,"philippe":19.0,"retailleau":9.0,"dupontaignan":1.5,"lepen":33.0,"knafo":4.0}],
+  ["Harris Interactive","2026-05-25","2026-05-27",1744,{"arthaud":1.0,"roussel":4.0,"melenchon":15.0,"glucksmann":11.0,"tondelier":3.0,"attal":15.0,"retailleau":11.0,"dupontaignan":2.0,"lepen":32.0,"knafo":6.0}],
+  ["Harris Interactive","2026-05-25","2026-05-27",1744,{"arthaud":1.0,"roussel":3.0,"melenchon":14.0,"glucksmann":11.0,"tondelier":3.0,"philippe":19.0,"retailleau":10.0,"dupontaignan":2.0,"lepen":31.0,"knafo":6.0}],
+  ["Harris Interactive","2026-04-22","2026-04-22",2000,{"arthaud":1.0,"roussel":4.0,"melenchon":12.0,"glucksmann":12.0,"tondelier":4.0,"attal":14.0,"retailleau":13.0,"dupontaignan":2.0,"lepen":33.0,"knafo":5.0}],
+  ["Harris Interactive","2026-04-22","2026-04-22",2000,{"arthaud":1.0,"roussel":4.0,"melenchon":12.0,"glucksmann":11.0,"tondelier":4.0,"philippe":19.0,"retailleau":10.0,"dupontaignan":1.0,"lepen":32.0,"knafo":6.0}],
+  ["Elabe","2026-03-25","2026-03-27",1504,{"arthaud":1.0,"roussel":2.5,"melenchon":12.0,"glucksmann":12.5,"tondelier":4.0,"attal":11.5,"devillepin":6.0,"retailleau":10.0,"dupontaignan":2.5,"lepen":34.0,"knafo":4.0}],
+  ["Elabe","2026-03-25","2026-03-27",1504,{"arthaud":0.5,"roussel":3.5,"melenchon":11.5,"hollande":8.5,"tondelier":5.0,"philippe":22.0,"devillepin":2.5,"retailleau":8.5,"dupontaignan":3.0,"lepen":31.5,"zemmour":3.5}],
+  ["Ifop","2026-02-26","2026-02-27",1393,{"arthaud":2.0,"roussel":2.0,"melenchon":11.0,"glucksmann":12.0,"tondelier":4.5,"attal":10.0,"devillepin":4.5,"retailleau":12.0,"dupontaignan":3.0,"lepen":35.0,"knafo":4.0}],
+  ["Ifop","2026-02-26","2026-02-27",1393,{"arthaud":1.0,"roussel":2.0,"melenchon":10.0,"glucksmann":11.0,"tondelier":4.0,"philippe":16.0,"devillepin":5.0,"retailleau":11.0,"dupontaignan":2.0,"lepen":34.0,"knafo":4.0}],
+  ["Elabe","2025-10-30","2025-10-31",1501,{"arthaud":1.5,"roussel":3.0,"melenchon":11.5,"glucksmann":12.0,"tondelier":4.5,"attal":12.5,"devillepin":5.0,"retailleau":8.0,"dupontaignan":2.5,"lepen":34.0,"knafo":6.5}],
+  ["Harris Interactive","2025-10-07","2025-10-07",1124,{"arthaud":1.0,"roussel":3.0,"melenchon":14.0,"glucksmann":12.0,"tondelier":3.0,"philippe":16.0,"retailleau":10.0,"dupontaignan":1.0,"lepen":34.0,"zemmour":6.0}],
+  ["Harris Interactive","2025-10-07","2025-10-07",1124,{"arthaud":1.0,"roussel":3.0,"melenchon":14.0,"glucksmann":14.0,"tondelier":3.0,"attal":12.0,"retailleau":11.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":6.0}],
+  ["Cluster17","2025-09-30","2025-10-01",1534,{"arthaud":1.5,"roussel":3.0,"melenchon":15.0,"glucksmann":15.0,"attal":12.0,"retailleau":14.0,"dupontaignan":3.5,"lepen":30.5,"zemmour":5.5}],
+  ["Ifop","2025-09-24","2025-09-25",1210,{"arthaud":1.0,"roussel":3.0,"melenchon":12.0,"glucksmann":15.0,"philippe":16.0,"devillepin":5.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":4.0}],
+  ["Ifop","2025-05-19","2025-05-20",1114,{"arthaud":1.0,"roussel":3.0,"melenchon":13.5,"faure":4.5,"tondelier":5.0,"philippe":21.0,"retailleau":16.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":3.0}],
+  ["Harris Interactive","2025-05-19","2025-05-19",1071,{"arthaud":1.0,"roussel":3.0,"melenchon":14.0,"glucksmann":10.0,"tondelier":3.0,"philippe":21.0,"retailleau":12.0,"lepen":31.0,"zemmour":5.0}],
+  ["Harris Interactive","2025-05-19","2025-05-19",1071,{"arthaud":1.0,"roussel":3.0,"melenchon":15.0,"glucksmann":11.0,"tondelier":3.0,"attal":15.0,"retailleau":16.0,"lepen":31.0,"zemmour":5.0}],
+  ["Odoxa","2025-04-23","2025-04-24",1005,{"arthaud":1.0,"poutou":2.0,"roussel":3.0,"melenchon":12.0,"glucksmann":11.5,"tondelier":3.0,"philippe":20.5,"retailleau":10.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":3.0}],
+  ["Ifop/Hexagone","2025-04-11","2025-04-18",9128,{"arthaud":0.5,"roussel":2.0,"melenchon":10.0,"ruffin":5.5,"glucksmann":10.0,"philippe":21.0,"retailleau":9.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":4.0}],
+  ["Elabe","2025-04-02","2025-04-04",1413,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":10.0,"faure":5.5,"tondelier":5.5,"philippe":23.5,"retailleau":8.0,"dupontaignan":3.0,"lepen":32.0,"zemmour":3.5}],
+  ["Elabe","2025-04-02","2025-04-04",1413,{"arthaud":0.5,"poutou":2.0,"roussel":5.0,"melenchon":9.5,"glucksmann":10.5,"tondelier":4.0,"philippe":24.0,"wauquiez":4.5,"dupontaignan":3.0,"lepen":33.5,"zemmour":3.5}],
+  ["Elabe","2025-04-02","2025-04-04",1413,{"arthaud":1.0,"poutou":2.0,"roussel":5.5,"melenchon":11.0,"faure":4.0,"tondelier":6.0,"attal":18.0,"retailleau":10.0,"dupontaignan":3.0,"lepen":36.0,"zemmour":3.5}],
+  ["Ifop","2025-03-26","2025-03-27",1119,{"arthaud":1.0,"poutou":1.0,"roussel":4.0,"melenchon":12.0,"faure":4.0,"tondelier":3.0,"philippe":25.0,"wauquiez":5.0,"dupontaignan":4.0,"lepen":36.0,"zemmour":5.0}],
+  ["Ifop","2025-03-26","2025-03-27",1119,{"arthaud":1.0,"poutou":1.0,"roussel":3.0,"melenchon":13.0,"faure":5.0,"tondelier":3.0,"philippe":21.0,"retailleau":11.0,"dupontaignan":3.0,"lepen":34.0,"zemmour":5.0}],
+  ["Ifop","2025-03-26","2025-03-27",1119,{"arthaud":1.0,"poutou":1.0,"roussel":4.0,"melenchon":13.0,"faure":5.0,"tondelier":3.0,"attal":20.0,"wauquiez":8.0,"dupontaignan":3.0,"lepen":37.0,"zemmour":5.0}],
+  ["Ifop","2025-03-26","2025-03-27",1119,{"arthaud":1.0,"poutou":1.0,"roussel":2.0,"melenchon":13.0,"glucksmann":11.0,"tondelier":3.0,"philippe":20.0,"wauquiez":5.0,"dupontaignan":3.0,"lepen":35.0,"zemmour":5.0}],
+  ["Ifop","2024-12-06","2024-12-09",1101,{"arthaud":1.0,"poutou":0.5,"roussel":3.0,"melenchon":12.0,"faure":5.0,"tondelier":4.5,"attal":20.0,"lassalle":1.0,"wauquiez":8.0,"dupontaignan":3.0,"lepen":38.0,"zemmour":4.0}],
+  ["Ifop","2024-12-06","2024-12-09",1101,{"arthaud":1.0,"poutou":0.5,"roussel":3.0,"melenchon":11.0,"hollande":7.0,"tondelier":4.0,"philippe":24.0,"lassalle":1.5,"wauquiez":6.0,"dupontaignan":3.0,"lepen":35.0,"zemmour":4.0}],
+  ["Ifop","2024-12-06","2024-12-09",1101,{"arthaud":0.5,"poutou":0.5,"roussel":3.0,"melenchon":12.0,"faure":4.0,"tondelier":4.5,"philippe":25.0,"lassalle":1.0,"wauquiez":6.0,"dupontaignan":3.5,"lepen":36.0,"zemmour":4.0}],
+  ["Ifop","2024-12-06","2024-12-09",1101,{"arthaud":1.0,"poutou":0.5,"roussel":3.0,"melenchon":12.0,"faure":4.0,"tondelier":5.0,"philippe":26.0,"lassalle":1.5,"wauquiez":6.5,"dupontaignan":3.5,"bardella":34.0,"zemmour":3.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"roussel":4.0,"melenchon":10.0,"glucksmann":14.0,"rousseau":1.0,"philippe":26.0,"wauquiez":5.0,"lepen":35.0,"zemmour":5.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"arthaud":1.0,"poutou":2.0,"melenchon":15.0,"philippe":31.0,"bertrand":7.0,"lepen":40.0,"zemmour":4.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"roussel":3.0,"melenchon":10.0,"glucksmann":12.0,"rousseau":1.0,"attal":8.0,"philippe":23.0,"wauquiez":5.0,"lepen":34.0,"zemmour":4.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"arthaud":1.0,"poutou":2.0,"melenchon":14.0,"attal":10.0,"philippe":25.0,"wauquiez":6.0,"lepen":38.0,"zemmour":4.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"melenchon":4.0,"ruffin":10.0,"glucksmann":14.0,"rousseau":1.0,"philippe":28.0,"wauquiez":4.0,"bardella":35.0,"zemmour":4.0}],
+  ["OpinionWay","2024-09-11","2024-09-12",1009,{"roussel":4.0,"melenchon":10.0,"glucksmann":14.0,"rousseau":1.0,"philippe":27.0,"barnier":4.0,"lepen":36.0,"zemmour":4.0}],
+  ["Ifop","2024-09-06","2024-09-09",1107,{"arthaud":1.0,"poutou":1.0,"roussel":6.0,"melenchon":10.0,"faure":4.0,"tondelier":6.0,"attal":24.0,"lassalle":3.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2024-09-06","2024-09-09",1107,{"arthaud":1.0,"poutou":1.0,"roussel":5.0,"melenchon":10.0,"hollande":8.0,"tondelier":5.0,"attal":22.0,"lassalle":3.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":3.0}],
+  ["Ifop","2024-09-06","2024-09-09",1107,{"arthaud":1.0,"poutou":1.5,"roussel":6.0,"melenchon":9.0,"faure":4.0,"tondelier":5.0,"philippe":27.0,"lassalle":3.0,"wauquiez":4.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.5}],
+  ["Ifop","2024-09-06","2024-09-09",1107,{"arthaud":0.5,"poutou":1.0,"roussel":6.0,"melenchon":9.5,"hollande":7.0,"tondelier":5.0,"philippe":26.0,"lassalle":2.0,"wauquiez":4.0,"dupontaignan":2.0,"lepen":34.0,"zemmour":3.0}],
+  ["Harris Interactive","2024-07-07","2024-07-08",2496,{"arthaud":1.0,"poutou":2.0,"roussel":3.0,"melenchon":15.0,"glucksmann":14.0,"tondelier":3.0,"attal":20.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":4.0}],
+  ["Harris Interactive","2024-07-07","2024-07-08",2496,{"arthaud":1.0,"poutou":1.0,"roussel":3.0,"melenchon":15.0,"glucksmann":14.0,"tondelier":3.0,"philippe":22.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":3.0}],
+  ["Harris Interactive","2024-07-07","2024-07-08",2496,{"arthaud":1.0,"poutou":2.0,"roussel":5.0,"melenchon":16.0,"faure":6.0,"tondelier":4.0,"attal":23.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":4.0}],
+  ["Harris Interactive","2024-07-07","2024-07-08",2496,{"arthaud":1.0,"poutou":2.0,"roussel":4.0,"melenchon":17.0,"faure":5.0,"tondelier":4.0,"philippe":24.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":4.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.0,"poutou":2.0,"roussel":5.0,"melenchon":13.0,"faure":3.0,"tondelier":2.0,"attal":22.0,"lassalle":2.5,"wauquiez":8.0,"dupontaignan":2.5,"bardella":30.0,"zemmour":9.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.5,"poutou":0.5,"roussel":4.5,"melenchon":14.0,"faure":3.0,"tondelier":2.0,"philippe":26.0,"wauquiez":5.0,"dupontaignan":2.0,"bardella":33.0,"zemmour":7.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":2.0,"poutou":1.5,"roussel":6.0,"melenchon":15.0,"faure":5.5,"tondelier":3.0,"darmanin":12.0,"lassalle":2.0,"wauquiez":8.5,"dupontaignan":2.0,"lepen":36.0,"zemmour":6.5}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.5,"poutou":1.5,"roussel":5.0,"melenchon":16.0,"faure":4.5,"tondelier":2.5,"lemaire":14.0,"lassalle":2.0,"wauquiez":8.0,"dupontaignan":3.0,"lepen":35.0,"zemmour":7.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.0,"poutou":2.0,"roussel":4.0,"melenchon":14.0,"faure":4.0,"tondelier":3.0,"attal":20.0,"lassalle":2.0,"wauquiez":7.0,"dupontaignan":2.0,"lepen":35.0,"zemmour":6.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.5,"poutou":1.5,"roussel":4.5,"melenchon":13.0,"faure":4.5,"tondelier":2.0,"philippe":24.0,"lassalle":2.0,"wauquiez":5.0,"dupontaignan":3.0,"lepen":34.0,"zemmour":5.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.5,"poutou":1.0,"roussel":5.0,"melenchon":13.0,"faure":4.0,"tondelier":2.5,"philippe":24.0,"lassalle":2.0,"bertrand":6.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":6.0}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.0,"poutou":2.0,"roussel":5.5,"melenchon":12.0,"hollande":8.0,"philippe":24.0,"lassalle":2.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":6.5}],
+  ["Ifop","2024-04-16","2024-04-18",1090,{"arthaud":1.5,"poutou":2.0,"roussel":5.0,"ruffin":7.0,"faure":3.5,"tondelier":3.0,"philippe":26.0,"lassalle":3.0,"wauquiez":5.0,"dupontaignan":2.5,"lepen":35.0,"zemmour":6.5}],
+  ["Cluster17","2024-04-02","2024-04-05",1686,{"poutou":2.0,"ruffin":29.0,"philippe":25.0,"wauquiez":4.5,"dupontaignan":3.0,"lepen":31.0,"zemmour":6.5}],
+  ["Cluster17","2024-04-02","2024-04-05",1686,{"poutou":3.0,"melenchon":18.0,"philippe":31.0,"wauquiez":5.0,"dupontaignan":4.0,"lepen":32.0,"zemmour":7.0}],
+  ["Ifop","2024-01-31","2024-02-01",1081,{"arthaud":1.5,"poutou":1.5,"roussel":4.0,"melenchon":14.0,"faure":2.0,"tondelier":2.0,"attal":22.0,"lassalle":3.0,"wauquiez":5.5,"dupontaignan":2.5,"lepen":36.0,"zemmour":6.0}],
+  ["Ifop","2024-01-31","2024-02-01",1081,{"arthaud":1.5,"poutou":1.5,"roussel":4.5,"melenchon":14.0,"faure":2.0,"tondelier":2.5,"philippe":22.0,"lassalle":3.0,"wauquiez":4.5,"dupontaignan":2.5,"lepen":36.0,"zemmour":6.0}],
+  ["Ifop","2024-01-09","2024-01-10",1144,{"arthaud":1.0,"poutou":2.0,"roussel":5.0,"melenchon":14.5,"faure":4.0,"tondelier":1.0,"attal":24.0,"lassalle":2.5,"wauquiez":6.0,"dupontaignan":3.0,"bardella":28.0,"zemmour":9.0}],
+  ["Ifop","2024-01-09","2024-01-10",1144,{"arthaud":0.5,"poutou":1.5,"roussel":6.0,"melenchon":15.0,"faure":3.5,"tondelier":1.5,"philippe":26.0,"lassalle":2.5,"wauquiez":6.0,"dupontaignan":2.5,"bardella":27.0,"zemmour":8.0}],
+  ["Ifop","2024-01-09","2024-01-10",1144,{"arthaud":0.5,"poutou":2.0,"roussel":6.5,"melenchon":14.0,"faure":3.5,"tondelier":1.5,"attal":23.0,"lassalle":2.5,"wauquiez":6.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":6.5}],
+  ["Ifop","2024-01-09","2024-01-10",1144,{"arthaud":0.5,"poutou":1.5,"roussel":6.0,"melenchon":13.0,"faure":3.0,"tondelier":2.0,"philippe":25.0,"lassalle":2.5,"wauquiez":5.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":6.5}],
+  ["Ifop","2023-10-24","2023-10-25",1179,{"arthaud":1.0,"poutou":1.0,"roussel":6.0,"melenchon":14.0,"faure":5.0,"tondelier":2.0,"attal":19.0,"lassalle":4.0,"wauquiez":6.0,"dupontaignan":3.0,"lepen":33.0,"zemmour":6.0}],
+  ["Ifop","2023-10-24","2023-10-25",1179,{"arthaud":1.5,"poutou":1.5,"roussel":6.0,"melenchon":15.0,"faure":6.0,"tondelier":2.0,"darmanin":16.0,"lassalle":3.5,"wauquiez":6.0,"dupontaignan":2.5,"lepen":33.0,"zemmour":7.0}],
+  ["Ifop","2023-10-24","2023-10-25",1179,{"arthaud":1.5,"poutou":1.0,"roussel":7.0,"melenchon":15.0,"faure":5.5,"tondelier":2.0,"lemaire":18.0,"lassalle":3.0,"wauquiez":6.0,"dupontaignan":2.5,"lepen":32.0,"zemmour":6.5}],
+  ["Ifop","2023-10-24","2023-10-25",1179,{"arthaud":1.5,"poutou":2.0,"roussel":7.5,"ruffin":7.0,"faure":4.0,"tondelier":2.0,"philippe":26.0,"lassalle":2.5,"wauquiez":6.0,"dupontaignan":3.0,"lepen":32.0,"zemmour":6.5}],
+  ["Ifop","2023-10-24","2023-10-25",1179,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":14.0,"faure":4.0,"tondelier":1.0,"philippe":25.0,"lassalle":2.5,"wauquiez":5.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":6.5}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":16.0,"cazeneuve":7.0,"jadot":5.0,"lemaire":16.0,"wauquiez":7.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":16.0,"cazeneuve":8.0,"jadot":6.0,"darmanin":14.0,"wauquiez":7.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":16.0,"cazeneuve":9.0,"jadot":5.0,"borne":11.0,"wauquiez":9.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":17.0,"cazeneuve":10.0,"jadot":7.0,"braunpivet":5.0,"wauquiez":10.0,"dupontaignan":3.0,"lepen":33.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":5.0,"melenchon":16.0,"cazeneuve":8.0,"jadot":7.0,"attal":12.0,"wauquiez":8.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":7.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":17.0,"cazeneuve":9.0,"jadot":6.0,"castex":9.0,"wauquiez":9.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":16.0,"cazeneuve":10.0,"jadot":6.0,"bayrou":8.0,"wauquiez":9.0,"dupontaignan":3.0,"lepen":33.0,"zemmour":6.0}],
+  ["Harris Interactive","2023-09-01","2023-09-04",2525,{"arthaud":1.0,"poutou":2.0,"roussel":6.0,"melenchon":16.0,"cazeneuve":5.0,"jadot":5.0,"philippe":22.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":30.0,"zemmour":6.0}],
+  ["OpinionWay","2023-04-12","2023-04-13",1038,{"arthaud":1.0,"poutou":3.0,"melenchon":17.0,"faure":6.0,"rousseau":2.0,"philippe":32.0,"wauquiez":7.0,"bardella":23.0,"zemmour":9.0}],
+  ["Harris Interactive","2023-04-06","2023-04-07",1320,{"arthaud":1.0,"poutou":1.0,"roussel":4.0,"melenchon":16.0,"cazeneuve":5.0,"jadot":4.0,"philippe":24.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":30.0,"zemmour":7.0}],
+  ["Harris Interactive","2023-04-06","2023-04-07",1320,{"arthaud":1.0,"poutou":1.0,"roussel":5.0,"melenchon":18.0,"cazeneuve":7.0,"jadot":5.0,"lemaire":16.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":32.0,"zemmour":7.0}],
+  ["Harris Interactive","2023-04-06","2023-04-07",1320,{"arthaud":1.0,"poutou":1.0,"roussel":5.0,"melenchon":19.0,"cazeneuve":8.0,"jadot":5.0,"darmanin":10.0,"wauquiez":7.0,"dupontaignan":2.0,"lepen":33.0,"zemmour":8.0}],
+  ["Harris Interactive","2023-04-06","2023-04-07",1320,{"arthaud":1.0,"poutou":1.0,"roussel":4.0,"melenchon":17.0,"delga":3.0,"jadot":4.0,"philippe":24.0,"wauquiez":5.0,"dupontaignan":2.0,"lepen":31.0,"zemmour":7.0}],
+  ["Ifop","2023-03-30","2023-03-31",1105,{"arthaud":1.0,"poutou":2.5,"roussel":5.0,"melenchon":17.0,"faure":3.0,"tondelier":1.0,"philippe":26.0,"lassalle":2.0,"wauquiez":5.0,"dupontaignan":2.5,"lepen":29.0,"zemmour":6.0}],
+  ["Ifop","2023-03-30","2023-03-31",1105,{"arthaud":1.0,"poutou":2.5,"melenchon":22.0,"philippe":28.0,"lassalle":2.5,"wauquiez":4.0,"dupontaignan":3.0,"lepen":31.0,"zemmour":6.0}],
+  ["Ifop","2023-03-30","2023-03-31",1105,{"arthaud":1.0,"poutou":2.5,"roussel":6.0,"melenchon":20.0,"faure":2.0,"tondelier":1.0,"lemaire":18.0,"lassalle":2.5,"wauquiez":6.0,"dupontaignan":3.0,"lepen":32.0,"zemmour":6.0}],
+  ["Ifop","2023-03-30","2023-03-31",1105,{"arthaud":0.5,"poutou":2.5,"roussel":5.0,"melenchon":20.0,"faure":3.0,"tondelier":2.0,"darmanin":11.0,"lassalle":2.0,"wauquiez":8.0,"dupontaignan":4.0,"lepen":35.0,"zemmour":7.0}],
+  ["Ifop","2023-03-30","2023-03-31",1105,{"arthaud":1.0,"poutou":1.5,"roussel":6.5,"melenchon":20.0,"faure":2.0,"tondelier":1.0,"bayrou":9.0,"lassalle":3.0,"wauquiez":10.0,"dupontaignan":3.0,"lepen":36.0,"zemmour":7.0}],
+  ["2022 election","2022-04-10","2022-04-10",0,{"arthaud":0.56,"poutou":0.76,"roussel":2.28,"melenchon":21.95,"jadot":4.63,"lassalle":3.13,"dupontaignan":2.06,"lepen":23.15,"zemmour":7.07}],
+];
+
+// Candidate scenarios: which candidates must (has) / must not (not) be in a poll question for it to count.
+// "Left fragmented" = Mélenchon, Glucksmann and Tondelier all run; "united left" = Glucksmann without Tondelier and Roussel.
+const SCEN_DEF = [
+  { short: 'Le Pen · Philippe', title: 'Le Pen and Philippe run, left fragmented', has: ['lepen', 'philippe', 'melenchon', 'glucksmann', 'tondelier'], not: ['attal', 'bardella'] },
+  { short: 'Le Pen · Attal', title: 'Le Pen and Attal run, left fragmented', has: ['lepen', 'attal', 'melenchon', 'glucksmann', 'tondelier'], not: ['philippe', 'bardella'] },
+  { short: 'Le Pen · Philippe · Attal', title: 'Le Pen, Philippe and Attal run, left fragmented', has: ['lepen', 'philippe', 'attal', 'melenchon', 'glucksmann', 'tondelier'], not: ['bardella'] },
+  { short: 'Le Pen · Glucksmann (united left)', title: 'Le Pen runs, left unified behind Glucksmann', has: ['lepen', 'glucksmann', 'melenchon'], not: ['tondelier', 'roussel', 'bardella'] },
+  { short: 'Bardella · Philippe', title: 'Bardella and Philippe run, left fragmented', has: ['bardella', 'philippe'], not: ['lepen'], main: false },
+];
+// Smoothed average: tricube-weighted mean of the nearest polls (a local LOESS of degree 0, which, unlike a local
+// line, does not overshoot at the ends of the series). Window: the nearest 15% of polls (at least 6), at least
+// MIN_SPAN and at most MAX_SPAN wide.
+const DAY = 864e5, MIN_SPAN = 28 * DAY, MAX_SPAN = 150 * DAY;
+function loessAt(pts, t0){
+  const d = pts.map((p) => [Math.abs(p.t - t0), p]).sort((a, b) => a[0] - b[0]);
+  const k = Math.max(6, Math.ceil(d.length * 0.15));
+  let h = Math.max(d[Math.min(k, d.length) - 1][0], MIN_SPAN) * 1.0001;
+  if (d[0][0] < MAX_SPAN) h = Math.min(h, MAX_SPAN);
+  let sw = 0, sy = 0, n = 0; const used = [];
+  d.forEach(([dist, p]) => { if (dist >= h) return; const w = (1 - (dist / h) ** 3) ** 3; sw += w; sy += w * p.v; n++; used.push([w, p.v]); });
+  if (!sw || n < 1) return null;
+  const m = sy / sw;
+  // Uncertainty: weighted standard deviation of the polls in the window around the average (how far the polls disagree).
+  SMOOTH_SD = n > 1 ? Math.sqrt(used.reduce((a, [w, v]) => a + w * (v - m) ** 2, 0) / sw * n / (n - 1)) : null;
+  return m;
+}
+let SMOOTH_SD = null;  // set by loessAt(): spread of the polls behind the last value
+const smooth = (pts, t) => { const v = loessAt(pts, t); return v == null ? null : { t: new Date(t), v, sd: SMOOTH_SD }; };
+function buildScenarios(){
+  const rows = POLLS1.map(([pf, fs, fe, n, v]) => { const a = toDate(fs), b = toDate(fe); return { pf, n, t: new Date((+a + +b) / 2), v }; });
+  return SCEN_DEF.map((def) => {
+    const rs = rows.filter((r) => def.has.every((k) => r.v[k] != null) && def.not.every((k) => r.v[k] == null)).sort((a, b) => a.t - b.t);
+    if (rs.length < 3) return null;
+    const last = rs.at(-1).t, start = new Date(Math.max(+rs[0].t, +last - 365 * DAY));
+    // Every candidate polled in this scenario gets a line, drawn only over the period in which they were polled.
+    const keys = [...new Set(rs.flatMap((r) => Object.keys(r.v)))];
+    const series = keys.map((k) => {
+      const all = rs.filter((r) => r.v[k] != null).map((r) => ({ t: r.t, v: r.v[k], pf: r.pf }));
+      const inWin = all.filter((p) => p.t >= start); if (!inWin.length) return null;
+      const lo = +inWin[0].t, hi = +inWin.at(-1).t, line = [];
+      for (let t = lo; t < hi; t += 2 * DAY) { const q = smooth(all, t); if (q) line.push(q); }
+      const q = smooth(all, hi); if (q) line.push(q);
+      const s = { c: candOf(k), pts: inWin, line, recent: hi >= +last - 60 * DAY };
+      s.last = line.at(-1) || null;
+      s.minor = !s.recent || !s.last || s.last.v < 5;  // switched off by default (can be switched on)
+      return s;
+    }).filter((s) => s && s.line.length).sort((a, b) => (b.recent - a.recent) || (b.last.v - a.last.v));
+    return { short: def.short, title: def.title, main: def.main !== false, n: rs.filter((r) => r.t >= start).length, series };
+  }).filter(Boolean);
+}
+// Rows of the Sheet tabs "first_round" and "second_round" (via averages.json, written by scripts/fetch_fr2027.py)
+// replace the hard-coded polls above when present.
+const cell = (r, i) => (i >= 0 && r[i] != null ? String(r[i]).trim() : '');
+function pctOf(v){ const t = String(v == null ? '' : v).trim(); if (!t || t === '–' || t === '-') return null;
+  const n = toNum(t.replace('<', '')); return n == null ? null : (t.startsWith('<') ? n / 2 : n); }
+const isoOf = (v) => { const d = toDate(v); return d ? d.toISOString().slice(0, 10) : ''; };
+function fromSheet(tabs){
+  const tab = (name) => (tabs || []).find((t) => fold(t.tab) === fold(name));
+  const t1 = tab('first_round'), t2 = tab('second_round');
+  if (t1 && t1.rows.length > 1) {
+    const h = t1.rows[0].map((x) => fold(x)), iP = h.indexOf('pollster'), iS = h.indexOf('fieldworkstart'), iE = h.indexOf('fieldworkend'), iN = h.indexOf('sample');
+    const cands = h.map((k, i) => [k, i]).filter(([k, i]) => k && ![iP, iS, iE, iN].includes(i));
+    const rows = t1.rows.slice(1).map((r) => [cell(r, iP), isoOf(r[iS]), isoOf(r[iE]) || isoOf(r[iS]), toNum(r[iN]) || 0,
+      Object.fromEntries(cands.map(([k, i]) => [k, pctOf(r[i])]).filter(([, v]) => v != null))]).filter((r) => r[1] && Object.keys(r[4]).length);
+    if (rows.length) POLLS1 = rows;
+  }
+  if (t2 && t2.rows.length > 1) {
+    const h = t2.rows[0].map((x) => fold(x)), ix = (n) => h.indexOf(n);
+    const groupsR = new Map();
+    t2.rows.slice(1).forEach((r) => {
+      // Columns: pollster, fieldwork_start, fieldwork_end, sample, candidate_a, candidate_a_pct, candidate_b, candidate_b_pct, no_longer_running
+      const a = cell(r, ix('candidatea')), b = cell(r, ix('candidateb')), va = pctOf(r[ix('candidateapct')]), vb = pctOf(r[ix('candidatebpct')]);
+      if (!a || !b || va == null || vb == null) return;
+      const k = a + '|' + b; if (!groupsR.has(k)) groupsR.set(k, { a, b, old: /^(y|yes|true|1)$/i.test(cell(r, ix('nolongerrunning'))), polls: [] });
+      groupsR.get(k).polls.push([cell(r, ix('pollster')), isoOf(r[ix('fieldworkstart')]), isoOf(r[ix('fieldworkend')]) || isoOf(r[ix('fieldworkstart')]), toNum(r[ix('sample')]) || 0, va, vb]);
+    });
+    if (groupsR.size) RUNOFF = [...groupsR.values()];
+  }
+}
 async function loadPolls(){
   const box = document.getElementById('polls');
-  try {
-    const r = await fetch('averages.json', { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    UPDATED = data.updated || '';
-    SCEN = (data.tabs || []).filter((t) => /^R_/i.test(t.tab)).map(parseTab).filter(Boolean);
-    if (!SCEN.length) throw new Error('no scenarios');
-    renderPolls();
-  } catch (e) {
-    box.innerHTML = '<p class="empty">The polling averages will appear here soon.</p>';
-  }
+  try { const r = await fetch('averages.json', { cache: 'no-cache' }); if (r.ok) fromSheet((await r.json()).tabs); } catch (e) { /* use the hard-coded polls */ }
+  SCEN = buildScenarios();
+  const latest = d3.max(POLLS1, (r) => toDate(r[2]));
+  UPDATED = latest ? 'latest poll ' + d3.utcFormat('%-d %b %Y')(latest) : '';
+  if (SCEN.length) renderPolls(); else box.innerHTML = '<p class="empty">The polling averages will appear here soon.</p>';
+  drawRunoff();
   postHeight();
 }
 
@@ -709,7 +1116,7 @@ document.querySelectorAll('#history-mode button').forEach((b) => b.addEventListe
   HMODE = b.dataset.m; document.querySelectorAll('#history-mode button').forEach((x) => x.setAttribute('aria-pressed', x === b)); drawHistory(); }));
 
 /* ===================== 2024 EP election: who voted for whom ===================== */
-const DEMO_LISTS = [['Ensemble', 'RE', '#E5B800'], ['RN', 'PfE', '#111111'], ['LFI', 'LEFT', '#990000'], ['REC', 'ESN', '#70463A'], ['LR', 'EPP', '#3399FF'], ['LÉ', 'G/EFA', '#16A34A'], ['PCF', 'LEFT', '#C0392B'], ['PS/PP', 'S&D', '#FF2D2D']];
+const DEMO_LISTS = [['Ensemble', '*–RE', '#E5B800'], ['RN', 'PfE–PfE', '#111111'], ['LFI', 'ELA–LEFT', '#990000'], ['REC', 'ESN–ESN', '#70463A'], ['LR', 'EPP–EPP', '#3399FF'], ['LÉ', 'EGP–G/EFA', '#16A34A'], ['PCF', 'PEL–LEFT', '#C0392B'], ['PS/PP', 'PES–S&D', '#FF2D2D']];
 const DEMO_GROUPS = [['', 'Overall'], ['Gender', 'Men'], ['Gender', 'Women'], ['Age', '18–24'], ['Age', '25–34'], ['Age', '35–49'], ['Age', '50–59'], ['Age', '60–69'], ['Age', '70+'],
   ['Education', 'Lower education'], ['Education', 'High school degree'], ['Education', 'Postgraduate'], ['Education', 'College graduate']];
 const DEMO = [ // per list, in the order of DEMO_GROUPS (%)
@@ -755,6 +1162,261 @@ function drawDemo(){
 document.querySelectorAll('#demo-mode button').forEach((b) => b.addEventListener('click', () => {
   DMODE = b.dataset.m; document.querySelectorAll('#demo-mode button').forEach((x) => x.setAttribute('aria-pressed', x === b)); drawDemo(); postHeight(); }));
 
+
+/* ===================== Candidate list (compact default view) ===================== */
+let CVIEW = 'bubbles', COPEN = null; const CMORE = new Set(); const CMAX = 7;
+const STATUS_TXT = { declared: 'Declared candidate', registered: 'Registered candidate', withdrawn: 'Withdrawn candidate', potential: 'Potential candidate' };
+function chipColor(it, g){ const f = it[5] || g.fill; return /^url/.test(f) ? '#B0B0B0' : f; }
+function renderList(genderFilter, statusFilter){
+  const box = document.getElementById('clist');
+  const gs = groups.map((g) => ({ ...g, c: filterCandidates(g.c, statusFilter, genderFilter) })).filter((g) => g.c.length);
+  let n = 0, uid = 0;
+  const chip = (it, g) => { n++; const id = 'c' + (uid++);
+    return `<button type="button" class="cc st-${it[4]}${it[2] >= 10 ? ' big' : ''}" data-id="${id}" aria-expanded="${COPEN === it[1]}" data-full="${esc(it[1])}"><i style="background:${chipColor(it, g)}"></i>${esc(it[0])}${it[10] ? ` <em>${esc(it[10])}</em>` : ''}</button>`; };
+  const byName = {};
+  gs.forEach((g) => g.c.forEach((it) => (it.sub ? it.c : [it]).forEach((x) => { byName[x[1]] = x; })));
+  box.innerHTML = gs.length ? gs.map((g, gi) => {
+    const items = [...g.c].sort((a, b) => (b.sub ? 99 : b[2]) - (a.sub ? 99 : a[2]));
+    const cnt = g.c.reduce((a, it) => a + (it.sub ? it.c.length : 1), 0);
+    const open = COPEN && (g.c.some((it) => (it.sub ? it.c : [it]).some((x) => x[1] === COPEN))) ? byName[COPEN] : null;
+    return `<div class="crow"><div class="cg" style="border-color:${g.stroke}">${esc(g.label.replace(/\s*\(.*\)\s*$/, '').replace(/ Candidates?$/, ''))}<small>${cnt} candidate${cnt > 1 ? 's' : ''}</small></div>
+      <div class="ccs">${(() => { const mx = window.innerWidth < 600 ? 5 : CMAX; const all = !CMORE.has(gi) && items.length > mx && !open ? items.slice(0, mx - 1) : items;
+        return all.map((it) => it.sub ? `<span class="subg"><b>${esc(it.label)}</b>${[...it.c].sort((a, b) => b[2] - a[2]).map((x) => chip(x, g)).join('')}</span>` : chip(it, g)).join('')
+          + (all.length < items.length ? `<button type="button" class="more" data-g="${gi}">+${items.length - all.length} more</button>` : ''); })()}</div>
+      ${open ? `<div class="cdet"><h4>${esc(open[1])}</h4><div class="aff">${[open[7] || 'No party', open[8] ? 'Europarty: ' + open[8] : '', open[9] ? 'EP group: ' + open[9] : ''].filter(Boolean).map(esc).join(' · ')} · ${STATUS_TXT[open[4]] || ''}</div>${esc(open[3])}</div>` : ''}</div>`;
+  }).join('') : '<p class="empty">No candidates match this filter combination.</p>';
+  document.getElementById('ccount').textContent = n ? `${n} shown` : '';
+  box.querySelectorAll('.more').forEach((b) => b.addEventListener('click', () => { CMORE.add(+b.dataset.g); renderList(genderFilter, statusFilter); postHeight(); }));
+  box.querySelectorAll('.cc').forEach((b) => b.addEventListener('click', () => { COPEN = COPEN === b.dataset.full ? null : b.dataset.full; renderList(genderFilter, statusFilter); postHeight(); }));
+}
+function renderCandidates(){
+  const gF = genderSelect.value, sF = statusSelect.value;
+  document.getElementById('clist').hidden = CVIEW !== 'list';
+  document.getElementById('bubblecard').hidden = CVIEW !== 'bubbles';
+  if (CVIEW === 'list') renderList(gF, sF); else renderBubbles(gF, sF);
+}
+document.querySelectorAll('#cand-view button').forEach((b) => b.addEventListener('click', () => {
+  CVIEW = b.dataset.v; document.querySelectorAll('#cand-view button').forEach((x) => x.setAttribute('aria-pressed', x === b)); renderCandidates(); postHeight(); }));
+
+// Run-off (second-round) polls: [pollster, fieldwork start, fieldwork end, sample size, candidate A %, candidate B %].
+// To add a poll, add a line at the top of its matchup; to add a matchup, copy a block. old: true = candidate no longer running.
+let RUNOFF = [
+  { a: "Philippe", b: "Le Pen", polls: [
+    ["Harris Interactive", '2026-11-03', '2026-11-05', 2101, 42, 58],
+    ["OpinionWay", '2026-10-21', '2026-10-22', 973, 44, 56],
+    ["Harris Interactive", '2026-10-19', '2026-10-21', 2094, 43, 57],
+    ["Ifop", '2026-10-17', '2026-10-19', 1928, 44, 56],
+    ["Elabe", '2026-10-14', '2026-10-16', 1701, 47.5, 52.5],
+    ["YouGov", '2026-10-12', '2026-10-15', 1094, 48, 52],
+    ["OpinionWay", '2026-10-13', '2026-10-14', 1043, 44, 56],
+    ["Harris Interactive", '2026-10-05', '2026-10-08', 2004, 44, 56],
+    ["Harris Interactive", '2026-09-22', '2026-09-24', 1974, 43, 57],
+    ["Harris Interactive", '2026-09-08', '2026-09-10', 2052, 45, 55],
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 48, 52],
+    ["Harris Interactive", '2026-08-18', '2026-08-19', 1764, 45, 55],
+    ["Cluster17", '2026-07-22', '2026-07-24', 1506, 48, 52],
+    ["Harris Interactive", '2026-07-07', '2026-07-08', 1582, 49, 51],
+    ["Ifop", '2026-07-07', '2026-07-08', 984, 46, 54],
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 48, 52],
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 53, 47],
+    ["Odoxa", '2025-04-23', '2025-04-24', 1005, 54, 46],
+    ["Ifop", '2024-04-20', '2024-04-24', 1081, 49, 51],
+    ["Ifop/Hexagone", '2025-04-11', '2025-04-18', 9128, 52, 48],
+    ["Ifop", '2024-01-31', '2024-02-01', 1081, 50, 50],
+] },
+  { a: "Attal", b: "Le Pen", polls: [
+    ["Ifop", '2026-10-17', '2026-10-19', 1928, 42, 58],
+    ["YouGov", '2026-10-12', '2026-10-15', 1094, 45, 55],
+    ["Harris Interactive", '2026-09-08', '2026-09-10', 2052, 44, 56],
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 46, 54],
+    ["Harris Interactive", '2026-08-18', '2026-08-19', 1764, 43, 57],
+    ["Cluster17", '2026-07-22', '2026-07-24', 1506, 44, 56],
+    ["Harris Interactive", '2026-07-07', '2026-07-08', 1582, 45, 55],
+    ["Ifop", '2026-07-07', '2026-07-08', 984, 45, 55],
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 46, 54],
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 49, 51],
+    ["Ifop", '2024-04-20', '2024-04-24', 1081, 47, 53],
+    ["Ifop", '2024-01-31', '2024-02-01', 1081, 49, 51],
+] },
+  { a: "Glucksmann", b: "Le Pen", polls: [
+    ["Harris Interactive", '2026-11-03', '2026-11-05', 2101, 40, 60],
+    ["OpinionWay", '2026-10-21', '2026-10-22', 973, 44, 56],
+    ["Harris Interactive", '2026-10-19', '2026-10-21', 2094, 41, 59],
+    ["Ifop", '2026-10-17', '2026-10-19', 1928, 43, 57],
+    ["Elabe", '2026-10-14', '2026-10-16', 1701, 46.5, 53.5],
+    ["YouGov", '2026-10-12', '2026-10-15', 1094, 45, 55],
+    ["OpinionWay", '2026-10-13', '2026-10-14', 1043, 44, 56],
+    ["Elabe", '2026-08-26', '2026-08-28', 1501, 43, 57],
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 45, 55],
+    ["Cluster17", '2026-07-22', '2026-07-24', 1506, 44, 56],
+] },
+  { a: "Mélenchon", b: "Le Pen", polls: [
+    ["Harris Interactive", '2026-11-03', '2026-11-05', 2101, 32, 68],
+    ["OpinionWay", '2026-10-21', '2026-10-22', 973, 31, 69],
+    ["Harris Interactive", '2026-10-19', '2026-10-21', 2094, 30, 70],
+    ["Ifop", '2026-10-17', '2026-10-19', 1928, 32, 68],
+    ["Elabe", '2026-10-14', '2026-10-16', 1701, 31, 69],
+    ["YouGov", '2026-10-12', '2026-10-15', 1094, 32, 68],
+    ["OpinionWay", '2026-10-13', '2026-10-14', 1043, 32, 68],
+    ["Harris Interactive", '2026-10-05', '2026-10-08', 2004, 33, 67],
+    ["Harris Interactive", '2026-09-22', '2026-09-24', 1974, 31, 69],
+    ["Harris Interactive", '2026-09-08', '2026-09-10', 2052, 33, 67],
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 33, 67],
+    ["Harris Interactive", '2026-08-18', '2026-08-19', 1764, 32, 68],
+    ["Cluster17", '2026-07-22', '2026-07-24', 1506, 39, 61],
+    ["Harris Interactive", '2026-07-07', '2026-07-08', 1582, 33, 67],
+    ["Ifop", '2026-07-07', '2026-07-08', 984, 30, 70],
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 33, 67],
+    ["Cluster17", '2024-04-02', '2024-04-05', 1686, 35, 65],
+    ["Ifop", '2024-01-31', '2024-02-01', 1081, 36, 64],
+] },
+  { a: "Ruffin", b: "Le Pen", polls: [
+    ["Cluster17", '2024-04-02', '2024-04-05', 1686, 50, 50],
+] },
+  { a: "Hollande", b: "Le Pen", polls: [
+    ["Ifop", '2026-10-17', '2026-10-19', 1928, 41, 59],
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 46, 54],
+] },
+  { a: "Retailleau", b: "Le Pen", polls: [
+    ["Ifop", '2026-08-24', '2026-08-25', 1598, 42, 58],
+    ["Cluster17", '2026-07-22', '2026-07-24', 1506, 43, 57],
+] },
+  { a: "Philippe", b: "Bardella", old: true, polls: [
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 46, 54],
+    ["Odoxa", '2026-05-20', '2026-05-21', 1005, 48, 52],
+    ["Odoxa", '2026-03-25', '2026-03-26', 1005, 52, 48],
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 51.5, 48.5],
+    ["Odoxa", '2025-11-19', '2025-11-20', 1300, 47, 53],
+    ["Odoxa", '2025-04-23', '2025-04-24', 1005, 54, 46],
+    ["Ifop/Hexagone", '2025-04-11', '2025-04-18', 9128, 50, 50],
+] },
+  { a: "Attal", b: "Bardella", old: true, polls: [
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 43, 57],
+    ["Odoxa", '2025-11-19', '2025-11-20', 1300, 44, 56],
+    ["Ifop/Hexagone", '2025-04-11', '2025-04-18', 9128, 48, 52],
+] },
+  { a: "Glucksmann", b: "Bardella", old: true, polls: [
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 41.5, 58.5],
+    ["Odoxa", '2025-11-19', '2025-11-20', 1300, 42, 58],
+] },
+  { a: "Mélenchon", b: "Bardella", old: true, polls: [
+    ["Harris Interactive", '2026-05-25', '2026-05-27', 1744, 32, 68],
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 28.5, 71.5],
+    ["Odoxa", '2025-11-19', '2025-11-20', 1300, 26, 74],
+    ["Ifop/Hexagone", '2025-04-11', '2025-04-18', 9128, 33, 67],
+] },
+  { a: "Retailleau", b: "Bardella", old: true, polls: [
+    ["Elabe", '2026-03-25', '2026-03-27', 1504, 42, 58],
+    ["Ifop/Hexagone", '2025-04-11', '2025-04-18', 9128, 47, 53],
+] }
+];
+
+const RO_WINDOW = 30 * 864e5;
+const RO_OPEN = new Set();
+function roStats(m){
+  const polls = m.polls.map((p) => ({ pf: p[0], fs: toDate(p[1]), fe: toDate(p[2]), n: p[3], a: p[4], b: p[5] })).sort((x, y) => y.fe - x.fe);
+  // Same smoothed average as the first round, on the candidate's share of the two-candidate vote.
+  const pts = polls.map((p) => ({ t: new Date((+p.fs + +p.fe) / 2), v: p.a / (p.a + p.b) * 100 })).sort((x, y) => x.t - y.t);
+  const last = polls[0].fe, tl = +pts.at(-1).t, line = [];
+  for (let t = +pts[0].t; t < tl; t += 3 * DAY) line.push(smooth(pts, t));
+  line.push(smooth(pts, tl));
+  const a = line.at(-1).v;
+  return { polls, pts, line, last, n: polls.length, a, b: 100 - a };
+}
+function drawRunoff(){
+  drawRunoffOverview();
+  const fmt = d3.utcFormat('%-d %b %Y'), now = Date.now();
+  const render = (boxId, list) => {
+    const box = document.getElementById(boxId); if (!box) return;
+    const items = list.map((m) => ({ m, st: roStats(m), A: candOf(m.a), B: candOf(m.b) })).sort((x, y) => ((Date.now() - x.st.last > 180 * 864e5) - (Date.now() - y.st.last > 180 * 864e5)) || y.st.a - x.st.a);  // dated matchups last
+    box.innerHTML = items.map(({ m, st, A, B }, i) => {
+      const id = boxId + '-' + i, dated = now - st.last > 180 * 864e5, open = RO_OPEN.has(m.a + '|' + m.b);
+      const ca = A.color === '#FFD21F' ? '#E5B800' : A.color;
+      return `<div class="mu${dated ? ' dated' : ''}"><button type="button" class="muh" aria-expanded="${open}" data-k="${esc(m.a + '|' + m.b)}">
+        <span class="n">${esc(A.name)}<small>${esc(candTag(A))}</small></span>
+        <span class="dv" role="img" aria-label="${esc(A.name)} ${Math.round(st.a)}%, ${esc(B.name)} ${100 - Math.round(st.a)}%"><b style="width:${st.a}%;background:${ca}">${Math.round(st.a)}%</b><b class="R" style="width:${st.b}%;background:${B.color}">${100 - Math.round(st.a)}%</b><i></i></span>
+        <span class="n r">${esc(B.name)}<small>${esc(candTag(B))}</small></span>
+        <span class="mmeta">${st.n} poll${st.n > 1 ? 's' : ''} · latest ${fmt(st.last)}${dated ? ' · dated' : ''}${st.a > st.b ? ' · ' + esc(A.name) + ' ahead' : st.a < st.b ? ' · ' + esc(B.name) + ' ahead' : ' · tied'}</span></button>
+        ${open ? `<div class="mubody">${st.polls.length > 1 ? `<div class="chart" id="${id}"></div>` : ''}
+          <table class="ptable"><thead><tr><th>Pollster</th><th>Fieldwork</th><th style="text-align:right">Sample</th><th style="text-align:right">${esc(A.name)}</th><th style="text-align:right">${esc(B.name)}</th></tr></thead><tbody>
+          ${st.polls.map((p) => `<tr><td>${esc(p.pf)}</td><td>${fmt(p.fs)} – ${fmt(p.fe)}</td><td class="v">${p.n.toLocaleString('en')}</td><td class="v">${p.a}%</td><td class="v">${p.b}%</td></tr>`).join('')}</tbody></table></div>` : ''}</div>`;
+    }).join('');
+    box.querySelectorAll('.muh').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.k; RO_OPEN.has(k) ? RO_OPEN.delete(k) : RO_OPEN.add(k); drawRunoff(); postHeight(); }));
+    items.forEach(({ m, st, A, B }, i) => { const el = document.getElementById(boxId + '-' + i); if (el) drawRunoffChart(el, st, A, B); });
+  };
+  render('runoff', RUNOFF.filter((m) => !m.old));
+  render('runoff-old', RUNOFF.filter((m) => m.old));
+}
+
+let RO_RANGE = 365; const RO_OVR = new Map();
+function drawRunoffOverview(){
+  const el = document.getElementById('runoff-chart'); if (!el) return;
+  const seg = document.getElementById('ro-range');
+  seg.innerHTML = [[730, 'Two years'], [365, 'Last year'], [92, 'Last 3 months']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RO_RANGE === d}">${l}</button>`).join('');
+  seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { RO_RANGE = +b.dataset.d; drawRunoffOverview(); }));
+  const ms = RUNOFF.filter((m) => !m.old && m.polls.length > 1).map((m) => ({ m, st: roStats(m), A: candOf(m.a), B: candOf(m.b) }))
+    .sort((x, y) => y.st.a - x.st.a);
+  // Off by default (can be switched on): matchups with fewer than 4 polls or no poll in the last 6 months.
+  const hidden = (o) => RO_OVR.has(o.A.key) ? !RO_OVR.get(o.A.key) : (o.m.polls.length < 4 || Date.now() - o.st.last > 180 * DAY);
+  const chips = document.getElementById('runoff-chips');
+  chips.innerHTML = ms.map((o) => `<button type="button" class="chip" data-k="${o.A.key}" aria-pressed="${!hidden(o)}"><i style="background:${o.A.color}"></i>${esc(o.A.name)} vs ${esc(o.B.name)}</button>`).join('');
+  chips.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => { const o = ms.find((x) => x.A.key === b.dataset.k); RO_OVR.set(o.A.key, hidden(o)); drawRunoffOverview(); }));
+  el.innerHTML = '';
+  const vis = ms.filter((o) => !hidden(o));
+  const W = el.clientWidth || 640, narrow = W < 520, H = narrow ? 280 : 330, m = { t: 14, r: narrow ? 70 : 96, b: 30, l: 34 };
+  const tMax = d3.max(ms, (o) => o.st.pts.at(-1).t), cut = new Date(+tMax - RO_RANGE * DAY), inR = (p) => p.t >= cut;
+  const x = d3.scaleUtc().domain([cut, tMax]).range([m.l, W - m.r]);
+  const y = d3.scaleLinear().domain([20, 60]).range([H - m.b, m.t]);
+  const s = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'Second-round polling averages against Le Pen');
+  gridY(s, y, m.l, W - m.r, y.ticks(5));
+  s.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(50)).attr('y2', y(50)).attr('stroke', '#1B2A4A').attr('stroke-width', 1.5).attr('stroke-dasharray', '5,4');
+  s.append('text').attr('x', m.l + 4).attr('y', y(50) - 6).attr('font-size', 12).attr('font-weight', 700).attr('fill', '#1B2A4A').text('50%: tie with Le Pen');
+  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 3 : 6).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(RO_RANGE > 120 ? '%b %Y' : '%-d %b')));
+  xa.selectAll('text').attr('font-size', 12).attr('fill', '#8A8D95').attr('font-family', FONT); xa.select('.domain').remove();
+  const labs = [];
+  vis.forEach((o) => {
+    const col = o.A.color === '#FFD21F' ? '#E5B800' : o.A.color, line = o.st.line.filter(inR), pts = o.st.pts.filter(inR);
+    const g = s.append('g');
+    const band = line.filter((p) => p.sd != null);
+    if (band.length > 1) g.append('path').datum(band).attr('fill', col).attr('opacity', .12).attr('d', d3.area().x((p) => x(p.t)).y0((p) => y(Math.max(20, p.v - p.sd))).y1((p) => y(Math.min(60, p.v + p.sd))).curve(d3.curveMonotoneX));
+    g.selectAll('circle').data(pts).join('circle').attr('cx', (p) => x(p.t)).attr('cy', (p) => y(p.v)).attr('r', 2.6).attr('fill', col).attr('opacity', .35);
+    if (line.length > 1) g.append('path').datum(line).attr('fill', 'none').attr('stroke', col).attr('stroke-width', 2.6).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)).curve(d3.curveMonotoneX));
+    const lp = line.at(-1); if (lp) { g.append('circle').attr('cx', x(lp.t)).attr('cy', y(lp.v)).attr('r', 4.5).attr('fill', col).attr('stroke', '#fff').attr('stroke-width', 1.5); labs.push({ o, col, v: lp.v, y: y(lp.v) }); }
+  });
+  spread(labs, 14, m.t, H - m.b).forEach((l) => s.append('text').attr('x', W - m.r + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700).attr('fill', readable(l.col)).text(`${l.o.A.name} ${Math.round(l.v)}%`));
+  if (!vis.length) s.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H / 2).attr('text-anchor', 'middle').attr('fill', '#8A8D95').attr('font-size', 15).text('Click a name below to show its average.');
+  const tt = chartTip(el), guide = s.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', '#1B2A4A').attr('stroke-dasharray', '3,3').attr('opacity', 0), fmt = d3.utcFormat('%-d %B %Y');
+  s.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.r - m.l).attr('height', H - m.b - m.t).attr('fill', 'transparent')
+    .on('mousemove touchstart touchmove', (ev) => { const [px, py] = d3.pointer(ev.touches ? ev.touches[0] : ev, el), t = x.invert(px);
+      const vals = vis.map((o) => { const ln = o.st.line; if (!ln.length || t < ln[0].t || t > ln.at(-1).t) return null; const p = valueAt(ln, t); return [o, p]; }).filter(Boolean).sort((a, b) => b[1].v - a[1].v);
+      if (!vals.length) { tt.hide(); guide.attr('opacity', 0); return; }
+      guide.attr('x1', px).attr('x2', px).attr('opacity', .45);
+      tt.show(`<b>${fmt(t)}</b>` + vals.map(([o, p]) => `<div class="r"><span><i class="k" style="background:${o.A.color}"></i>${esc(o.A.name)} – Le Pen</span><span>${Math.round(p.v)}%–${100 - Math.round(p.v)}%</span></div>`).join(''), px, py); })
+    .on('mouseleave touchend', () => { tt.hide(); guide.attr('opacity', 0); });
+}
+function drawRunoffChart(el, st, A, B){
+  el.innerHTML = '';
+  // Chart: the last 12 months before the matchup's latest poll (the average itself uses all polls).
+  const from = +st.last - 365 * DAY;
+  const pts = st.polls.slice().reverse().filter((p) => +p.fe >= from), W = el.clientWidth || 600, H = 220, m = { t: 12, r: 104, b: 28, l: 34 };
+  const ext = [new Date(Math.max(from, +d3.min(st.line, (r) => r.t))), d3.max(pts, (p) => p.fe)]; if (+ext[0] === +ext[1]) { ext[0] = new Date(+ext[0] - 30 * 864e5); ext[1] = new Date(+ext[1] + 30 * 864e5); }
+  const x = d3.scaleUtc().domain(ext).range([m.l, W - m.r]);
+  const vals = pts.flatMap((p) => [p.a, p.b]);
+  const y = d3.scaleLinear().domain([Math.min(25, Math.floor((d3.min(vals) - 3) / 5) * 5), Math.max(75, Math.ceil((d3.max(vals) + 3) / 5) * 5)]).range([H - m.b, m.t]);
+  const s = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+  gridY(s, y, m.l, W - m.r, y.ticks(5));
+  s.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(50)).attr('y2', y(50)).attr('stroke', '#1B2A4A').attr('stroke-dasharray', '4,3').attr('opacity', .5);
+  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(W < 500 ? 3 : 6).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat('%b %Y')));
+  xa.selectAll('text').attr('font-size', 12).attr('fill', '#8A8D95').attr('font-family', FONT); xa.select('.domain').remove();
+  const ca = A.color === '#FFD21F' ? '#E5B800' : A.color;
+  const roll = st.line.filter((r) => +r.t >= from).map((r) => ({ t: r.t, a: r.v }));
+  [[ca, 'a', (r) => r.a], [B.color, 'b', (r) => 100 - r.a]].forEach(([col, k, f]) => {
+    s.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (p) => x(p.fe)).attr('cy', (p) => y(p[k])).attr('r', 3.5).attr('fill', col).attr('opacity', .35);
+    if (roll.length > 1) s.append('path').datum(roll).attr('fill', 'none').attr('stroke', col).attr('stroke-width', 2.4).attr('d', d3.line().x((r) => x(r.t)).y((r) => y(f(r))).curve(d3.curveMonotoneX));
+    s.append('text').attr('x', W - m.r + 8).attr('y', y(f(roll.at(-1))) + 4).attr('font-size', 12.5).attr('font-weight', 700).attr('fill', readable(col)).text(`${(k === 'a' ? A : B).name} ${Math.round(f(roll.at(-1)))}%`);
+  });
+}
+
 /* ===================== Page ===================== */
 function postHeight(){
   if (window.parent === window) return;
@@ -762,9 +1424,9 @@ function postHeight(){
   const h = Math.ceil(box.getBoundingClientRect().bottom + window.scrollY);
   window.parent.postMessage({ 'datawrapper-height': { 'ee-fr-2027': h } }, '*');
 }
-function drawAll(){ renderBubbles(genderSelect.value, statusSelect.value); renderPolls(); drawTurnout(); drawHistory(); drawDemo(); postHeight(); }
-genderSelect.addEventListener('change', () => { renderBubbles(genderSelect.value, statusSelect.value); postHeight(); });
-statusSelect.addEventListener('change', () => { renderBubbles(genderSelect.value, statusSelect.value); postHeight(); });
+function drawAll(){ renderCandidates(); renderPolls(); drawRunoff(); drawTurnout(); drawHistory(); drawDemo(); postHeight(); }
+genderSelect.addEventListener('change', () => { renderCandidates(); postHeight(); });
+statusSelect.addEventListener('change', () => { renderCandidates(); postHeight(); });
 let lastW = 0, rt;
 window.addEventListener('resize', () => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; clearTimeout(rt); rt = setTimeout(drawAll, 120); });
 document.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', postHeight));
