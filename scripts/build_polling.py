@@ -99,7 +99,8 @@ def parse_ropf(text):
                 polls.append({'d': mid, 'pf': pf, 'v': values, 'n': int(ss) if ss and ss >= 50 else None})
                 done = True
         else:
-            m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
+            # KEY: number •A: …  — the number column may be left out (KEY: •I: ALA424 •A: …).
+            m = re.match(r'^(\S+):\s+(?!•)(\S+)\s+(.*)$', line) or re.match(r'^(\S+):\s+()(•.*)$', line)
             if m and '•A:' in line:
                 key = m.group(1)
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
@@ -161,8 +162,35 @@ def loess_se(xs, ys, x0, k, span=SPAN_DAYS):
     return min(max(a + b * x0, min(used)), max(used)), var ** 0.5
 
 
+def merge_same_id(polls, parties):
+    """Lines that carry the same Europe Elects ID (•I:) are one party under different names in the file
+    (e.g. NOVA+S and KÚ+NOVA+S+ZZDÚ for OĽaNO's lists): they become one line, under the key polled most
+    recently. A poll that lists two of them keeps the first value found."""
+    by_id = {}
+    for key, info in parties.items():
+        if info.get('id'):
+            by_id.setdefault(info['id'], []).append(key)
+    alias = {}
+    for ee, keys in by_id.items():
+        if len(keys) < 2:
+            continue
+        last = {k: max((p['d'] for p in polls if k in p['v']), default=dt.date.min) for k in keys}
+        main = max(keys, key=lambda k: last[k])
+        for k in keys:
+            if k != main:
+                alias[k] = main
+        parties[main] = {**parties[main], 'aliases': sorted(k for k in keys if k != main)}
+    if alias:
+        for p in polls:
+            for k in [k for k in p['v'] if k in alias]:
+                v = p['v'].pop(k)
+                p['v'].setdefault(alias[k], v)
+    return alias
+
+
 def build_country(polls, parties):
     polls.sort(key=lambda p: p['d'])
+    merge_same_id(polls, parties)
     day0 = polls[0]['d']
     out_parties = []
     keys = sorted({k for p in polls for k in p['v']}, key=lambda k: -max(p['v'].get(k, 0) for p in polls))
