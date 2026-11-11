@@ -1,6 +1,6 @@
-"""Reads the French presidential polling-average Sheet for the fr-2027 special page and writes
-fr-2027/averages.json. Every tab is copied as-is (header row + rows); the page draws the tabs whose
-name starts with "R_" (one candidate scenario each, e.g. R_lepen_philippe) as polling-average charts.
+"""Reads the French presidential polling Sheet for the fr-2027 special page and writes
+fr-2027/averages.json. Every tab is copied as-is (header row + rows). The page reads the tabs
+"first_round" and "second_round" (one row per poll) and computes the polling averages itself.
 
 Usage: python3 scripts/fetch_fr2027.py <output.json>
 Environment:
@@ -29,7 +29,7 @@ def main(dst):
     for p in tabs:
         rng = urllib.parse.quote("'" + p['title'].replace("'", "''") + "'", safe='')
         rows = get(API + sheet_id + '/values/' + rng + '?valueRenderOption=UNFORMATTED_VALUE'
-                   '&dateTimeRenderOption=FORMATTED_STRING').get('values', [])
+                   '&dateTimeRenderOption=SERIAL_NUMBER').get('values', [])  # dates as day numbers: no locale mix-ups
         out.append({'tab': p['title'], 'rows': rows})
         print(f"fr-2027 tab {p['title']}: {max(len(rows) - 1, 0)} rows")
     os.makedirs(os.path.dirname(dst) or '.', exist_ok=True)
