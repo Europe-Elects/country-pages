@@ -605,7 +605,19 @@ function parseTab(tab){
 }
 const valueAt = (line, t) => { if (!line.length) return null; const i = d3.bisector((p) => p.t).center(line, t); return line[i]; };
 
-let SCEN = [], UPDATED = '', CUR = 0, HL = null, RANGE = 365;  // RANGE: days shown (last year / month / week)
+// Election days: the charts can run up to them (the averages stop at the latest poll; nothing is projected).
+const ELECTION_R1 = new Date(Date.UTC(2027, 3, 18)), ELECTION_R2 = new Date(Date.UTC(2027, 4, 2));
+function electionMark(s, x, from, day, label, m, H){
+  const x0 = x(from), x1 = x(day);
+  if (x1 <= x0) return;
+  s.append('rect').attr('x', x0).attr('y', m.t).attr('width', x1 - x0).attr('height', H - m.b - m.t).attr('fill', '#F3F1EB').attr('opacity', .7);
+  s.append('line').attr('x1', x1).attr('x2', x1).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', '#1B2A4A').attr('stroke-width', 1.5).attr('stroke-dasharray', '4,3');
+  const days = Math.ceil((+day - Date.now()) / 864e5);
+  const tx = s.append('text').attr('x', x1 - 6).attr('y', m.t + 14).attr('text-anchor', 'end').attr('font-size', 12.5).attr('font-weight', 700).attr('fill', '#1B2A4A');
+  tx.append('tspan').text(label);
+  if (days > 0) tx.append('tspan').attr('x', x1 - 6).attr('dy', 15).attr('font-weight', 500).attr('fill', '#565B66').text(`${days} days to go`);
+}
+let SCEN = [], UPDATED = '', CUR = 0, HL = null, RANGE = 0;  // RANGE: days shown (last year / month / week); 0 = last year up to election day
 const OVR = new Map();  // candidate key → true (shown) / false (hidden), set by clicking a name
 const isHidden = (s) => OVR.has(s.c.key) ? !OVR.get(s.c.key) : s.minor;
 function renderPolls(){
@@ -617,7 +629,7 @@ function renderPolls(){
       `<button type="button" data-i="${i}" aria-pressed="${i === CUR}">${esc(x.short)}</button>`).join('')}</div>` : '')
     + (otherS.length ? `<p class="scx">Earlier scenario${otherS.length > 1 ? 's' : ''} without Le Pen: ${otherS.map(([x, i]) => `<button type="button" data-i="${i}" aria-pressed="${i === CUR}">${esc(x.short)}</button>`).join(' · ')}</p>` : '')
     + `<p class="ptitle">${esc(sc.title)}</p><p class="psub">Polling average for this candidate scenario · ${sc.n} poll questions${UPDATED ? ' · ' + esc(UPDATED) : ''}</p>`
-    + `<div class="pgrid"><div><div class="seg" id="range-seg" role="group" aria-label="Period" style="margin-bottom:8px">${[[365, 'Last year'], [31, 'Last month'], [7, 'Last week']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RANGE === d}">${l}</button>`).join('')}</div><div class="chart" id="pchart"></div><div class="chips" id="pchips"></div></div><div class="rank" id="prank"></div></div>`
+    + `<div class="pgrid"><div><div class="seg" id="range-seg" role="group" aria-label="Period" style="margin-bottom:8px">${[[0, 'Until election day'], [365, 'Last year'], [31, 'Last month'], [7, 'Last week']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RANGE === d}">${l}</button>`).join('')}</div><div class="chart" id="pchart"></div><div class="chips" id="pchips"></div></div><div class="rank" id="prank"></div></div>`
     + `<p class="note">Lines: smoothed average (tricube-weighted, LOESS-type) of the published first-round polls that test this candidate line-up, over up to the last 12 months. Dots: single polls. Candidates below 5% are switched off by default: click a name to show or hide it. Shaded bands: how much the polls behind the average disagree (± one standard deviation). Hover the chart for exact values.</p>`;
   box.querySelectorAll('#range-seg button').forEach((b) => b.addEventListener('click', () => { RANGE = +b.dataset.d; renderPolls(); postHeight(); }));
   box.querySelectorAll('#scen-seg button, .scx button').forEach((b) => b.addEventListener('click', () => { CUR = +b.dataset.i; HL = null; renderPolls(); postHeight(); }));
@@ -653,16 +665,18 @@ function drawScenario(el, sc){
   const W = el.clientWidth || 640, narrow = W < 520;
   const m = { t: 14, r: narrow ? 44 : 54, b: 30, l: 34 }, H = narrow ? 320 : 400;
   // Period filter: only the last RANGE days up to the latest poll of this scenario.
-  const tMax = d3.max(sc.series.flatMap((s) => s.pts), (p) => p.t), cut = new Date(+tMax - RANGE * 864e5);
+  const tMax = d3.max(sc.series.flatMap((s) => s.pts), (p) => p.t), cut = new Date(+tMax - (RANGE || 365) * 864e5);
+  const tEnd = RANGE ? tMax : new Date(Math.max(+tMax, +ELECTION_R1));
   const inR = (p) => p.t >= cut;
   const vis = sc.series.filter((s) => !isHidden(s)).map((s) => ({ ...s, pts: s.pts.filter(inR), line: s.line.filter(inR), last: s.recent && s.last && s.last.t >= cut ? s.last : null })).filter((s) => s.pts.length || s.line.length);
   const all = vis.flatMap((s) => [...s.pts, ...s.line]);
-  const x = d3.scaleUtc().domain([cut, tMax]).range([m.l, W - m.r]);
+  const x = d3.scaleUtc().domain([cut, tEnd]).range([m.l, W - m.r]);
   const ymax = Math.max(10, Math.ceil((d3.max(vis.flatMap((s) => [...s.pts, ...s.line]), (p) => p.v) || 10) / 5) * 5 + (narrow ? 0 : 0));
   const y = d3.scaleLinear().domain([0, ymax]).range([H - m.b, m.t]);
   const s = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'Polling average: ' + sc.title);
   gridY(s, y, m.l, W - m.r, y.ticks(narrow ? 5 : 7));
-  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 7).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(RANGE > 60 ? '%b %Y' : '%-d %b')));
+  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 7).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(!RANGE || RANGE > 60 ? '%b %Y' : '%-d %b')));
+  if (!RANGE) electionMark(s, x, tMax, ELECTION_R1, 'First round · 18 Apr 2027', m, H);
   xa.selectAll('text').attr('font-size', 12).attr('fill', '#8A8D95').attr('font-family', FONT); xa.select('.domain').remove();
   if (!vis.length) s.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H / 2).attr('text-anchor', 'middle').attr('fill', '#8A8D95').attr('font-size', 15).text('No polls for this scenario in this period.');
   vis.slice().reverse().forEach((sr) => {
@@ -683,7 +697,7 @@ function drawScenario(el, sc){
   });
   // Value labels at the line ends (spaced so they do not overlap).
   const labs = spread(vis.filter((sr) => sr.last).map((sr) => ({ sr, y: y(sr.last.v) })), 13, m.t, H - m.b);
-  labs.forEach((l) => s.append('text').attr('class', 'lab').attr('x', W - m.r + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700)
+  labs.forEach((l) => s.append('text').attr('class', 'lab').attr('x', x(tMax) + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700)
     .attr('fill', readable(l.sr.c.color)).text(Math.round(l.sr.last.v) + '%'));
   // Hover: values of the averages on the nearest day.
   const tt = chartTip(el), fmt = d3.utcFormat('%-d %B %Y');
@@ -1348,11 +1362,11 @@ function drawRunoff(){
   render('runoff-old', RUNOFF.filter((m) => m.old));
 }
 
-let RO_RANGE = 365; const RO_OVR = new Map();
+let RO_RANGE = 0; const RO_OVR = new Map();  // 0 = last year up to the run-off
 function drawRunoffOverview(){
   const el = document.getElementById('runoff-chart'); if (!el) return;
   const seg = document.getElementById('ro-range');
-  seg.innerHTML = [[730, 'Two years'], [365, 'Last year'], [92, 'Last 3 months']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RO_RANGE === d}">${l}</button>`).join('');
+  seg.innerHTML = [[0, 'Until election day'], [730, 'Two years'], [365, 'Last year'], [92, 'Last 3 months']].map(([d, l]) => `<button type="button" data-d="${d}" aria-pressed="${RO_RANGE === d}">${l}</button>`).join('');
   seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { RO_RANGE = +b.dataset.d; drawRunoffOverview(); }));
   const ms = RUNOFF.filter((m) => !m.old && m.polls.length > 1).map((m) => ({ m, st: roStats(m), A: candOf(m.a), B: candOf(m.b) }))
     .sort((x, y) => y.st.a - x.st.a);
@@ -1364,14 +1378,16 @@ function drawRunoffOverview(){
   el.innerHTML = '';
   const vis = ms.filter((o) => !hidden(o));
   const W = el.clientWidth || 640, narrow = W < 520, H = narrow ? 280 : 330, m = { t: 14, r: narrow ? 70 : 96, b: 30, l: 34 };
-  const tMax = d3.max(ms, (o) => o.st.pts.at(-1).t), cut = new Date(+tMax - RO_RANGE * DAY), inR = (p) => p.t >= cut;
-  const x = d3.scaleUtc().domain([cut, tMax]).range([m.l, W - m.r]);
+  const tMax = d3.max(ms, (o) => o.st.pts.at(-1).t), cut = new Date(+tMax - (RO_RANGE || 365) * DAY), inR = (p) => p.t >= cut;
+  const tEnd = RO_RANGE ? tMax : new Date(Math.max(+tMax, +ELECTION_R2));
+  const x = d3.scaleUtc().domain([cut, tEnd]).range([m.l, W - m.r]);
   const y = d3.scaleLinear().domain([20, 60]).range([H - m.b, m.t]);
   const s = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'Second-round polling averages against Le Pen');
   gridY(s, y, m.l, W - m.r, y.ticks(5));
   s.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(50)).attr('y2', y(50)).attr('stroke', '#1B2A4A').attr('stroke-width', 1.5).attr('stroke-dasharray', '5,4');
   s.append('text').attr('x', m.l + 4).attr('y', y(50) - 6).attr('font-size', 12).attr('font-weight', 700).attr('fill', '#1B2A4A').text('50%: tie with Le Pen');
-  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 3 : 6).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(RO_RANGE > 120 ? '%b %Y' : '%-d %b')));
+  const xa = s.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(narrow ? 3 : 6).tickSize(0).tickPadding(10).tickFormat(d3.utcFormat(!RO_RANGE || RO_RANGE > 120 ? '%b %Y' : '%-d %b')));
+  if (!RO_RANGE) electionMark(s, x, tMax, ELECTION_R2, 'Run-off · 2 May 2027', m, H);
   xa.selectAll('text').attr('font-size', 12).attr('fill', '#8A8D95').attr('font-family', FONT); xa.select('.domain').remove();
   const labs = [];
   vis.forEach((o) => {
@@ -1383,7 +1399,7 @@ function drawRunoffOverview(){
     if (line.length > 1) g.append('path').datum(line).attr('fill', 'none').attr('stroke', col).attr('stroke-width', 2.6).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.v)).curve(d3.curveMonotoneX));
     const lp = line.at(-1); if (lp) { g.append('circle').attr('cx', x(lp.t)).attr('cy', y(lp.v)).attr('r', 4.5).attr('fill', col).attr('stroke', '#fff').attr('stroke-width', 1.5); labs.push({ o, col, v: lp.v, y: y(lp.v) }); }
   });
-  spread(labs, 14, m.t, H - m.b).forEach((l) => s.append('text').attr('x', W - m.r + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700).attr('fill', readable(l.col)).text(`${l.o.A.name} ${Math.round(l.v)}%`));
+  spread(labs, 14, m.t, H - m.b).forEach((l) => s.append('text').attr('x', x(tMax) + 8).attr('y', l.y + 4).attr('font-size', 12.5).attr('font-weight', 700).attr('fill', readable(l.col)).text(`${l.o.A.name} ${Math.round(l.v)}%`));
   if (!vis.length) s.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H / 2).attr('text-anchor', 'middle').attr('fill', '#8A8D95').attr('font-size', 15).text('Click a name below to show its average.');
   const tt = chartTip(el), guide = s.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', '#1B2A4A').attr('stroke-dasharray', '3,3').attr('opacity', 0), fmt = d3.utcFormat('%-d %B %Y');
   s.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.r - m.l).attr('height', H - m.b - m.t).attr('fill', 'transparent')
