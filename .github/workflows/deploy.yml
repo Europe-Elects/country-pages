@@ -61,6 +61,12 @@ jobs:
           HEADLINE_SHEET_ID: ${{ secrets.HEADLINE_SHEET_ID }}
         run: python3 scripts/fetch_sheets.py site/sheets
 
+      - name: Read the French presidential polling averages (fr-2027 page)
+        env:
+          GOOGLE_TOKEN: ${{ steps.google.outputs.access_token }}
+          FR_PRES_SHEET_ID: ${{ secrets.FR_PRES_SHEET_ID }}
+        run: python3 scripts/fetch_fr2027.py site/fr-2027/averages.json || echo "fr-2027 averages not updated"
+
       - name: Assemble the site
         run: |
           mkdir -p site
@@ -71,6 +77,7 @@ jobs:
             [ -f "$f" ] && cp "$f" site/ || true
           done
           [ -d home ] && cp -r home site/ || true
+          mkdir -p site/fr-2027 && cp fr-2027/index.html site/fr-2027/
           [ -f EMBED-CODES.md ] && cp EMBED-CODES.md site/ || true
           python3 scripts/build_polling.py apopod site/polling
 
