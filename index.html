@@ -66,7 +66,7 @@ h1.country{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-siz
 .parl .meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;font-size:15px}
 .seatwrap{position:relative}
 .seatbar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:#ECEAE4}
-.seatbar div{min-width:0;box-shadow:inset -1px 0 0 #fff;transition:flex-grow .9s ease}
+.seatbar div{min-width:0;box-shadow:inset -1px 0 0 #fff;transition:flex-grow .9s ease,opacity .25s}
 @media (prefers-reduced-motion: reduce){.seatbar div{transition:none}}
 .parl-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 button.play{display:inline-flex;align-items:center;gap:8px}
@@ -77,6 +77,22 @@ button.play{display:inline-flex;align-items:center;gap:8px}
 .majline{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
 .keys{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
 .keys span{display:inline-flex;align-items:center;gap:6px}
+.parl .keys{gap:4px 4px}
+.keys .key{display:inline-flex;align-items:center;gap:6px;margin:0;padding:3px 8px;border:1px solid transparent;border-radius:999px;background:none;font:inherit;color:inherit;cursor:pointer;transition:opacity .2s}
+.keys .key:hover{background:#F3F1EC;border-color:var(--line)}
+.keys .key[aria-pressed="true"]{background:#FFF6D6;border-color:var(--gold)}
+.keys .key[aria-pressed="true"]::before{content:"✓";font-weight:800;color:var(--navy)}
+.keys .key:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.keys.picking .key[aria-pressed="false"]{opacity:.55}
+.keys.picking .key[aria-pressed="false"]:hover{opacity:1}
+.keys .ksep{flex-basis:100%;height:0}
+.seatbar div.off{opacity:.28}
+.coal[hidden]{display:none}
+.coal{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 12px;border-radius:6px;background:var(--bg);font-size:15px}
+.coal .ok{color:#1F7A3A;font-weight:700}
+.coal .no{color:#B42318;font-weight:700}
+.coal .coal-clear{margin-left:auto;padding:2px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font:600 14px 'Advent Pro',system-ui,sans-serif;color:var(--navy);cursor:pointer}
+.coal .coal-clear:hover{border-color:var(--navy)}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
 .poll{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .poll iframe{width:0;min-width:100%;border:none}
@@ -1286,21 +1302,49 @@ function viewParliament(cfg, parties) {
     ${controls}
     <div class="seatwrap"><div class="seatbar" role="img">${c.segs.map((sg, i) => `<div data-i="${i}" style="flex:${sg.vals[last] || 0} 0 0;background:${segBg(sg)}"></div>`).join('')}</div>
     <div class="majline" aria-hidden="true"></div></div>
-    <div class="keys" aria-live="polite"></div>
+    <div class="coal" aria-live="polite" hidden></div>
+    <div class="keys" role="group" aria-label="Parties: click to add to or remove from a coalition"></div>
+    <p class="note-s" style="margin:0">Click on party names to build a coalition: they move to the left of the bar, in the order you pick them, and their seats are added up against the majority.</p>
     ${c.segs.some((sg) => sg.soft) ? `<p class="note-s" style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot" style="background:${stripes('#8A9099')}"></span>Striped: no ${AFF_WORD_L()}, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
     <div class="parl-hist" hidden>${c.elections.map((e, i) => { const tot = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0), maj = Math.floor(tot / 2) + 1;
       return `<div class="hrow"><span class="hlbl">${esc(e.label)}</span><div class="seatwrap"><div class="seatbar sm" role="img" aria-label="${esc(e.label)}: ${esc(c.segs.filter((sg) => sg.vals[i] > 0).map((sg) => `${sg.a} ${sg.vals[i]}`).join(', '))}">${c.segs.map((sg) => (sg.vals[i] > 0 ? `<div style="flex:${sg.vals[i]} 0 0;background:${segBg(sg)}" title="${esc(sg.a + (sg.tag ? ' (' + sg.tag + ')' : '') + ': ' + sg.vals[i])}"></div>` : '')).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / tot * 100).toFixed(2)}%"></div></div><span class="htot">${tot}</span></div>`; }).reverse().join('')}</div></section>`;
   }).join('');
 }
+// Coalition builder: parties picked by clicking their name, per chamber, in click order. Kept by chamber name and
+// party ID (not segment index), so the pick survives a change of election year or colour mode.
+const PARL_PICKS = {};
+const segKey = (sg) => sg.entityId || sg.a;
 function setParlYear(ci, i) {
   const c = PARLS[ci], el = document.querySelector(`.parl[data-c="${ci}"]`); if (!c || !el || c.missing) return;
+  c.cur = i;
   const e = c.elections[i], total = c.totals[i] || c.segs.reduce((a, sg) => a + (sg.vals[i] || 0), 0);
+  const pick = PARL_PICKS[c.name] || [];
+  const pos = (sg) => pick.indexOf(segKey(sg));
   const barEl = el.querySelector('.seatbar');
-  barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0; d.style.flexGrow = n; d.title = `${sg.a}${sg.tag ? ' (' + sg.tag + ')' : ''} – ${sg.title}: ${n}`; });
-  const live = c.segs.map((sg) => ({ a: sg.a, tag: sg.tag, title: sg.title, bg: segBg(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
-  barEl.setAttribute('aria-label', `Seats ${e.label}: ` + live.map((x) => `${x.a} ${x.n}`).join(', '));
-  el.querySelector('.keys').innerHTML = live.map((x) => `<span title="${esc(x.title)}${x.soft ? (' · no ' + AFF_WORD_L() + ' (EP group or related organisation only)') : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</span>`).join('');
+  // Picked parties move to the left of the bar (CSS order), in the order they were picked; the rest fade.
+  barEl.querySelectorAll('div').forEach((d) => { const sg = c.segs[+d.dataset.i]; const n = sg.vals[i] || 0, p = pos(sg);
+    d.style.flexGrow = n; d.style.order = p >= 0 ? p : 1000 + +d.dataset.i; d.classList.toggle('off', pick.length > 0 && p < 0);
+    d.title = `${sg.a}${sg.tag ? ' (' + sg.tag + ')' : ''} – ${sg.title}: ${n}`; });
+  const live = c.segs.map((sg, si) => ({ k: segKey(sg), p: pos(sg), si, a: sg.a, tag: sg.tag, title: sg.title, bg: segBg(sg), soft: sg.soft, n: sg.vals[i] || 0 })).filter((x) => x.n > 0);
+  const inC = live.filter((x) => x.p >= 0).sort((a, b) => a.p - b.p), outC = live.filter((x) => x.p < 0);
+  barEl.setAttribute('aria-label', `Seats ${e.label}: ` + [...inC, ...outC].map((x) => `${x.a} ${x.n}`).join(', '));
+  const keyHtml = (x) => `<button type="button" class="key" data-k="${esc(x.k)}" aria-pressed="${x.p >= 0}" title="${esc(x.title)}${x.soft ? (' · no ' + AFF_WORD_L() + ' (EP group or related organisation only)') : ''}"><span class="dot" style="background:${x.bg}"></span><strong>${esc(x.a)}</strong>${x.tag ? ` <span class="muted">(${esc(x.tag)})</span>` : ''} ${x.n}</button>`;
+  const keysEl = el.querySelector('.keys');
+  keysEl.classList.toggle('picking', inC.length > 0);
+  keysEl.innerHTML = inC.map(keyHtml).join('') + (inC.length && outC.length ? '<span class="ksep" aria-hidden="true"></span>' : '') + outC.map(keyHtml).join('');
   const majority = Math.floor(total / 2) + 1;
+  // Coalition tally against the majority of the election shown
+  const coal = el.querySelector('.coal');
+  if (pick.length) {
+    const sum = inC.reduce((a, x) => a + x.n, 0);
+    const absent = pick.length - inC.length;
+    coal.hidden = false;
+    coal.innerHTML = `<span><strong>${inC.length ? inC.map((x) => esc(x.a)).join(' + ') : 'Your coalition'}</strong> · ${sum} seat${sum === 1 ? '' : 's'}</span>`
+      + (sum >= majority ? `<span class="ok">✓ Majority${sum > majority ? `: ${sum - majority} to spare` : ''} (${majority} needed)</span>`
+        : `<span class="no">${majority - sum} short of a majority (${majority})</span>`)
+      + (absent ? `<span class="muted">${absent} picked part${absent === 1 ? 'y has' : 'ies have'} no seats in ${esc(e.label)}</span>` : '')
+      + '<button type="button" class="coal-clear">Clear</button>';
+  } else { coal.hidden = true; coal.innerHTML = ''; }
   el.querySelector('.parl-seats').textContent = total;
   el.querySelector('.parl-maj').textContent = `${majority} seats for a majority`;
   el.querySelector('.majline').style.left = (majority / total * 100).toFixed(2) + '%';
@@ -1323,6 +1367,18 @@ function bindParl() {
       parlTimers[ci] = setInterval(() => { i++; setParlYear(ci, i); if (i >= last) stop(); }, 1400);
     };
     el.querySelectorAll('.yrbtn').forEach((b) => { b.onclick = () => { if (parlTimers[ci]) stop(); setParlYear(ci, +b.dataset.i); }; });
+    // Coalition builder: click a party name to add it (it moves to the left of the bar) or remove it again
+    const keysEl = el.querySelector('.keys');
+    if (keysEl) keysEl.onclick = (ev) => {
+      const b = ev.target.closest('.key'); if (!b) return;
+      const k = b.dataset.k, pick = PARL_PICKS[c.name] = PARL_PICKS[c.name] || [];
+      const at = pick.indexOf(k); if (at >= 0) pick.splice(at, 1); else pick.push(k);
+      setParlYear(ci, c.cur == null ? last : c.cur);
+      const again = [...keysEl.querySelectorAll('.key')].find((x) => x.dataset.k === k); if (again) again.focus();
+      postHeight();
+    };
+    const coalEl = el.querySelector('.coal');
+    if (coalEl) coalEl.onclick = (ev) => { if (!ev.target.closest('.coal-clear')) return; PARL_PICKS[c.name] = []; setParlYear(ci, c.cur == null ? last : c.cur); postHeight(); };
     // "Show all": every election as its own bar, newest first
     const all = el.querySelector('.parl-all'), hist = el.querySelector('.parl-hist');
     if (all && hist) all.onclick = () => { const open = hist.hidden; hist.hidden = !open; all.setAttribute('aria-expanded', String(open)); all.textContent = open ? 'Show less' : 'Show all'; postHeight(); };
