@@ -36,8 +36,13 @@ def parse_date(s, end=False):
         return None
 
 
+# Countries whose regional polls (•A: area) are also exported, per area, for the automatic EP projection:
+# Belgium elects its MEPs in language colleges and is polled by region (Flanders, Wallonia, Brussels).
+AREA_EXPORT = {'BE'}
+
+
 def parse_ropf(text):
-    polls, parties = [], {}
+    polls, parties, area_polls = [], {}, []
     head, head_fields, done = None, {}, True   # the current poll's first line, its fields, national row taken?
     for line in text.splitlines():
         if not line.strip():
@@ -70,8 +75,7 @@ def parse_ropf(text):
             m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
             if fields.get('SC', 'N') != 'N':
                 continue
-            if 'A' in fields:
-                continue  # poll for one area/region only (e.g. Flanders): not part of the national average
+            area = fields.get('A', '')  # poll for one area/region only (e.g. Flanders): kept apart from the national average
             fs, fe = parse_date(fields.get('FS', '')), parse_date(fields.get('FE', ''), True)
             if not fs and not fe:
                 continue
@@ -96,8 +100,12 @@ def parse_ropf(text):
                 if total > 0:
                     values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 ss = num(fields.get('SS'))
-                polls.append({'d': mid, 'pf': pf, 'v': values, 'n': int(ss) if ss and ss >= 50 else None})
-                done = True
+                rec = {'d': mid, 'pf': pf, 'v': values, 'n': int(ss) if ss and ss >= 50 else None}
+                if area:
+                    area_polls.append({**rec, 'a': area})  # every regional row of a poll counts ('&' rows: other regions)
+                else:
+                    polls.append(rec)
+                    done = True
         else:
             # KEY: number •A: …  — the number column may be left out (KEY: •I: ALA424 •A: …).
             m = re.match(r'^(\S+):\s+(?!•)(\S+)\s+(.*)$', line) or re.match(r'^(\S+):\s+()(•.*)$', line)
@@ -115,7 +123,7 @@ def parse_ropf(text):
                 roman = attrs.pop('R', '')  # romanised abbreviation (•R), used where the abbreviation is not in Latin script
                 native = next(iter(attrs.values()), '')
                 parties[key] = {'key': key, 'id': ee, 'abbr': abbr, 'roman': roman, 'native': native, 'english': en}
-    return polls, parties
+    return polls, parties, area_polls
 
 
 def loess(xs, ys, x0, k, span=SPAN_DAYS):
@@ -237,6 +245,36 @@ def build_country(polls, parties):
     }
 
 
+# Belgium's French-speaking EP college = Wallonia + the (overwhelmingly francophone) Brussels voters.
+# Each Wallonia poll is mixed with the Brussels row of the same poll: Brussels keeps only francophone lists
+# (keys also polled in Wallonia; a joint list such as PS+VOORUIT counts for its francophone partner, PS),
+# rescaled to 100%, and weighs BRU_SHARE of the college (about its share of the college's 2024 EP votes).
+BRU_SHARE = 0.18
+
+
+def francophone_with_brussels(wal, bru):
+    fr_keys = {k for p in wal for k in p['v']}
+    out = []
+    for w in wal:
+        b = next((x for x in bru if x['d'] == w['d'] and x['pf'] == w['pf']), None)
+        if not b:
+            out.append(w)
+            continue
+        fr = {}
+        for k, v in b['v'].items():
+            part = k if k in fr_keys else next((x for x in k.split('+') if x in fr_keys), None)
+            if part:
+                fr[part] = fr.get(part, 0) + v
+        tot = sum(fr.values())
+        if tot <= 0:
+            out.append(w)
+            continue
+        keys = set(w['v']) | set(fr)
+        mix = {k: round((1 - BRU_SHARE) * w['v'].get(k, 0) + BRU_SHARE * fr.get(k, 0) * 100 / tot, 2) for k in keys}
+        out.append({**w, 'v': {k: v for k, v in mix.items() if v > 0}, 'pf': w['pf']})
+    return out
+
+
 def main(src, dst):
     os.makedirs(dst, exist_ok=True)
     if not os.path.isdir(src):
@@ -248,11 +286,22 @@ def main(src, dst):
         if not m or m.group(1).upper() in NO_POLLING:
             continue
         with open(os.path.join(src, name), encoding='utf-8') as fh:
-            polls, parties = parse_ropf(fh.read())
-        if not polls:
-            continue
-        data = build_country(polls, parties)
+            polls, parties, area_polls = parse_ropf(fh.read())
         iso = m.group(1).upper()
+        areas = {}
+        if iso in AREA_EXPORT:
+            for ap in area_polls:
+                areas.setdefault(ap['a'], []).append({k: v for k, v in ap.items() if k != 'a'})
+        if not polls and not areas:
+            continue
+        # no national polls (Belgium): a file with the party list and the regional data only, so the country
+        # page shows no national average but the EP projection can use the regions
+        data = build_country(polls, parties) if polls else {'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+            'parties': [{**info, 'n': 0, 'curve': []} for info in parties.values()], 'polls': []}
+        if iso == 'BE' and 'WAL' in areas:
+            areas['WAL+BRU'] = francophone_with_brussels(areas['WAL'], areas.get('BRU', []))
+        if areas:
+            data['areas'] = {a: build_country(ps, parties) for a, ps in areas.items()}
         with open(os.path.join(dst, iso + '.json'), 'w', encoding='utf-8') as fh:
             json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
         done.append(f'{iso}:{len(data["polls"])}')
