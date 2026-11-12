@@ -1331,10 +1331,10 @@ function applyColorMode(list, kind) {
     list.sort(COLOR_MODE === 'ideo' ? (a, b) => ideoRank(a.ide && a.ide.name) - ideoRank(b.ide && b.ide.name) || last(b) - last(a) : (a, b) => a._ord - b._ord);
   }
 }
-// Seat order in Ideology mode, left to right. Ideologies not listed here go to the end, in this order of appearance.
+// Seat / stack order in Ideology mode, left to right (Diverse in the centre). Ideologies not listed here go to the end.
 const IDEOLOGY_ORDER = ['Far-left', 'Left-wing', 'Animal rights', 'Green politics', 'Pirate politics', 'Centre-left', 'Regionalism', 'Eurofederalism',
-  'Liberalism', 'Centrism', 'Agrarianism', 'Libertarianism', 'Centre-right', 'Christian fundamentalism', 'National conservatism', 'Monarchism',
-  'Right-wing', 'Far-right', 'Islamism', 'Diverse'];
+  'Liberalism', 'Centrism', 'Diverse', 'Agrarianism', 'Libertarianism', 'Centre-right', 'Christian fundamentalism', 'National conservatism', 'Monarchism',
+  'Right-wing', 'Far-right', 'Islamism'];
 const ideoRank = (name) => { const k = norm(name).replace(/-/g, ' '); const i = IDEOLOGY_ORDER.findIndex((x) => norm(x).replace(/-/g, ' ') === k); return i < 0 ? IDEOLOGY_ORDER.length : i; };
 const modeToggle = () => `<span class="cmode" role="group" aria-label="Colour parties by"><span class="cm-l">Colour by</span><button type="button" data-m="aff" aria-pressed="${COLOR_MODE === 'aff'}">Affiliation</button><button type="button" data-m="ideo" aria-pressed="${COLOR_MODE === 'ideo'}">Ideology</button></span>`;
 const modeNote = () => (COLOR_MODE === 'ideo' ? `<p class="note-s" style="margin:0">Colours show each party's main ideology (first entry in our party database); alliances take the most common ideology of their members. See the ideology legend below.</p>` : '');
