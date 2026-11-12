@@ -1070,12 +1070,14 @@ function viewProjection(proj, cfg) {
   const total = proj.series.reduce((a, sr) => a + (sr.values[last] || 0), 0);
   const monthTxt = proj.months[last].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   return bar('European Parliament projection', `<a href="${EP_PROJECTION_URL}" target="_blank" rel="noopener">Dashboard →</a>`) + `<section class="card proj">
+    <div class="poll-range"><span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn" data-s="lines" aria-pressed="${proj.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn" data-s="stack" aria-pressed="${proj.shape === 'stack'}">Stacked</button></span></div>
     <div class="poll-parties" role="group" aria-label="Show or hide parties">${[...proj.series].sort((p1, p2) => (p2.values[last] || 0) - (p1.values[last] || 0)).map((sr) => `<button type="button" class="pchip proj-chip" data-k="${esc(sr.key)}" aria-pressed="true" title="${esc(sr.label + interestTitle(sr))}"><span class="dot" style="background:${sr.color}"></span>${esc(sr.short)}</button>`).join('')}</div>
     <div class="proj-chart" id="proj-chart"></div>
     <p class="note-s" style="margin:0">${esc(cfg.name)}: ${total} projected seats in ${esc(monthTxt)}. Hover over a party label for its full name, or over the chart for earlier months.</p></section>`;
 }
 function drawProjection() {
   const host = document.getElementById('proj-chart'); if (!host || !PROJ) return;
+  if (PROJ.shape === 'stack') { drawProjStack(host); return; }
   const { months } = PROJ;
   const series = PROJ.series.filter((sr) => !PROJ.hidden.has(sr.key));
   const W = host.clientWidth, small = W < 560, H = small ? 260 : 320, m = { l: 30, r: small ? 62 : 190, t: 12, b: 28 };
@@ -1129,7 +1131,65 @@ function drawProjection() {
   hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
   hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
 }
+// "Stacked" view: projected seats stacked by EP group, left (bottom) to right (top); largest party first within a group.
+const EP_GROUP_ORDER = ['LEFT', 'The Left', 'G/EFA', 'Greens/EFA', 'S&D', 'RE', 'Renew', 'NI', 'EPP', 'ECR', 'PfE', 'ESN'];
+function drawProjStack(host) {
+  const { months } = PROJ;
+  const gRank = (sr) => { const i = EP_GROUP_ORDER.indexOf(String(sr.group || '').trim()); return i < 0 ? EP_GROUP_ORDER.indexOf('NI') : i; };
+  const lastI = months.length - 1;
+  const series = PROJ.series.filter((sr) => !PROJ.hidden.has(sr.key))
+    .sort((a, b) => gRank(a) - gRank(b) || (b.values[lastI] || 0) - (a.values[lastI] || 0));
+  const W = host.clientWidth, small = W < 560, H = small ? 280 : 340, m = { l: 30, r: small ? 88 : 190, t: 12, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const t0 = months[0].getTime(), t1 = months[lastI].getTime();
+  const x = (i) => m.l + (months.length === 1 ? iw / 2 : (months[i].getTime() - t0) / (t1 - t0) * iw);
+  const V = series.map((sr) => sr.values.map((v) => v || 0));
+  const base = months.map(() => 0), lower = [], upper = [];
+  V.forEach((vals, k) => { lower[k] = base.slice(); vals.forEach((v, i) => { base[i] += v; }); upper[k] = base.slice(); });
+  const vmax = Math.max(1, ...base);
+  const step = vmax <= 12 ? 1 : vmax <= 30 ? 2 : vmax <= 60 ? 5 : 10;
+  const ymax = Math.ceil(vmax / step) * step;
+  const y = (v) => m.t + ih - v / ymax * ih;
+  let svg = '', defs = '';
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  series.forEach((sr, k) => {
+    const top = months.map((_, i) => `${x(i).toFixed(1)},${y(upper[k][i]).toFixed(1)}`);
+    const bot = months.map((_, i) => `${x(i).toFixed(1)},${y(lower[k][i]).toFixed(1)}`).reverse();
+    let fill = sr.color;
+    if (sr.dash) { defs += `<pattern id="pjh-${k}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#fff"/><rect width="4" height="7" fill="${sr.color}"/></pattern>`; fill = `url(#pjh-${k})`; }
+    svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${fill}" stroke="#fff" stroke-width=".8"><title>${esc(seriesLabel(sr.short, sr.tag))}</title></polygon>`;
+  });
+  months.forEach((d, i) => { if (d.getMonth() === 0 || i === 0) svg += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="ax">${d.toLocaleDateString('en-GB', { month: 'short' })} ’${String(d.getFullYear()).slice(2)}</text>`; });
+  const ends = series.map((sr, k) => ({ sr, v: V[k][lastI], mid: y((lower[k][lastI] + upper[k][lastI]) / 2) })).filter((e) => e.v > 0).sort((a, b) => a.mid - b.mid);
+  ends.forEach((e) => { e.yy = e.mid; });
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  const over = ends.length ? ends[ends.length - 1].yy - (y(0) - 4) : 0; if (over > 0) ends.forEach((e) => { e.yy -= over; });
+  ends.forEach((e) => { svg += `<polyline points="${x(lastI) + 2},${e.mid} ${x(lastI) + 10},${e.yy}" fill="none" stroke="${e.sr.color}" stroke-width="1" opacity=".7"/><text x="${x(lastI) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(e.sr.color)}" style="cursor:help"><title>${esc(e.sr.label)}</title><tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}</text>`; });
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="European Parliament seat projection, stacked: ${esc(ends.map((e) => e.sr.short + ' ' + e.v).join(', '))}"><defs>${defs}</defs>${svg}
+    <line id="pjs-x" x1="0" x2="0" y1="${m.t}" y2="${y(0)}" stroke="#1A1D23" stroke-width="1" visibility="hidden"/>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="pjs-hit"/></svg><div class="proj-tip" id="pjs-tip" hidden></div>
+    <p class="note-s" style="margin:4px 0 0">Stacked by European Parliament group, from the left (bottom) to the right (top); non-attached parties in the middle.</p>`;
+  const hit = document.getElementById('pjs-hit'), cross = document.getElementById('pjs-x'), tip = document.getElementById('pjs-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    let best = 0; months.forEach((_, i) => { if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i; });
+    cross.setAttribute('x1', x(best)); cross.setAttribute('x2', x(best)); cross.setAttribute('visibility', 'visible');
+    const rows = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v > 0).reverse();
+    tip.innerHTML = `<strong>${months[best].toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} · ${base[best]} seats</strong>`
+      + (rows.map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag))}</span><strong>${o.v}</strong></div>`).join('') || '<div>No projection</div>');
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = x(best) + 12; if (left + tw > W) left = x(best) - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
 function bindProjection() {
+  document.querySelectorAll('.proj .shpbtn').forEach((b) => { b.onclick = () => {
+    PROJ.shape = b.dataset.s; document.querySelectorAll('.proj .shpbtn').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+    drawProjection(); postHeight();
+  }; });
   document.querySelectorAll('.proj-chip').forEach((b) => { b.onclick = () => {
     const k = b.dataset.k; if (PROJ.hidden.has(k)) PROJ.hidden.delete(k); else PROJ.hidden.add(k);
     b.setAttribute('aria-pressed', String(!PROJ.hidden.has(k))); drawProjection();
@@ -1716,8 +1776,8 @@ function viewPolling(cfg, poll) {
 }
 function bindPolling() {
   if (!POLL) return;
-  document.querySelectorAll('.shpbtn').forEach((b) => { b.onclick = () => {
-    POLL.shape = b.dataset.s; document.querySelectorAll('.shpbtn').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+  document.querySelectorAll('.poll .shpbtn').forEach((b) => { b.onclick = () => {
+    POLL.shape = b.dataset.s; document.querySelectorAll('.poll .shpbtn').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
     drawPolling(); postHeight();
   }; });
   document.querySelectorAll('.rngbtn').forEach((b) => { b.onclick = () => {
