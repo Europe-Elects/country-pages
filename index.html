@@ -195,6 +195,9 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .seatcheck tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .seatcheck .dot{display:inline-block;vertical-align:middle}
 .seatcheck.rules td{text-align:left;white-space:normal}
+.epa-open{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.epa-d>td{text-align:left!important;white-space:normal!important;background:var(--bg)}
+.epa-d .seatcheck{background:#fff}
 .proj-chart svg{display:block}
 .proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#6B707A;font-variant-numeric:tabular-nums}
 .proj-chart .lab{font:500 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
@@ -2208,6 +2211,185 @@ function viewSeatCheck() {
   return bar('Rules and calculation', '<span class="note">for checking</span>') + `<section class="card" style="padding:14px 18px">
     <table class="seatcheck rules"><tbody>${rules.map(([k, v]) => `<tr><th style="text-align:left;width:220px">${esc(k)}</th><td>${esc(String(v))}</td></tr>`).join('')}</tbody></table>${calc}</section>`;
 }
+
+/* ---------- Automatic European Parliament projection (test page: ?view=ep) ---------- */
+// Every EU country's national polling average, run through that country's EP election rules (2024 seat
+// apportionment, 720 seats), then added up by EP group from the party database. Recalculated on every build
+// (hourly), with a daily history since the 2024 EP election computed from the averages.
+const EP_RULES = {
+  AT: { seats: 20, method: 'dhondt', threshold: 4 },
+  BE: { seats: 22, method: 'dhondt', threshold: 0, approx: 'Three language colleges (13 Dutch, 8 French, 1 German) are approximated nationwide.' },
+  BG: { seats: 17, method: 'hare', threshold: 100 / 17, approx: '' },
+  HR: { seats: 12, method: 'dhondt', threshold: 5 },
+  CY: { seats: 6, method: 'hare', threshold: 1.8 },
+  CZ: { seats: 21, method: 'dhondt', threshold: 5 },
+  DK: { seats: 15, method: 'dhondt', threshold: 0, approx: 'Electoral alliances between lists are not modelled.' },
+  EE: { seats: 7, method: 'dhondt', threshold: 0 },
+  FI: { seats: 15, method: 'dhondt', threshold: 0 },
+  FR: { seats: 81, method: 'dhondt', threshold: 5 },
+  DE: { seats: 96, method: 'sl', threshold: 0 },
+  GR: { seats: 21, method: 'hare', threshold: 3 },
+  HU: { seats: 21, method: 'dhondt', threshold: 5 },
+  IE: { seats: 14, method: 'droop', threshold: 0, approx: 'STV in three constituencies, approximated nationwide.' },
+  IT: { seats: 76, method: 'hare', threshold: 4, exempt: ['SVP'] },
+  LV: { seats: 9, method: 'sl', threshold: 5 },
+  LT: { seats: 11, method: 'hare', threshold: 5 },
+  LU: { seats: 6, method: 'dhondt', threshold: 0 },
+  MT: { seats: 6, method: 'droop', threshold: 0, approx: 'STV, approximated nationwide.' },
+  NL: { seats: 31, method: 'dhondt', threshold: 100 / 31 },
+  PL: { seats: 53, method: 'dhondt', threshold: 5 },
+  PT: { seats: 21, method: 'dhondt', threshold: 0 },
+  RO: { seats: 33, method: 'dhondt', threshold: 5 },
+  SK: { seats: 15, method: 'droop', threshold: 5 },
+  SI: { seats: 9, method: 'dhondt', threshold: 0 },
+  ES: { seats: 61, method: 'dhondt', threshold: 0 },
+  SE: { seats: 21, method: 'msl', first: 1.2, threshold: 4 }
+};
+const EP_SINCE = new Date(2024, 5, 9).getTime();  // 2024 European Parliament election
+const EPA_GROUPS = ['LEFT', 'G/EFA', 'S&D', 'RE', 'NI', 'UNA', 'EPP', 'ECR', 'PfE', 'ESN', 'NODATA'];
+const EPA_NAMES = { LEFT: 'The Left', 'G/EFA': 'Greens/EFA', 'S&D': 'S&D', RE: 'Renew Europe', NI: 'Non-attached', UNA: 'New / unaffiliated', EPP: 'EPP', ECR: 'ECR', PfE: 'Patriots for Europe', ESN: 'Europe of Sovereign Nations', NODATA: 'No polling average' };
+const epaColor = (gk) => (gk === 'NI' ? '#5B6170' : gk === 'UNA' ? '#B9B6AE' : gk === 'NODATA' ? '#E4E2DB' : EUROPARTY_COLORS[GROUP_TO_EUROPARTY[gk]] || NONE);
+const EPA_GROUP_ALIAS = { 'GREENS/EFA': 'G/EFA', 'G/EFA': 'G/EFA', 'RENEW': 'RE', 'RE': 'RE', 'THE LEFT': 'LEFT', 'LEFT': 'LEFT', 'GUE/NGL': 'LEFT', 'S&D': 'S&D', 'EPP': 'EPP', 'ECR': 'ECR', 'PFE': 'PfE', 'PATRIOTS': 'PfE', 'ESN': 'ESN', 'NI': 'NI' };
+const epaGroupKey = (v) => EPA_GROUP_ALIAS[String(v || '').split(/[|;,]/)[0].trim().toUpperCase()] || '';
+// EP group of one party: its EP group, else its Europarty's group, else a stated interest, else "~" orientation.
+function epaGroupOf(p) {
+  if (!p) return { g: 'UNA', basis: 'not in the party database' };
+  if (p.epGroup) { const k = epaGroupKey(p.epGroup); if (k) return { g: k, basis: 'EP group' }; }
+  if (p.europartyShort && EUROPARTY_TO_GROUP[p.europartyShort]) return { g: epaGroupKey(EUROPARTY_TO_GROUP[p.europartyShort]), basis: 'Europarty ' + epName(p.europartyShort) };
+  if (p.epInterest && epaGroupKey(p.epInterest)) return { g: epaGroupKey(p.epInterest), basis: 'wants to join ' + p.epInterest };
+  if (p.euInterest && EUROPARTY_TO_GROUP[p.euInterest]) return { g: epaGroupKey(EUROPARTY_TO_GROUP[p.euInterest]), basis: 'wants to join ' + epName(p.euInterest) };
+  const k = String(p.orientation || '').replace(/^~/, '').trim().toUpperCase();
+  if (ORIENTATION[k]) return { g: epaGroupKey(ORIENTATION[k][1]), basis: 'orientation ~' + k };
+  return { g: 'UNA', basis: 'no EP group or Europarty' };
+}
+// Groups of a polled line: one party, or the member parties of an alliance / joint list (seats split between them in turn).
+function epaLineGroups(sr) {
+  const mem = sr.party ? [sr.party] : sr.alliance ? sr.alliance.members.map((x) => x.party).filter(Boolean) : sr.joint || [];
+  if (!mem.length) return [{ g: 'UNA', basis: 'not matched to the party database', abbr: sr.abbr }];
+  return mem.map((p) => ({ ...epaGroupOf(p), abbr: p.abbr }));
+}
+function epaSplit(n, gs) {
+  const out = {}; for (let i = 0; i < n; i++) { const x = gs[i % gs.length]; out[x.g] = (out[x.g] || 0) + 1; } return out;
+}
+async function buildEPAuto(partyRows, allianceRows) {
+  const keepISO = ISO, keepEU = IS_EU, countries = [];
+  const isos = Object.keys(EP_RULES);
+  const files = await Promise.all(isos.map((iso) => (NO_POLLING.includes(iso) ? Promise.resolve(null)
+    : fetch(`polling/${iso}.json`, { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null))));
+  isos.forEach((iso, i) => {
+    ISO = iso; IS_EU = true;
+    const cfg = { ...(COUNTRIES[iso] || {}) };
+    const { list: parties } = buildParties(partyRows, iso, cfg);
+    const name = cfg.name || (parties[0] && parties[0].country) || iso;
+    const alliances = buildAlliances(allianceRows, iso, parties);
+    const poll = files[i] ? buildPolling(files[i], parties, [], name, alliances) : null;
+    const lines = [];
+    if (poll) {
+      const drop = new Set();
+      poll.groups.forEach((g0) => { if (poll.hidden.has(g0.alliance)) drop.add(g0.alliance); else g0.members.forEach((k) => drop.add(k)); });
+      poll.series.filter((sr) => !drop.has(sr.key) && sr.curve.some((seg) => seg.length > 1)).forEach((sr) => {
+        lines.push({ sr, key: sr.key, abbr: sr.abbr, name: sr.name, color: sr.color, groups: epaLineGroups(sr),
+          end: Math.max(...sr.curve.map((seg) => seg[seg.length - 1].t.getTime())) });
+      });
+    }
+    const end = lines.length ? Math.max(...lines.map((l) => l.end)) : null;
+    countries.push({ iso, name, rule: EP_RULES[iso], lines, end });
+  });
+  ISO = keepISO; IS_EU = keepEU;
+  const ends = countries.filter((c) => c.end).map((c) => c.end);
+  if (!ends.length) return null;
+  const tEnd = Math.max(...ends), dates = [];
+  for (let t = EP_SINCE; t < tEnd; t += 864e5) dates.push(t);
+  dates.push(tEnd);
+  // Seats per group per date, and the full calculation for the latest date
+  const totals = Object.fromEntries(EPA_GROUPS.map((gk) => [gk, dates.map(() => 0)]));
+  dates.forEach((t, di) => {
+    countries.forEach((c) => {
+      const rule = c.rule;
+      if (!c.end) { totals.NODATA[di] += rule.seats; return; }
+      const tc = Math.min(t, c.end);  // a country whose average stops earlier keeps its latest figures
+      const votes = c.lines.map((l) => ({ key: l.key, abbr: l.abbr, members: l.groups.length, v: avgAt(l.sr, tc) })).filter((x) => x.v != null && x.v > 0);
+      if (votes.length < 2) { totals.NODATA[di] += rule.seats; return; }
+      const res = projectSeats({ ...rule, exempt: rule.exempt }, votes);
+      c.lines.forEach((l) => { const n = res[l.key] || 0; if (!n) return; const sp = epaSplit(n, l.groups); Object.entries(sp).forEach(([gk, k]) => { totals[gk][di] += k; }); });
+      if (di === dates.length - 1) { c.last = { t: tc, votes, res }; }
+    });
+  });
+  return { dates, totals, countries };
+}
+let EPA = null;
+function viewEPAuto() {
+  if (!EPA) return '<div class="card status">No polling averages found.</div>';
+  const { dates, totals, countries } = EPA, li = dates.length - 1, total = 720, maj = 361;
+  const now = EPA_GROUPS.map((gk) => ({ gk, n: totals[gk][li] })).filter((x) => x.n > 0);
+  const day = new Date(dates[li]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const cell = (n) => (n ? n : '<span class="muted">·</span>');
+  const rows = countries.map((c) => {
+    const by = Object.fromEntries(EPA_GROUPS.map((gk) => [gk, 0]));
+    let detail = '';
+    if (c.last) {
+      c.lines.forEach((l) => { const n = c.last.res[l.key] || 0; Object.entries(epaSplit(n, l.groups)).forEach(([gk, k]) => { by[gk] += k; }); });
+      const vs = c.last.votes.slice().sort((a, b) => b.v - a.v);
+      detail = `<table class="seatcheck"><thead><tr><th>Party / list</th><th>Average %</th><th>Threshold</th><th>Seats</th><th>EP group</th><th>Based on</th></tr></thead><tbody>${vs.map((x) => {
+        const l = c.lines.find((q) => q.key === x.key), n = c.last.res[x.key] || 0, t = c.rule.threshold;
+        const ok = x.v >= t || (c.rule.exempt || []).some((a) => normKey(a) === normKey(x.abbr));
+        return `<tr><td>${esc(x.abbr)} <span class="muted">${esc(l.name || '')}</span></td><td>${x.v.toFixed(1)}</td><td>${ok ? '✓' : '✗'} ${t ? (+t.toFixed(1)) + '%' : '–'}</td><td><strong>${n}</strong></td><td>${l.groups.map((q) => `<span class="dot" style="background:${epaColor(q.g)}"></span> ${esc(q.g === 'UNA' ? 'New/unaff.' : q.g)}${l.groups.length > 1 ? ' (' + esc(q.abbr) + ')' : ''}`).join(', ')}</td><td class="muted" style="white-space:normal">${esc([...new Set(l.groups.map((q) => q.basis))].join('; '))}${l.groups.length > 1 ? ' · joint list: seats split between members in turn' : ''}</td></tr>`; }).join('')}</tbody></table>
+        <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}. Average on ${new Date(c.last.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''}</p>`;
+    } else { by.NODATA = c.rule.seats; detail = '<p class="note-s">No polling average for this country; its seats are counted as “No polling average”.</p>'; }
+    return `<tr class="epa-c"><td><button type="button" class="epa-open" aria-expanded="false">▸ <strong>${esc(c.name)}</strong> <span class="muted">${c.rule.seats}${c.rule.approx ? ' · approx.' : ''}</span></button></td>${EPA_GROUPS.map((gk) => `<td>${cell(by[gk])}</td>`).join('')}</tr>
+      <tr class="epa-d" hidden><td colspan="${EPA_GROUPS.length + 1}"><div style="padding:4px 0 12px;overflow-x:auto">${detail}</div></td></tr>`;
+  }).join('');
+  return `<div class="card status" style="text-align:left"><strong>Automatic European Parliament projection · test page</strong> <span class="muted">Not linked from the site. Recalculated from the national polling averages on every build.</span></div>`
+    + bar('European Parliament projection (automatic)', `<span class="note">720 seats · ${maj} for a majority</span>`) + `<section class="card proj epa">
+    <p class="note-s" style="margin:0"><strong>${esc(day)}:</strong> ${now.map((x) => `${esc(EPA_NAMES[x.gk])} ${x.n}`).join(' · ')}</p>
+    <div class="seatwrap"><div class="seatbar" role="img" aria-label="${esc(now.map((x) => EPA_NAMES[x.gk] + ' ' + x.n).join(', '))}">${now.map((x) => `<div style="flex:${x.n} 0 0;background:${epaColor(x.gk)}" title="${esc(EPA_NAMES[x.gk] + ': ' + x.n)}"></div>`).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / total * 100).toFixed(2)}%"></div></div>
+    <div class="poll-range"><span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn epa-shp" data-s="lines" aria-pressed="${EPA.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn epa-shp" data-s="stack" aria-pressed="${EPA.shape === 'stack'}">Stacked</button></span></div>
+    <div class="proj-chart" id="epa-chart"></div>
+    <p class="note-s" style="margin:0">Each country’s national polling average (parliamentary polls, as most countries have no regular EP polls) under its EP election rules, then grouped by EP group from our party database: the party’s EP group, else its Europarty’s group, else a stated interest to join, else its “~” orientation; parties with none count as “New / unaffiliated”. Joint lists split their seats between member parties in turn. Daily since the 2024 election.</p></section>`
+    + bar('By country', '<span class="note">click a country for the calculation</span>') + `<section class="card" style="padding:10px 14px;overflow-x:auto"><table class="seatcheck epa-t"><thead><tr><th>Country · seats</th>${EPA_GROUPS.map((gk) => `<th title="${esc(EPA_NAMES[gk])}"><span class="dot" style="background:${epaColor(gk)}"></span> ${gk === 'UNA' ? 'New' : gk === 'NODATA' ? 'No data' : esc(gk)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr><td>EU · 720</td>${EPA_GROUPS.map((gk) => `<td>${totals[gk][li]}</td>`).join('')}</tr></tfoot></table></section>`;
+}
+function drawEPAuto() {
+  const host = document.getElementById('epa-chart'); if (!host || !EPA) return;
+  const { dates, totals } = EPA, stack = EPA.shape === 'stack', maj = 361;
+  const groups = EPA_GROUPS.filter((gk) => totals[gk].some((v) => v > 0) && (stack || gk !== 'NODATA'));  // lines: no line for missing data
+  const W = host.clientWidth, small = W < 560, H = small ? 300 : 380, m = { l: 34, r: small ? 96 : 190, t: 12, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, t0 = dates[0], t1 = dates[dates.length - 1], li = dates.length - 1;
+  const x = (t) => m.l + (t - t0) / ((t1 - t0) || 1) * iw;
+  const base = dates.map(() => 0), lower = {}, upper = {};
+  groups.forEach((gk) => { lower[gk] = base.slice(); totals[gk].forEach((v, i) => { base[i] += v; }); upper[gk] = base.slice(); });
+  const ymax = stack ? 720 : Math.ceil((Math.max(...groups.map((gk) => Math.max(...totals[gk]))) + 10) / 50) * 50;
+  const y = (v) => m.t + ih - v / ymax * ih, step = stack ? 120 : ymax <= 200 ? 25 : 50;
+  let svg = '';
+  for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  const thin = (arr) => arr.filter((_, i) => i % Math.max(1, Math.round(dates.length / iw)) === 0 || i === li);
+  const idx = thin(dates.map((_, i) => i));
+  if (stack) groups.forEach((gk) => {
+    const top = idx.map((i) => `${x(dates[i]).toFixed(1)},${y(upper[gk][i]).toFixed(1)}`), bot = idx.map((i) => `${x(dates[i]).toFixed(1)},${y(lower[gk][i]).toFixed(1)}`).reverse();
+    svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${epaColor(gk)}" stroke="#fff" stroke-width=".8"><title>${esc(EPA_NAMES[gk])}</title></polygon>`;
+  });
+  else groups.forEach((gk) => { svg += `<path d="${idx.map((i, k) => `${k ? 'L' : 'M'}${x(dates[i]).toFixed(1)},${y(totals[gk][i]).toFixed(1)}`).join('')}" fill="none" stroke="${epaColor(gk)}" stroke-width="2.2" stroke-linejoin="round"/>`; });
+  if (stack) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(maj)}" y2="${y(maj)}" stroke="#1A1D23" stroke-width="1.2" stroke-dasharray="5 4"/><text x="${m.l + 4}" y="${y(maj) - 5}" class="ax" style="fill:#1A1D23">Majority ${maj}</text>`;
+  const d0 = new Date(t0); const tk = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+  for (; tk.getTime() <= t1; tk.setMonth(tk.getMonth() + 1)) if (tk.getMonth() % 6 === 0) svg += `<text x="${x(tk.getTime())}" y="${H - 8}" text-anchor="middle" class="ax">${tk.getMonth() === 0 ? tk.getFullYear() : tk.toLocaleDateString('en-GB', { month: 'short' })}</text>`;
+  const ends = groups.map((gk) => ({ gk, v: totals[gk][li], mid: stack ? y((lower[gk][li] + upper[gk][li]) / 2) : y(totals[gk][li]) })).filter((e) => e.v > 0).sort((a, b) => a.mid - b.mid);
+  ends.forEach((e) => { e.yy = e.mid; });
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  const over = ends.length ? ends[ends.length - 1].yy - (y(0) - 4) : 0; if (over > 0) ends.forEach((e) => { e.yy -= over; });
+  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${epaColor(e.gk)}" stroke-width="1"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(epaColor(e.gk))}"><tspan font-weight="700">${e.v}</tspan> ${esc(small ? (e.gk === 'UNA' ? 'New' : e.gk === 'NODATA' ? 'No data' : e.gk) : EPA_NAMES[e.gk])}</text>`; });
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="Automatic EP projection">${svg}<line id="epa-x" x1="0" x2="0" y1="${m.t}" y2="${y(0)}" stroke="#1A1D23" visibility="hidden"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="epa-hit"/></svg><div class="proj-tip" id="epa-tip" hidden></div>`;
+  const hit = document.getElementById('epa-hit'), cross = document.getElementById('epa-x'), tip = document.getElementById('epa-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    const i = Math.max(0, Math.min(li, Math.round((px - m.l) / iw * li)));
+    cross.setAttribute('x1', x(dates[i])); cross.setAttribute('x2', x(dates[i])); cross.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<strong>${new Date(dates[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>` + groups.slice().reverse().filter((gk) => totals[gk][i] > 0).map((gk) => `<div><span class="dot" style="background:${epaColor(gk)}"></span><span>${esc(EPA_NAMES[gk])}</span><strong>${totals[gk][i]}</strong></div>`).join('');
+    tip.hidden = false; const tw = tip.offsetWidth; let left = x(dates[i]) + 12; if (left + tw > W) left = x(dates[i]) - tw - 12; tip.style.left = Math.max(0, left) + 'px';
+  };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+window.addEventListener('resize', () => { clearTimeout(window.epaResize); window.epaResize = setTimeout(drawEPAuto, 150); });
 let seatpResize = null;
 window.addEventListener('resize', () => { clearTimeout(seatpResize); seatpResize = setTimeout(drawSeatProjection, 150); });
 function viewAlliances(alliances) {
@@ -2389,6 +2571,16 @@ async function main() {
     NEXT = await pickNext(calendarRows, partyRows);
     if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
     ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); IS_EUROPE = EUROPE.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
+  }
+  if (VIEW === 'ep') {
+    document.title = 'Europe Elects – Automatic EP projection (test)';
+    app.innerHTML = '<div class="card status">Calculating the projection for 27 countries…</div>';
+    EPA = await buildEPAuto(partyRows, allianceRows);
+    app.innerHTML = viewEPAuto(); drawEPAuto();
+    document.querySelectorAll('.epa-shp').forEach((b) => { b.onclick = () => { EPA.shape = b.dataset.s; document.querySelectorAll('.epa-shp').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); drawEPAuto(); }; });
+    document.querySelectorAll('.epa-open').forEach((b) => { b.onclick = () => { const d = b.closest('tr').nextElementSibling, open = d.hidden; d.hidden = !open; b.setAttribute('aria-expanded', String(open)); b.firstChild.textContent = open ? '▾ ' : '▸ '; postHeight(); }; });
+    postHeight();
+    return;
   }
   if (VIEW === 'seats') {
     if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
