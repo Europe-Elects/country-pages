@@ -2249,7 +2249,7 @@ const EP_RULES = {
 };
 const EP_SINCE = new Date(2024, 5, 9).getTime();  // 2024 European Parliament election
 const EPA_GROUPS = ['LEFT', 'G/EFA', 'S&D', 'RE', 'NI', 'UNA', 'EPP', 'ECR', 'PfE', 'ESN', 'NODATA'];
-const EPA_NAMES = { LEFT: 'The Left', 'G/EFA': 'Greens/EFA', 'S&D': 'S&D', RE: 'Renew Europe', NI: 'Non-attached', UNA: 'New / unaffiliated', EPP: 'EPP', ECR: 'ECR', PfE: 'Patriots for Europe', ESN: 'Europe of Sovereign Nations', NODATA: 'No polling average' };
+const EPA_NAMES = { LEFT: 'The Left', 'G/EFA': 'Greens/EFA', 'S&D': 'S&D', RE: 'Renew Europe', NI: 'Non-Inscrits', UNA: 'Unaffiliated', EPP: 'EPP', ECR: 'ECR', PfE: 'Patriots for Europe', ESN: 'Europe of Sovereign Nations', NODATA: 'No polling data' };
 const epaColor = (gk) => (gk === 'NI' ? '#5B6170' : gk === 'UNA' ? '#B9B6AE' : gk === 'NODATA' ? '#E4E2DB' : EUROPARTY_COLORS[GROUP_TO_EUROPARTY[gk]] || NONE);
 const EPA_GROUP_ALIAS = { 'GREENS/EFA': 'G/EFA', 'G/EFA': 'G/EFA', 'RENEW': 'RE', 'RE': 'RE', 'THE LEFT': 'LEFT', 'LEFT': 'LEFT', 'GUE/NGL': 'LEFT', 'S&D': 'S&D', 'EPP': 'EPP', 'ECR': 'ECR', 'PFE': 'PfE', 'PATRIOTS': 'PfE', 'ESN': 'ESN', 'NI': 'NI' };
 const epaGroupKey = (v) => EPA_GROUP_ALIAS[String(v || '').split(/[|;,]/)[0].trim().toUpperCase()] || '';
@@ -2290,6 +2290,8 @@ function epaSheetGroups(rows, iso, countryName, parties) {
     const id = match.entityId || match.abbr; const list = map.get(id) || [];
     const had = list.find((x) => x.g === gk); if (had) had.w += w; else list.push({ g: gk, w }); map.set(id, list);
   });
+  // A party listed both as "unaffiliated" and under an EP group sits in that group only.
+  map.forEach((list, id) => { if (list.length > 1 && list.some((x) => x.g !== 'UNA')) map.set(id, list.filter((x) => x.g !== 'UNA')); });
   return map;
 }
 // Member parties of a polled line with their share of its seats: one party = 100%; an alliance splits its seats
@@ -2332,7 +2334,95 @@ function epaSeatsOf(line, n) {
   line.members.forEach((m, i) => { Object.entries(epaSplit(perParty[i], m.groups)).forEach(([gk, k]) => { byGroup[gk] = (byGroup[gk] || 0) + k; }); });
   return { perParty, byGroup };
 }
-async function buildEPAuto(partyRows, allianceRows, projRows) {
+// ---- Europe Elects EP projection method (probabilistic) ----
+// 1. Polls: per country, polls of the last 90 days with a sample of at least 501, only the latest poll of each firm.
+//    No such polls: the latest polling average (treated as one poll of 1,000).
+// 2. Each poll is simulated many times (Dirichlet sampling around its figures with its sample size) and every
+//    simulation goes through the country's EP election law → a probability mass function (pmf) of seats per party,
+//    averaged over the country's polls.
+// 3. Alliances: seats split between member parties by the alliance sheet's Projection Weight; parties to EP groups as
+//    in the EP projection sheet.
+// 4. Per EP group, the pmfs of all its parties are convolved; the group's median is its projection, and the medians
+//    are scaled to the 720 seats (largest remainder). 90% intervals come from the same distributions.
+const EPA_POLL_DAYS = 90, EPA_MIN_N = 501, EPA_DEFAULT_N = 1000;
+const EPA_SIMS_NOW = 3000, EPA_SIMS_HIST = 300;
+function epaRng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function epaNormal(rnd) { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
+function epaGamma(a, rnd) {  // Marsaglia–Tsang
+  if (a < 1) return epaGamma(a + 1, rnd) * Math.pow(rnd() || 1e-12, 1 / a);
+  const d = a - 1 / 3, c = 1 / Math.sqrt(9 * d);
+  for (;;) { let x, v; do { x = epaNormal(rnd); v = 1 + c * x; } while (v <= 0); v = v * v * v; const u = rnd();
+    if (u < 1 - 0.0331 * x * x * x * x || Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v; }
+}
+// Polls used for a country on date t
+function epaPollsAt(c, t) {
+  const win = c.polls.filter((p) => p.t.getTime() <= t && p.t.getTime() > t - EPA_POLL_DAYS * 864e5 && (p.n == null || p.n >= EPA_MIN_N)
+    && c.lines.some((l) => p.v[l.key] != null));
+  const byFirm = new Map(); win.forEach((p) => { const k = normKey(p.pf || '?'); const o = byFirm.get(k); if (!o || p.t > o.t) byFirm.set(k, p); });
+  const out = [...byFirm.values()].map((p) => ({ label: p.pf || 'Poll', t: p.t.getTime(), n: p.n || EPA_DEFAULT_N, nKnown: !!p.n, v: Object.fromEntries(c.lines.filter((l) => p.v[l.key] != null).map((l) => [l.key, +p.v[l.key]])) }));
+  if (out.length) return out;
+  // fallback: the polling average on (or last before) t
+  const tc = Math.min(t, c.end || t);
+  const v = Object.fromEntries(c.lines.map((l) => [l.key, avgAt(l.sr, tc)]).filter(([, x]) => x != null && x > 0));
+  return Object.keys(v).length >= 2 ? [{ label: 'Polling average (no recent polls)', t: tc, n: EPA_DEFAULT_N, nKnown: false, avg: true, v }] : [];
+}
+// Seat pmfs per unit (country|party|group) for country c on date t
+function epaCountryPmfs(c, t, sims, rnd) {
+  const polls = epaPollsAt(c, t); if (!polls.length) return null;
+  const rule = c.rule, units = new Map();  // unit key -> Float64Array of probabilities
+  const unitInfo = new Map();
+  const addTo = (key, info, seats, w) => { let a = units.get(key); if (!a) { a = new Float64Array(rule.seats + 1); units.set(key, a); unitInfo.set(key, info); } a[seats] += w; };
+  polls.forEach((poll) => {
+    const keys = Object.keys(poll.v), pv = keys.map((k) => Math.max(0, poll.v[k]));
+    const others = Math.max(0, 100 - pv.reduce((a, b) => a + b, 0));
+    const tally = new Map();
+    for (let s = 0; s < sims; s++) {
+      const g = pv.map((x) => epaGamma(Math.max(x / 100 * poll.n, 0.05), rnd)), go = others > 0 ? epaGamma(Math.max(others / 100 * poll.n, 0.05), rnd) : 0;
+      const sum = g.reduce((a, b) => a + b, 0) + go;
+      const votes = keys.map((k, i) => { const l = c.lines.find((q) => q.key === k); return { key: k, abbr: l.abbr, members: l.members.length, v: g[i] / sum * 100 }; });
+      const res = projectSeats(rule, votes);
+      // seats -> parties -> groups for this simulation
+      const units1 = new Map();
+      keys.forEach((k) => { const n = res[k] || 0; const l = c.lines.find((q) => q.key === k);
+        const per = epaLR(n, l.members.map((m) => m.w));
+        l.members.forEach((m, i) => { Object.entries(epaSplit(per[i], m.groups)).forEach(([gk, x]) => { const uk = `${m.abbr}|${gk}`; units1.set(uk, (units1.get(uk) || 0) + x); });
+          if (!per[i]) m.groups.forEach((q) => { const uk = `${m.abbr}|${q.g}`; if (!units1.has(uk)) units1.set(uk, 0); }); });
+      });
+      units1.forEach((x, uk) => { let tl = tally.get(uk); if (!tl) { tl = new Map(); tally.set(uk, tl); } tl.set(x, (tl.get(x) || 0) + 1); });
+    }
+    tally.forEach((tl, uk) => { const [abbr, gk] = uk.split('|'); let seen = 0;
+      tl.forEach((cnt, seats) => { addTo(uk, { abbr, g: gk }, seats, cnt / sims / polls.length); seen += cnt; });
+      if (seen < sims) addTo(uk, { abbr, g: gk }, 0, (sims - seen) / sims / polls.length); });
+  });
+  // units absent from some polls: the missing probability mass is "0 seats"
+  units.forEach((a) => { const tot = a.reduce((x, y) => x + y, 0); if (tot < 1) a[0] += 1 - tot; });
+  return { polls, units, unitInfo };
+}
+function epaConvolve(a, b) { const out = new Float64Array(a.length + b.length - 1);
+  for (let i = 0; i < a.length; i++) { if (!a[i]) continue; for (let j = 0; j < b.length; j++) if (b[j]) out[i + j] += a[i] * b[j]; } return out; }
+const epaQuant = (pmf, q) => { let c = 0; for (let k = 0; k < pmf.length; k++) { c += pmf[k]; if (c >= q - 1e-9) return k; } return pmf.length - 1; };
+const epaMean = (pmf) => pmf.reduce((s, p, k) => s + p * k, 0);
+// One projection on date t: per group median (normalised to 720), 90% range; per country the details.
+function epaProjectAt(countries, t, sims, seed) {
+  const rnd = epaRng(seed), groupPmf = {}, perCountry = [];
+  let nodata = 0;
+  countries.forEach((c) => {
+    const r = c.lines.length ? epaCountryPmfs(c, t, sims, rnd) : null;
+    if (!r) { nodata += c.rule.seats; perCountry.push({ c, r: null }); return; }
+    perCountry.push({ c, r });
+    r.units.forEach((pmf, uk) => { const gk = r.unitInfo.get(uk).g; groupPmf[gk] = groupPmf[gk] ? epaConvolve(groupPmf[gk], pmf) : pmf; });
+  });
+  const groups = EPA_GROUPS.filter((gk) => gk !== 'NODATA' && groupPmf[gk]);
+  const med = Object.fromEntries(groups.map((gk) => [gk, epaQuant(groupPmf[gk], 0.5)]));
+  const target = 720 - nodata, sumMed = Object.values(med).reduce((a, b) => a + b, 0);
+  // normalise the medians to the seats of the countries with data (largest remainder)
+  const keys = Object.keys(med), scaled = epaLR(target, keys.map((k) => (sumMed > 0 ? med[k] : 1)));
+  const seats = Object.fromEntries(keys.map((k, i) => [k, sumMed > 0 ? scaled[i] : 0]));
+  if (nodata) seats.NODATA = nodata;
+  const range = Object.fromEntries(groups.map((gk) => [gk, [epaQuant(groupPmf[gk], 0.05), epaQuant(groupPmf[gk], 0.95)]]));
+  return { t, seats, median: med, range, perCountry, sumMed };
+}
+async function buildEPAuto(partyRows, allianceRows, projRows, progress) {
   const keepISO = ISO, keepEU = IS_EU, countries = [];
   const isos = Object.keys(EP_RULES);
   const files = await Promise.all(isos.map((iso) => (NO_POLLING.includes(iso) ? Promise.resolve(null)
@@ -2349,104 +2439,109 @@ async function buildEPAuto(partyRows, allianceRows, projRows) {
     if (poll) {
       const drop = new Set();
       poll.groups.forEach((g0) => { if (poll.hidden.has(g0.alliance)) drop.add(g0.alliance); else g0.members.forEach((k) => drop.add(k)); });
-      poll.series.filter((sr) => !drop.has(sr.key) && sr.curve.some((seg) => seg.length > 1)).forEach((sr) => {
-        lines.push({ sr, key: sr.key, abbr: sr.abbr, name: sr.name, color: sr.color, members: epaLineParties(sr, sheet),
-          end: Math.max(...sr.curve.map((seg) => seg[seg.length - 1].t.getTime())) });
+      poll.series.filter((sr) => !drop.has(sr.key)).forEach((sr) => {
+        const segEnds = sr.curve.map((seg) => seg[seg.length - 1].t.getTime());
+        lines.push({ sr, key: sr.key, abbr: sr.abbr, name: sr.name, color: sr.color, members: epaLineParties(sr, sheet), end: segEnds.length ? Math.max(...segEnds) : 0 });
       });
     }
-    const end = lines.length ? Math.max(...lines.map((l) => l.end)) : null;
-    countries.push({ iso, name, rule: EP_RULES[iso], lines, end });
+    const pollT = poll ? poll.polls.map((p) => p.t.getTime()) : [];
+    const end = Math.max(0, ...lines.map((l) => l.end), ...pollT) || null;
+    countries.push({ iso, name, rule: EP_RULES[iso], lines, end, polls: poll ? poll.polls : [] });
   });
   ISO = keepISO; IS_EU = keepEU;
-  const ends = countries.filter((c) => c.end).map((c) => c.end);
-  if (!ends.length) return null;
-  const tEnd = Math.max(...ends), dates = [];
-  for (let t = EP_SINCE; t < tEnd; t += 864e5) dates.push(t);
-  dates.push(tEnd);
-  // Seats per group per date, and the full calculation for the latest date
-  const totals = Object.fromEntries(EPA_GROUPS.map((gk) => [gk, dates.map(() => 0)]));
-  dates.forEach((t, di) => {
-    countries.forEach((c) => {
-      const rule = c.rule;
-      if (!c.end) { totals.NODATA[di] += rule.seats; return; }
-      const tc = Math.min(t, c.end);  // a country whose average stops earlier keeps its latest figures
-      const votes = c.lines.map((l) => ({ key: l.key, abbr: l.abbr, members: l.members.length, v: avgAt(l.sr, tc) })).filter((x) => x.v != null && x.v > 0);
-      if (votes.length < 2) { totals.NODATA[di] += rule.seats; return; }
-      const res = projectSeats({ ...rule, exempt: rule.exempt }, votes);
-      c.lines.forEach((l) => { const n = res[l.key] || 0; if (!n) return; Object.entries(epaSeatsOf(l, n).byGroup).forEach(([gk, k]) => { totals[gk][di] += k; }); });
-      if (di === dates.length - 1) { c.last = { t: tc, votes, res }; }
-    });
-  });
-  return { dates, totals, countries };
+  if (!countries.some((c) => c.end)) return null;
+  const today = new Date().setHours(0, 0, 0, 0);
+  progress && progress('Simulating today’s projection…');
+  await new Promise((r) => setTimeout(r, 20));
+  const now = epaProjectAt(countries, today, EPA_SIMS_NOW, 20240609);
+  // history: the first of every month since July 2024 (fewer simulations), then today
+  const hist = [];
+  for (let d = new Date(2024, 6, 1); d.getTime() < today; d.setMonth(d.getMonth() + 1)) hist.push(d.getTime());
+  return { countries, now, histDates: hist, hist: [], today };
+}
+async function epaRunHistory(onStep) {
+  for (let i = 0; i < EPA.histDates.length; i++) {
+    const t = EPA.histDates[i];
+    EPA.hist.push(epaProjectAt(EPA.countries, t, EPA_SIMS_HIST, 1000 + i));
+    onStep(i + 1, EPA.histDates.length);
+    await new Promise((r) => setTimeout(r, 0));
+  }
 }
 let EPA = null;
+const epaSeries = () => [...EPA.hist, EPA.now];
 function viewEPAuto() {
-  if (!EPA) return '<div class="card status">No polling averages found.</div>';
-  const { dates, totals, countries } = EPA, li = dates.length - 1, total = 720, maj = 361;
-  const now = EPA_GROUPS.map((gk) => ({ gk, n: totals[gk][li] })).filter((x) => x.n > 0);
-  const day = new Date(dates[li]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (!EPA) return '<div class="card status">No polling data found.</div>';
+  const { now } = EPA, total = 720, maj = 361;
+  const order = EPA_GROUPS.filter((gk) => now.seats[gk] > 0);
+  const day = new Date(now.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const cell = (n) => (n ? n : '<span class="muted">·</span>');
-  const rows = countries.map((c) => {
+  const fmtD = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const rows = now.perCountry.map(({ c, r }) => {
     const by = Object.fromEntries(EPA_GROUPS.map((gk) => [gk, 0]));
-    let detail = '';
-    if (c.last) {
-      c.lines.forEach((l) => { const n = c.last.res[l.key] || 0; Object.entries(epaSeatsOf(l, n).byGroup).forEach(([gk, k]) => { by[gk] += k; }); });
-      const vs = c.last.votes.slice().sort((a, b) => b.v - a.v);
-      detail = `<table class="seatcheck"><thead><tr><th>Party / list</th><th>Average %</th><th>Threshold</th><th>List seats</th><th>Party</th><th>Party seats</th><th>EP group</th><th>Based on</th></tr></thead><tbody>${vs.map((x) => {
-        const l = c.lines.find((q) => q.key === x.key), n = c.last.res[x.key] || 0, t = c.rule.threshold;
-        const ok = x.v >= t || (c.rule.exempt || []).some((a) => normKey(a) === normKey(x.abbr));
-        const sp = epaSeatsOf(l, n), multi = l.members.length > 1;
-        return l.members.map((mm, i) => `<tr${i ? ' class="sub"' : ''}>${i ? '<td></td><td></td><td></td><td></td>' : `<td>${esc(x.abbr)} <span class="muted">${esc(l.name || '')}</span></td><td>${x.v.toFixed(1)}</td><td>${ok ? '✓' : '✗'} ${t ? (+t.toFixed(1)) + '%' : '–'}</td><td><strong>${n}</strong></td>`}<td>${esc(mm.abbr)}${multi ? ` <span class="muted">(${mm.wFromSheet ? 'weight ' + mm.w : 'equal share'})</span>` : ''}</td><td><strong>${sp.perParty[i]}</strong></td><td>${Object.entries(epaSplit(sp.perParty[i], mm.groups)).map(([gk, k]) => `<span class="dot" style="background:${epaColor(gk)}"></span> ${esc(gk === 'UNA' ? 'New/unaff.' : gk)}${mm.groups.length > 1 ? ' ' + k : ''}`).join(', ') || mm.groups.map((q) => esc(q.g === 'UNA' ? 'New/unaff.' : q.g)).join(', ')}</td><td class="muted" style="white-space:normal">${esc(mm.groups[0].basis)}</td></tr>`).join(''); }).join('')}</tbody></table>
-        <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}. Average on ${new Date(c.last.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''}</p>`;
-    } else { by.NODATA = c.rule.seats; detail = '<p class="note-s">No polling average for this country; its seats are counted as “No polling average”.</p>'; }
-    return `<tr class="epa-c"><td><button type="button" class="epa-open" aria-expanded="false">▸ <strong>${esc(c.name)}</strong> <span class="muted">${c.rule.seats}${c.rule.approx ? ' · approx.' : ''}</span></button></td>${EPA_GROUPS.map((gk) => `<td>${cell(by[gk])}</td>`).join('')}</tr>
+    let detail;
+    if (!r) { by.NODATA = c.rule.seats; detail = '<p class="note-s">No polls or polling average for this country; its seats are counted as “No polling data”.</p>'; }
+    else {
+      const units = [...r.units.entries()].map(([uk, pmf]) => ({ ...r.unitInfo.get(uk), pmf, med: epaQuant(pmf, 0.5), lo: epaQuant(pmf, 0.05), hi: epaQuant(pmf, 0.95), mean: epaMean(pmf) }))
+        .filter((u) => u.hi > 0).sort((a, b) => b.mean - a.mean);
+      units.forEach((u) => { by[u.g] += u.med; });
+      const basisOf = (abbr) => { for (const l of c.lines) for (const m of l.members) if (m.abbr === abbr) return { list: l, m }; return null; };
+      detail = `<p class="note-s" style="margin:0 0 6px"><strong>Polls used:</strong> ${r.polls.map((p) => `${esc(p.label)} (${fmtD(p.t)}, n=${p.nKnown ? p.n : '–'})`).join(' · ')}</p>
+        <table class="seatcheck"><thead><tr><th>Party</th><th>List</th><th>Median seats</th><th>90% range</th><th>Mean</th><th>EP group</th><th>Based on</th></tr></thead><tbody>${units.map((u) => { const b = basisOf(u.abbr);
+          return `<tr><td>${esc(u.abbr)}</td><td class="muted">${b && b.list.members.length > 1 ? esc(b.list.abbr) + (b.m.wFromSheet ? ' (weight ' + b.m.w + ')' : ' (equal share)') : ''}</td><td><strong>${u.med}</strong></td><td>${u.lo}–${u.hi}</td><td>${u.mean.toFixed(1)}</td><td><span class="dot" style="background:${epaColor(u.g)}"></span> ${esc(u.g === 'UNA' ? 'Unaffiliated' : u.g)}</td><td class="muted" style="white-space:normal">${b ? esc(b.m.groups.find((q) => q.g === u.g)?.basis || b.m.groups[0].basis) : ''}</td></tr>`; }).join('')}</tbody></table>
+        <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''} Party medians are shown before the EU-wide normalisation, so they need not add up to ${c.rule.seats}.</p>`;
+    }
+    return `<tr class="epa-c"><td><button type="button" class="epa-open" aria-expanded="false">▸ <strong>${esc(c.name)}</strong> <span class="muted">${c.rule.seats}${c.rule.approx ? ' · approx.' : ''}${r ? ' · ' + (r.polls[0].avg ? 'average' : r.polls.length + ' poll' + (r.polls.length > 1 ? 's' : '')) : ''}</span></button></td>${EPA_GROUPS.map((gk) => `<td>${cell(by[gk])}</td>`).join('')}</tr>
       <tr class="epa-d" hidden><td colspan="${EPA_GROUPS.length + 1}"><div style="padding:4px 0 12px;overflow-x:auto">${detail}</div></td></tr>`;
   }).join('');
-  return `<div class="card status" style="text-align:left"><strong>Automatic European Parliament projection · test page</strong> <span class="muted">Not linked from the site. Recalculated from the national polling averages on every build.</span></div>`
+  return `<div class="card status" style="text-align:left"><strong>Automatic European Parliament projection · test page</strong> <span class="muted">Not linked from the site. Recalculated from the poll database on every build.</span></div>`
     + bar('European Parliament projection (automatic)', `<span class="note">720 seats · ${maj} for a majority</span>`) + `<section class="card proj epa">
-    <p class="note-s" style="margin:0"><strong>${esc(day)}:</strong> ${now.map((x) => `${esc(EPA_NAMES[x.gk])} ${x.n}`).join(' · ')}</p>
-    <div class="seatwrap"><div class="seatbar" role="img" aria-label="${esc(now.map((x) => EPA_NAMES[x.gk] + ' ' + x.n).join(', '))}">${now.map((x) => `<div style="flex:${x.n} 0 0;background:${epaColor(x.gk)}" title="${esc(EPA_NAMES[x.gk] + ': ' + x.n)}"></div>`).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / total * 100).toFixed(2)}%"></div></div>
-    <div class="poll-range"><span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn epa-shp" data-s="lines" aria-pressed="${EPA.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn epa-shp" data-s="stack" aria-pressed="${EPA.shape === 'stack'}">Stacked</button></span></div>
+    <p class="note-s" style="margin:0"><strong>${esc(day)}:</strong> ${order.map((gk) => `${esc(EPA_NAMES[gk])} ${now.seats[gk]}${now.range[gk] ? ` <span class="muted">(${now.range[gk][0]}–${now.range[gk][1]})</span>` : ''}`).join(' · ')}</p>
+    <div class="seatwrap"><div class="seatbar" role="img" aria-label="${esc(order.map((gk) => EPA_NAMES[gk] + ' ' + now.seats[gk]).join(', '))}">${order.map((gk) => `<div style="flex:${now.seats[gk]} 0 0;background:${epaColor(gk)}" title="${esc(EPA_NAMES[gk] + ': ' + now.seats[gk])}"></div>`).join('')}</div><div class="majline" aria-hidden="true" style="left:${(maj / total * 100).toFixed(2)}%"></div></div>
+    <div class="poll-range"><span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn epa-shp" data-s="lines" aria-pressed="${EPA.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn epa-shp" data-s="stack" aria-pressed="${EPA.shape === 'stack'}">Stacked</button></span><span class="note-s" id="epa-prog"></span></div>
     <div class="proj-chart" id="epa-chart"></div>
-    <p class="note-s" style="margin:0">Each country’s national polling average (parliamentary polls, as most countries have no regular EP polls) under its EP election rules, then grouped by EP group as in our EP projection sheet (a party listed under two groups shares its seats between them in proportion to its latest figures there; “unaffiliated” = New / unaffiliated). Parties not in that sheet fall back to the party database: EP group, else Europarty, else a stated interest to join, else “~” orientation. Alliances split their seats between their parties by the “Projection Weight” columns of the alliance sheet (largest remainder; equally where none are filled in). Daily since the 2024 election.</p></section>`
-    + bar('By country', '<span class="note">click a country for the calculation</span>') + `<section class="card" style="padding:10px 14px;overflow-x:auto"><table class="seatcheck epa-t"><thead><tr><th>Country · seats</th>${EPA_GROUPS.map((gk) => `<th title="${esc(EPA_NAMES[gk])}"><span class="dot" style="background:${epaColor(gk)}"></span> ${gk === 'UNA' ? 'New' : gk === 'NODATA' ? 'No data' : esc(gk)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
-    <tfoot><tr><td>EU · 720</td>${EPA_GROUPS.map((gk) => `<td>${totals[gk][li]}</td>`).join('')}</tr></tfoot></table></section>`;
+    <p class="note-s" style="margin:0">Method: for every country, the polls of the last ${EPA_POLL_DAYS} days with a sample of at least ${EPA_MIN_N} (latest poll per firm; without any, the latest polling average) are each simulated ${EPA_SIMS_NOW.toLocaleString('en-GB')} times under the country’s EP election law. The seat distributions are averaged over the polls, convolved per EP group, and each group’s median is scaled to the 720 seats; brackets show the 90% range. Groups as in our EP projection sheet; alliances split by the Projection Weight in the alliance sheet. Monthly history (first of each month, ${EPA_SIMS_HIST} simulations per poll) plus today. Not yet included: EP-specific polls preferred over national ones, presidential polls for France, the German minor-party trajectory model, and manual pollster exclusions.</p></section>`
+    + bar('By country', '<span class="note">group medians before EU-wide scaling · click a country for details</span>') + `<section class="card" style="padding:10px 14px;overflow-x:auto"><table class="seatcheck epa-t"><thead><tr><th>Country · seats</th>${EPA_GROUPS.map((gk) => `<th title="${esc(EPA_NAMES[gk])}"><span class="dot" style="background:${epaColor(gk)}"></span> ${gk === 'UNA' ? 'Unaff.' : gk === 'NODATA' ? 'No data' : esc(gk)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr><td>EU · 720 (scaled)</td>${EPA_GROUPS.map((gk) => `<td>${now.seats[gk] || 0}</td>`).join('')}</tr></tfoot></table></section>`;
 }
 function drawEPAuto() {
   const host = document.getElementById('epa-chart'); if (!host || !EPA) return;
-  const { dates, totals } = EPA, stack = EPA.shape === 'stack', maj = 361;
-  const groups = EPA_GROUPS.filter((gk) => totals[gk].some((v) => v > 0) && (stack || gk !== 'NODATA'));  // lines: no line for missing data
+  const pts = epaSeries(), stack = EPA.shape === 'stack', maj = 361;
+  const dates = pts.map((p) => p.t), val = (gk, i) => pts[i].seats[gk] || 0;
+  if (pts.length < 2) { host.innerHTML = '<p class="note-s">History is being calculated…</p>'; return; }
+  const groups = EPA_GROUPS.filter((gk) => pts.some((p) => p.seats[gk] > 0) && (stack || gk !== 'NODATA'));
   const W = host.clientWidth, small = W < 560, H = small ? 300 : 380, m = { l: 34, r: small ? 96 : 190, t: 12, b: 28 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b, t0 = dates[0], t1 = dates[dates.length - 1], li = dates.length - 1;
   const x = (t) => m.l + (t - t0) / ((t1 - t0) || 1) * iw;
   const base = dates.map(() => 0), lower = {}, upper = {};
-  groups.forEach((gk) => { lower[gk] = base.slice(); totals[gk].forEach((v, i) => { base[i] += v; }); upper[gk] = base.slice(); });
-  const ymax = stack ? 720 : Math.ceil((Math.max(...groups.map((gk) => Math.max(...totals[gk]))) + 10) / 50) * 50;
+  groups.forEach((gk) => { lower[gk] = base.slice(); dates.forEach((_, i) => { base[i] += val(gk, i); }); upper[gk] = base.slice(); });
+  const ymax = stack ? 720 : Math.ceil((Math.max(...groups.map((gk) => Math.max(...dates.map((_, i) => (pts[i].range[gk] ? pts[i].range[gk][1] : val(gk, i)))))) + 10) / 50) * 50;
   const y = (v) => m.t + ih - v / ymax * ih, step = stack ? 120 : ymax <= 200 ? 25 : 50;
   let svg = '';
   for (let v = 0; v <= ymax; v += step) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
-  const thin = (arr) => arr.filter((_, i) => i % Math.max(1, Math.round(dates.length / iw)) === 0 || i === li);
-  const idx = thin(dates.map((_, i) => i));
   if (stack) groups.forEach((gk) => {
-    const top = idx.map((i) => `${x(dates[i]).toFixed(1)},${y(upper[gk][i]).toFixed(1)}`), bot = idx.map((i) => `${x(dates[i]).toFixed(1)},${y(lower[gk][i]).toFixed(1)}`).reverse();
+    const top = dates.map((t, i) => `${x(t).toFixed(1)},${y(upper[gk][i]).toFixed(1)}`), bot = dates.map((t, i) => `${x(t).toFixed(1)},${y(lower[gk][i]).toFixed(1)}`).reverse();
     svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${epaColor(gk)}" stroke="#fff" stroke-width=".8"><title>${esc(EPA_NAMES[gk])}</title></polygon>`;
   });
-  else groups.forEach((gk) => { svg += `<path d="${idx.map((i, k) => `${k ? 'L' : 'M'}${x(dates[i]).toFixed(1)},${y(totals[gk][i]).toFixed(1)}`).join('')}" fill="none" stroke="${epaColor(gk)}" stroke-width="2.2" stroke-linejoin="round"/>`; });
+  else groups.forEach((gk) => {
+    const band = dates.map((t, i) => (pts[i].range[gk] ? [x(t), y(pts[i].range[gk][1]), y(pts[i].range[gk][0])] : null)).filter(Boolean);
+    if (band.length > 1) svg += `<polygon points="${band.map((b) => `${b[0].toFixed(1)},${b[1].toFixed(1)}`).join(' ')} ${band.slice().reverse().map((b) => `${b[0].toFixed(1)},${b[2].toFixed(1)}`).join(' ')}" fill="${epaColor(gk)}" opacity=".13"/>`;
+    svg += `<path d="${dates.map((t, i) => `${i ? 'L' : 'M'}${x(t).toFixed(1)},${y(val(gk, i)).toFixed(1)}`).join('')}" fill="none" stroke="${epaColor(gk)}" stroke-width="2.2" stroke-linejoin="round"/>`;
+  });
   if (stack) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(maj)}" y2="${y(maj)}" stroke="#1A1D23" stroke-width="1.2" stroke-dasharray="5 4"/><text x="${m.l + 4}" y="${y(maj) - 5}" class="ax" style="fill:#1A1D23">Majority ${maj}</text>`;
-  const d0 = new Date(t0); const tk = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
-  for (; tk.getTime() <= t1; tk.setMonth(tk.getMonth() + 1)) if (tk.getMonth() % 6 === 0) svg += `<text x="${x(tk.getTime())}" y="${H - 8}" text-anchor="middle" class="ax">${tk.getMonth() === 0 ? tk.getFullYear() : tk.toLocaleDateString('en-GB', { month: 'short' })}</text>`;
-  const ends = groups.map((gk) => ({ gk, v: totals[gk][li], mid: stack ? y((lower[gk][li] + upper[gk][li]) / 2) : y(totals[gk][li]) })).filter((e) => e.v > 0).sort((a, b) => a.mid - b.mid);
+  const d0 = new Date(t0); const tk = new Date(d0.getFullYear(), d0.getMonth(), 1);
+  for (; tk.getTime() <= t1; tk.setMonth(tk.getMonth() + 1)) if (tk.getMonth() % 6 === 0 && tk.getTime() >= t0) svg += `<text x="${x(tk.getTime())}" y="${H - 8}" text-anchor="middle" class="ax">${tk.getMonth() === 0 ? tk.getFullYear() : tk.toLocaleDateString('en-GB', { month: 'short' })}</text>`;
+  const ends = groups.map((gk) => ({ gk, v: val(gk, li), mid: stack ? y((lower[gk][li] + upper[gk][li]) / 2) : y(val(gk, li)) })).filter((e) => e.v > 0).sort((a, b) => a.mid - b.mid);
   ends.forEach((e) => { e.yy = e.mid; });
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
   const over = ends.length ? ends[ends.length - 1].yy - (y(0) - 4) : 0; if (over > 0) ends.forEach((e) => { e.yy -= over; });
-  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${epaColor(e.gk)}" stroke-width="1"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(epaColor(e.gk))}"><tspan font-weight="700">${e.v}</tspan> ${esc(small ? (e.gk === 'UNA' ? 'New' : e.gk === 'NODATA' ? 'No data' : e.gk) : EPA_NAMES[e.gk])}</text>`; });
+  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${epaColor(e.gk)}" stroke-width="1"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(epaColor(e.gk))}"><tspan font-weight="700">${e.v}</tspan> ${esc(small ? (e.gk === 'UNA' ? 'Unaff.' : e.gk === 'NODATA' ? 'No data' : e.gk) : EPA_NAMES[e.gk])}</text>`; });
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="Automatic EP projection">${svg}<line id="epa-x" x1="0" x2="0" y1="${m.t}" y2="${y(0)}" stroke="#1A1D23" visibility="hidden"/><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="epa-hit"/></svg><div class="proj-tip" id="epa-tip" hidden></div>`;
   const hit = document.getElementById('epa-hit'), cross = document.getElementById('epa-x'), tip = document.getElementById('epa-tip');
   const show = (evt) => {
     const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
-    const i = Math.max(0, Math.min(li, Math.round((px - m.l) / iw * li)));
+    let i = 0; dates.forEach((t, k) => { if (Math.abs(x(t) - px) < Math.abs(x(dates[i]) - px)) i = k; });
     cross.setAttribute('x1', x(dates[i])); cross.setAttribute('x2', x(dates[i])); cross.setAttribute('visibility', 'visible');
-    tip.innerHTML = `<strong>${new Date(dates[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>` + groups.slice().reverse().filter((gk) => totals[gk][i] > 0).map((gk) => `<div><span class="dot" style="background:${epaColor(gk)}"></span><span>${esc(EPA_NAMES[gk])}</span><strong>${totals[gk][i]}</strong></div>`).join('');
+    tip.innerHTML = `<strong>${new Date(dates[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>` + groups.slice().reverse().filter((gk) => val(gk, i) > 0).map((gk) => `<div><span class="dot" style="background:${epaColor(gk)}"></span><span>${esc(EPA_NAMES[gk])}${pts[i].range[gk] ? ` <span class="muted">${pts[i].range[gk][0]}–${pts[i].range[gk][1]}</span>` : ''}</span><strong>${val(gk, i)}</strong></div>`).join('');
     tip.hidden = false; const tw = tip.offsetWidth; let left = x(dates[i]) + 12; if (left + tw > W) left = x(dates[i]) - tw - 12; tip.style.left = Math.max(0, left) + 'px';
   };
   hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
@@ -2637,13 +2732,15 @@ async function main() {
   }
   if (VIEW === 'ep') {
     document.title = 'Europe Elects – Automatic EP projection (test)';
-    app.innerHTML = '<div class="card status">Calculating the projection for 27 countries…</div>';
+    app.innerHTML = '<div class="card status" id="epa-status">Loading polls for 27 countries…</div>';
     const projRows = await soft(SOURCES.projection, 'Projection');
-    EPA = await buildEPAuto(partyRows, allianceRows, projRows || []);
+    EPA = await buildEPAuto(partyRows, allianceRows, projRows || [], (msg) => { const st = document.getElementById('epa-status'); if (st) st.textContent = msg; });
     app.innerHTML = viewEPAuto(); drawEPAuto();
     document.querySelectorAll('.epa-shp').forEach((b) => { b.onclick = () => { EPA.shape = b.dataset.s; document.querySelectorAll('.epa-shp').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); drawEPAuto(); }; });
     document.querySelectorAll('.epa-open').forEach((b) => { b.onclick = () => { const d = b.closest('tr').nextElementSibling, open = d.hidden; d.hidden = !open; b.setAttribute('aria-expanded', String(open)); b.firstChild.textContent = open ? '▾ ' : '▸ '; postHeight(); }; });
     postHeight();
+    if (EPA) { const pr = document.getElementById('epa-prog');
+      await epaRunHistory((k, n) => { if (pr) pr.textContent = k < n ? `calculating history ${k}/${n}…` : ''; if (k % 4 === 0 || k === n) drawEPAuto(); }); }
     return;
   }
   if (VIEW === 'seats') {
