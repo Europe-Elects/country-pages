@@ -207,6 +207,12 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .poll-range,.poll-parties{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .rngbtn,.pchip{min-height:36px;padding:0 12px;border:1px solid #D5D3CC;border-radius:999px;background:#fff;color:var(--ink);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .rngbtn[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.poll-shape{display:inline-flex;margin-left:auto}
+.poll-shape .shpbtn{min-height:36px;padding:0 14px;border:1px solid var(--navy);background:#fff;color:var(--navy);font:600 15px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+.poll-shape .shpbtn:first-child{border-radius:999px 0 0 999px}
+.poll-shape .shpbtn:last-child{border-radius:0 999px 999px 0;margin-left:-1px}
+.poll-shape .shpbtn[aria-pressed="true"]{background:var(--navy);color:#fff}
+.poll-shape .shpbtn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .proj-tip .pf{display:block;margin:6px 0 2px;color:var(--muted);font-size:13px}
 .pchip[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
 .poll .poll-key{display:flex;align-items:center;gap:6px;font-style:normal}
@@ -1691,7 +1697,8 @@ function viewPolling(cfg, poll) {
     return (VIEW === 'polling' ? nextHead(cfg) : bar('Polling average', `<span class="bar-r">${modeToggle()}${right}</span>`)) + `<section class="card poll">
       <div class="poll-ctl">
         <div class="poll-range" role="group" aria-label="Time span">${ranges.map(([r, l]) => `<button type="button" class="rngbtn" data-r="${r}" aria-pressed="${r === 'all'}">${l}</button>`).join('')}
-          <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span></div>
+          <span class="note-s" id="poll-hint">or drag across the chart to zoom in</span>
+          ${POLL.bold ? '' : `<span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn" data-s="lines" aria-pressed="${POLL.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn" data-s="stack" aria-pressed="${POLL.shape === 'stack'}">Stacked</button></span>`}</div>
         <div class="poll-parties" role="group" aria-label="Show or hide parties">${chips.map(chipHtml).join('')}</div>
       </div>
       <div class="proj-chart" id="poll-chart"></div>
@@ -1709,6 +1716,10 @@ function viewPolling(cfg, poll) {
 }
 function bindPolling() {
   if (!POLL) return;
+  document.querySelectorAll('.shpbtn').forEach((b) => { b.onclick = () => {
+    POLL.shape = b.dataset.s; document.querySelectorAll('.shpbtn').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+    drawPolling(); postHeight();
+  }; });
   document.querySelectorAll('.rngbtn').forEach((b) => { b.onclick = () => {
     const r = b.dataset.r; POLL.range = r;
     POLL.view = r === 'all' ? { ...POLL.full } : { a: Math.max(POLL.full.a, POLL.full.b - +r * 365.25 * 864e5), b: POLL.full.b };
@@ -1729,6 +1740,7 @@ function bindPolling() {
 function drawPolling() {
   const host = document.getElementById('poll-chart'); if (!host || !POLL) return;
   document.querySelectorAll('.rngbtn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === POLL.range)));
+  if (POLL.shape === 'stack') { drawPollStack(host); return; }
   const hint = document.getElementById('poll-hint');
   if (hint) hint.textContent = POLL.range === 'custom' ? `${new Date(POLL.view.a).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} – ${new Date(POLL.view.b).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} · choose “All” to reset` : 'or drag across the chart to zoom in';
   const series = POLL.series.filter((sr) => !POLL.hidden.has(sr.key));
@@ -1855,6 +1867,84 @@ function drawPolling() {
     if (tb - ta < 45 * 864e5) return; // at least ~6 weeks
     POLL.view = { a: ta, b: tb }; POLL.range = 'custom'; drawPolling();
   });
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+// "Stacked" view: the polling average as a stacked area chart, parties from left (bottom) to right (top):
+// Europarty family in Affiliation mode, ideology in Ideology mode (the same order as the parliament bar).
+function pollFamily(sr) {
+  const ent = sr.party || sr.alliance || (sr.joint && sr.joint[0]) || null;
+  if (!ent) return '(none)';
+  const eu = sr.party ? (ent.europartyShort || '') : (ent.europarty && ent.europarty !== 'None' ? String(ent.europarty).split(/[|;,]/)[0].trim() : '');
+  if (eu) return eu;
+  const grp = GROUP_TO_EUROPARTY[String(ent.epGroup || '').split(/[|;,]/)[0].trim()];
+  if (grp) return grp;
+  const so = sr.party ? softAffiliation(ent.orientation) : null;
+  return so ? so.europarty : '(none)';
+}
+function drawPollStack(host) {
+  const hint = document.getElementById('poll-hint'); if (hint) hint.textContent = 'parties stacked from left (bottom) to right (top)';
+  const series = POLL.series.filter((sr) => !POLL.hidden.has(sr.key) && sr.curve.some((seg) => seg.length > 1));
+  const famRank = (sr) => { const i = FAMILY_ORDER.indexOf(pollFamily(sr)); return i < 0 ? FAMILY_ORDER.indexOf('(none)') : i; };
+  const rank = (sr) => (COLOR_MODE === 'ideo' ? ideoRank(sr.ide && sr.ide.name) : famRank(sr));
+  const lastT = (sr) => Math.max(...sr.curve.map((seg) => seg[seg.length - 1].t.getTime()));
+  const meanV = (sr) => { const v = sr.curve.flat().map((q) => q.v); return v.reduce((x, y) => x + y, 0) / (v.length || 1); };
+  series.sort((a, b) => rank(a) - rank(b) || meanV(b) - meanV(a));
+  const t0 = POLL.view.a, t1 = Math.min(POLL.view.b, Math.max(...series.map(lastT)));
+  const W = host.clientWidth, small = W < 560, H = small ? 300 : 380, m = { l: 34, r: small ? 88 : 150, t: 10, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const N = Math.max(40, Math.min(240, Math.round(iw / 4)));
+  const ts = Array.from({ length: N + 1 }, (_, i) => t0 + (t1 - t0) * i / N);
+  const x = (t) => m.l + (t - t0) / ((t1 - t0) || 1) * iw, y = (v) => m.t + ih - v / 100 * ih;
+  // values (0 where a party has no average on that date), stacked bottom-up; "Others" fills up to 100%
+  const V = series.map((sr) => ts.map((t) => { const v = avgAt(sr, t); return v == null || v < 0 ? 0 : v; }));
+  const base = ts.map(() => 0), lower = [], upper = [];
+  V.forEach((vals, k) => { lower[k] = base.slice(); vals.forEach((v, i) => { base[i] += v; }); upper[k] = base.slice(); });
+  const scale = ts.map((_, i) => (base[i] > 100 ? 100 / base[i] : 1));  // never above 100% (rounding in the averages)
+  let svg = '';
+  for (let v = 0; v <= 100; v += 20) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  svg += `<rect x="${m.l}" y="${y(100)}" width="${iw}" height="${y(0) - y(100)}" fill="url(#oth-hatch)"/>`;
+  series.forEach((sr, k) => {
+    const top = ts.map((t, i) => `${x(t).toFixed(1)},${y(upper[k][i] * scale[i]).toFixed(1)}`);
+    const bot = ts.map((t, i) => `${x(t).toFixed(1)},${y(lower[k][i] * scale[i]).toFixed(1)}`).reverse();
+    const fill = sr.soft ? `url(#hatch-${k})` : sr.color;
+    if (sr.soft) svg = `<defs><pattern id="hatch-${k}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#fff"/><rect width="4" height="7" fill="${sr.color}"/></pattern></defs>` + svg;
+    svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${fill}" stroke="#fff" stroke-width=".8"><title>${esc(seriesLabel(sr.abbr, sr.tag))}</title></polygon>`;
+  });
+  svg = `<defs><pattern id="oth-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#F2F1EC"/><rect width="3" height="7" fill="#E4E2DB"/></pattern></defs>` + svg;
+  // x ticks
+  const spanY = (t1 - t0) / (365.25 * 864e5), stepM = spanY > 6 ? 24 : spanY > 2.5 ? 12 : spanY > 1 ? 6 : 3;
+  const d0 = new Date(t0); const tk = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+  for (; tk.getTime() <= t1; tk.setMonth(tk.getMonth() + 1)) if (tk.getMonth() % stepM === 0 && (stepM < 24 || tk.getFullYear() % 2 === 0))
+    svg += `<line x1="${x(tk.getTime())}" x2="${x(tk.getTime())}" y1="${y(0)}" y2="${y(0) + 4}" stroke="#1A1D23"/><text x="${x(tk.getTime())}" y="${H - 8}" text-anchor="middle" class="ax">${tk.getMonth() === 0 ? tk.getFullYear() : tk.toLocaleDateString('en-GB', { month: 'short' })}</text>`;
+  POLL.elections.forEach((d) => { const t = d.getTime(); if (t > t0 && t < t1) svg += `<line x1="${x(t)}" x2="${x(t)}" y1="${m.t}" y2="${y(0)}" stroke="#C8202F" stroke-width="1.2" stroke-dasharray="4 3"><title>Parliamentary election, ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</title></line>`; });
+  // labels at the right edge, in the middle of each band (moved apart when bands are thin)
+  const li = ts.length - 1;
+  const ends = series.map((sr, k) => ({ sr, v: V[k][li], mid: y((lower[k][li] + upper[k][li]) / 2 * scale[li]) })).filter((e) => e.v >= 0.5).sort((a, b) => a.mid - b.mid);
+  ends.forEach((e) => { e.yy = e.mid; });
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  const over = ends.length ? ends[ends.length - 1].yy - (y(0) - 4) : 0; if (over > 0) ends.forEach((e) => { e.yy -= over; });
+  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${e.sr.color}" stroke-width="1" opacity=".7"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(e.sr.color)}"><tspan font-weight="700">${Math.round(e.v)}%</tspan> ${esc(e.sr.abbr.length > 10 ? e.sr.abbr.slice(0, 9) + '…' : e.sr.abbr)}</text>`; });
+  const othNow = Math.max(0, 100 - base[li]);
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="Polling average, stacked: ${esc(ends.map((e) => e.sr.abbr + ' ' + Math.round(e.v) + '%').join(', '))}">${svg}
+    <line id="pst-x" x1="0" x2="0" y1="${m.t}" y2="${y(0)}" stroke="#1A1D23" stroke-width="1" visibility="hidden"/>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="pst-hit"/></svg><div class="proj-tip" id="pst-tip" hidden></div>
+    <p class="note-s" style="margin:4px 0 0">Stacked ${COLOR_MODE === 'ideo' ? 'by main ideology, far-left at the bottom and far-right at the top' : 'by European political family, left at the bottom and right at the top (parties without one in the middle)'}. The hatched area at the top is all other parties${othNow >= 0.5 ? ` (${Math.round(othNow)}% now)` : ''}. Switch parties on or off above.</p>`;
+  const hit = document.getElementById('pst-hit'), cross = document.getElementById('pst-x'), tip = document.getElementById('pst-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    const i = Math.max(0, Math.min(li, Math.round((px - m.l) / iw * N)));
+    cross.setAttribute('x1', x(ts[i])); cross.setAttribute('x2', x(ts[i])); cross.setAttribute('visibility', 'visible');
+    const rows = series.map((sr, k) => ({ sr, v: V[k][i] })).filter((o) => o.v >= 0.05).reverse();
+    const oth = Math.max(0, 100 - base[i]);
+    tip.innerHTML = `<strong>${new Date(ts[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>`
+      + rows.map((o) => `<div><span class="dot" style="background:${o.sr.soft ? stripes(o.sr.color) : o.sr.color}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('')
+      + (oth >= 0.05 ? `<div><span class="dot" style="background:#E4E2DB"></span><span>Others</span><strong>${oth.toFixed(1)}%</strong></div>` : '');
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = x(ts[i]) + 12; if (left + tw > W) left = x(ts[i]) - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
   hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
 }
 let pollResize = null;
