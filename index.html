@@ -2225,7 +2225,7 @@ function viewSeatCheck() {
 // (hourly), with a daily history since the 2024 EP election computed from the averages.
 const EP_RULES = {
   AT: { seats: 20, method: 'dhondt', threshold: 4 },
-  BE: { seats: 22, method: 'dhondt', threshold: 0, approx: 'Three language colleges (13 Dutch, 8 French, 1 German) are approximated nationwide.' },
+  BE: { seats: 22, method: 'dhondt', threshold: 0, approx: 'Three language colleges (13 Dutch, 8 French, 1 German) approximated nationwide; with regional polls the colleges are modelled separately.' },
   BG: { seats: 17, method: 'hare', threshold: 100 / 17, approx: '' },
   HR: { seats: 12, method: 'dhondt', threshold: 5 },
   CY: { seats: 6, method: 'hare', threshold: 1.8 },
@@ -2404,6 +2404,13 @@ function epaCountryPmfs(c, t, sims, rnd) {
   units.forEach((a) => { const tot = a.reduce((x, y) => x + y, 0); if (tot < 1) a[0] += 1 - tot; });
   return { polls, units, unitInfo };
 }
+// A college without polls whose seat is taken as fixed (Belgium's German-speaking college: last EP result).
+function epaFixedPmfs(c) {
+  const units = new Map(), unitInfo = new Map();
+  c.fixed.forEach((m) => { const gk = m.groups[0].g, uk = `${m.abbr}|${gk}`, a = new Float64Array(c.rule.seats + 1); a[c.rule.seats] = 1;
+    units.set(uk, a); unitInfo.set(uk, { abbr: m.abbr, g: gk, eu: m.eu, name: m.name }); });
+  return { polls: [{ label: 'Fixed: last EP result', t: Date.now(), n: 0, nKnown: false, avg: true, v: {} }], units, unitInfo };
+}
 function epaConvolve(a, b) { const out = new Float64Array(a.length + b.length - 1);
   for (let i = 0; i < a.length; i++) { if (!a[i]) continue; for (let j = 0; j < b.length; j++) if (b[j]) out[i + j] += a[i] * b[j]; } return out; }
 const epaQuant = (pmf, q) => { let c = 0; for (let k = 0; k < pmf.length; k++) { c += pmf[k]; if (c >= q - 1e-9) return k; } return pmf.length - 1; };
@@ -2429,7 +2436,7 @@ function epaProjectAt(countries, t, sims, seed, keepPmf) {
   const rnd = epaRng(seed), perCountry = [];
   let nodata = 0;
   countries.forEach((c) => {
-    const r = c.lines.length ? epaCountryPmfs(c, t, sims, rnd) : null;
+    const r = c.fixed && c.fixed.length ? epaFixedPmfs(c) : c.lines.length ? epaCountryPmfs(c, t, sims, rnd) : null;
     if (!r) nodata += c.rule.seats;
     perCountry.push({ c, r });
   });
@@ -2450,8 +2457,30 @@ async function buildEPAuto(partyRows, allianceRows, projRows, progress) {
     const { list: parties } = buildParties(partyRows, iso, cfg);
     const name = cfg.name || (parties[0] && parties[0].country) || iso;
     const alliances = buildAlliances(allianceRows, iso, parties);
-    const poll = files[i] ? buildPolling(files[i], parties, [], name, alliances) : null;
     const sheet = epaSheetGroups(projRows, iso, name, parties);
+    // Belgium: three language colleges, polled by region (•A: in the ROPF, exported per area by the build)
+    if (iso === 'BE' && files[i] && files[i].areas) {
+      const areas = files[i].areas, pick = (re) => Object.keys(areas).find((a) => re.test(a));
+      [['Dutch-speaking college', 13, /fland|vlaand|flemish|flandre|^vl/i], ['French-speaking college', 8, /wallo|^wa/i]].forEach(([label, seats, re]) => {
+        // French college: Wallonia mixed with francophone Brussels (built as area 'WAL+BRU') when available
+        const a = (label.startsWith('French') && areas['WAL+BRU'] && areas['WAL+BRU'].polls && areas['WAL+BRU'].polls.length) ? 'WAL+BRU' : pick(re), area = a ? areas[a] : null;
+        const poll = area && area.polls && area.polls.length ? buildPolling(area, parties, [], name, alliances) : null;
+        const { lines, end } = epaMakeLines(poll, sheet);
+        countries.push({ iso, name: 'Belgium · ' + label, rule: { ...EP_RULES.BE, seats, approx: '', note: a === 'WAL+BRU' ? 'Regional polls: Wallonia (•A: WAL) with the francophone lists of the Brussels row of the same poll (•A: BRU), Brussels weighing 18% of the college; joint lists count for their francophone partner.' : a ? `Regional polls (•A: ${a}).` : 'No regional polls found.' }, lines, end, polls: poll ? poll.polls : [] });
+      });
+      const csp = parties.find((p) => p.latest !== false && normKey(p.abbr) === 'csp');
+      countries.push({ iso, name: 'Belgium · German-speaking college', rule: { seats: 1, method: 'dhondt', threshold: 0, approx: 'Not polled: the 2024 EP result (CSP) is kept.' },
+        lines: [], fixed: csp ? epaLineParties({ party: csp }, sheet) : null, end: csp ? Date.now() : null, polls: [] });
+      return;
+    }
+    const poll = files[i] ? buildPolling(files[i], parties, [], name, alliances) : null;
+    const { lines, end } = epaMakeLines(poll, sheet);
+    countries.push({ iso, name, rule: EP_RULES[iso], lines, end, polls: poll ? poll.polls : [] });
+  });
+  ISO = keepISO; IS_EU = keepEU;
+  return epaFinish(countries, progress);
+}
+function epaMakeLines(poll, sheet) {
     const lines = [];
     if (poll) {
       const drop = new Set();
@@ -2463,9 +2492,9 @@ async function buildEPAuto(partyRows, allianceRows, projRows, progress) {
     }
     const pollT = poll ? poll.polls.map((p) => p.t.getTime()) : [];
     const end = Math.max(0, ...lines.map((l) => l.end), ...pollT) || null;
-    countries.push({ iso, name, rule: EP_RULES[iso], lines, end, polls: poll ? poll.polls : [] });
-  });
-  ISO = keepISO; IS_EU = keepEU;
+    return { lines, end };
+}
+async function epaFinish(countries, progress) {
   if (!countries.some((c) => c.end)) return null;
   const today = new Date().setHours(0, 0, 0, 0);
   progress && progress('Simulating today’s projection…');
@@ -2496,7 +2525,7 @@ const epaKName = (k, short) => (k === 'NODATA' ? (short ? 'No data' : 'No pollin
 function viewEPAuto() {
   if (!EPA) return '<div class="card status">No polling data found.</div>';
   const maj = 361;
-  const countryOpts = EPA.now.perCountry.map(({ c, r }) => `<option value="${c.iso}"${r ? '' : ' disabled'}>${esc(c.name)}${r ? '' : ' (no data)'}</option>`).join('');
+  const countryOpts = EPA.now.perCountry.map(({ c, r }, i) => `<option value="${i}"${r ? '' : ' disabled'}>${esc(c.name)}${r ? '' : ' (no data)'}</option>`).join('');
   return `<div class="card status" style="text-align:left"><strong>Automatic European Parliament projection · test page</strong> <span class="muted">Not linked from the site. Recalculated from the poll database on every build.</span></div>`
     + bar('European Parliament projection (automatic)', `<span class="bar-r"><span class="cmode" role="group" aria-label="Show"><span class="cm-l">Show</span><button type="button" class="epa-dim" data-d="grp" aria-pressed="${epaDim() === 'grp'}">EP groups</button><button type="button" class="epa-dim" data-d="eu" aria-pressed="${epaDim() === 'eu'}">Europarties</button></span><span class="note">720 seats · ${maj} for a majority</span></span>`) + `<section class="card proj epa">
     <div id="epa-head"></div>
@@ -2532,9 +2561,9 @@ function epaTableHtml() {
       detail = `<p class="note-s" style="margin:0 0 6px"><strong>Polls used:</strong> ${r.polls.map((p) => `${esc(p.label)} (${fmtD(p.t)}, n=${p.nKnown ? p.n : '–'})`).join(' · ')}</p>
         <table class="seatcheck"><thead><tr><th>Party</th><th>List</th><th>Median seats</th><th>90% range</th><th>Mean</th><th>EP group</th><th>Europarty</th><th>Group based on</th></tr></thead><tbody>${units.map((u) => { const b = basisOf(u.abbr);
           return `<tr><td>${esc(u.abbr)}</td><td class="muted">${b && b.list.members.length > 1 ? esc(b.list.abbr) + (b.m.wFromSheet ? ' (weight ' + b.m.w + ')' : ' (equal share)') : ''}</td><td><strong>${u.med}</strong></td><td>${u.lo}–${u.hi}</td><td>${u.mean.toFixed(1)}</td><td><span class="dot" style="background:${epaColor(u.g)}"></span> ${esc(u.g === 'UNA' ? 'Unaffiliated' : u.g)}</td><td>${u.eu ? `<span class="dot" style="background:${EUROPARTY_COLORS[u.eu] || '#B9B6AE'}"></span> ${esc(epName(u.eu) || u.eu)}` : '<span class="muted">none</span>'}</td><td class="muted" style="white-space:normal">${b ? esc(b.m.groups.find((q) => q.g === u.g)?.basis || b.m.groups[0].basis) : ''}</td></tr>`; }).join('')}</tbody></table>
-        <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''} Party medians are shown before the EU-wide normalisation, so they need not add up to ${c.rule.seats}.</p>`;
+        <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''}${c.rule.note ? ' ' + esc(c.rule.note) : ''} Party medians are shown before the EU-wide normalisation, so they need not add up to ${c.rule.seats}.</p>`;
     }
-    return `<tr class="epa-c"><td><button type="button" class="epa-open" aria-expanded="false">▸ <strong>${esc(c.name)}</strong> <span class="muted">${c.rule.seats}${c.rule.approx ? ' · approx.' : ''}${r ? ' · ' + (r.polls[0].avg ? 'average' : r.polls.length + ' poll' + (r.polls.length > 1 ? 's' : '')) : ''}</span></button></td>${keys.map((k) => `<td>${cell(by[k])}</td>`).join('')}</tr>
+    return `<tr class="epa-c"><td><button type="button" class="epa-open" aria-expanded="false">▸ <strong>${esc(c.name)}</strong> <span class="muted">${c.rule.seats}${c.rule.approx ? ' · approx.' : ''}${r ? ' · ' + (/^Fixed/.test(r.polls[0].label) ? 'fixed' : r.polls[0].avg ? 'average' : r.polls.length + ' poll' + (r.polls.length > 1 ? 's' : '')) : ''}</span></button></td>${keys.map((k) => `<td>${cell(by[k])}</td>`).join('')}</tr>
       <tr class="epa-d" hidden><td colspan="${keys.length + 1}"><div style="padding:4px 0 12px;overflow-x:auto">${detail}</div></td></tr>`;
   }).join('');
   return `<table class="seatcheck epa-t"><thead><tr><th>Country · seats</th>${keys.map((k) => `<th title="${esc(epaKName(k))}"><span class="dot" style="background:${epaKColor(k)}"></span> ${esc(epaKName(k, true))}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
@@ -2558,9 +2587,9 @@ function drawEPADist() {
   const v = epaView(EPA.now), keys = epaKeys([EPA.now]).filter((k) => k !== 'NODATA' && v.pmf && v.pmf[k]);
   host.innerHTML = keys.map((k) => epaHist(epaKName(k), epaKColor(k), v.pmf[k], 'scaled: ' + (v.seats[k] || 0))).join('');
   const sel = document.getElementById('epa-country'), out = document.getElementById('epa-dist-c'), note = document.getElementById('epa-country-note');
-  const pc = EPA.now.perCountry.find((x) => x.c.iso === sel.value) || EPA.now.perCountry.find((x) => x.r);
+  let pc = EPA.now.perCountry[+sel.value];
+  if (!pc || !pc.r) { const j = EPA.now.perCountry.findIndex((x) => x.r); pc = EPA.now.perCountry[j]; if (pc) sel.value = String(j); }
   if (!pc || !pc.r) { out.innerHTML = ''; return; }
-  if (sel.value !== pc.c.iso) sel.value = pc.c.iso;
   const units = [...pc.r.units.entries()].map(([uk, pmf]) => ({ info: pc.r.unitInfo.get(uk), pmf, mean: epaMean(pmf) })).filter((u) => epaQuant(u.pmf, 0.95) > 0).sort((a, b) => b.mean - a.mean);
   note.textContent = `${pc.c.rule.seats} seats · ${pc.r.polls[0].avg ? 'polling average' : pc.r.polls.length + ' poll' + (pc.r.polls.length > 1 ? 's' : '')}`;
   out.innerHTML = units.map((u) => epaHist(u.info.abbr + (u.info.name && u.info.name !== u.info.abbr ? ' – ' + u.info.name : ''), epaDim() === 'eu' ? (EUROPARTY_COLORS[u.info.eu] || '#B9B6AE') : epaColor(u.info.g),
