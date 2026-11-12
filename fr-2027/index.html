@@ -549,7 +549,7 @@ function candOf(col){
 }
 // National party → [Europarty, EP group]; '*' = none. Shown as e.g. RN (PfE–PfE), LFI (ELA–LEFT), HOR (*–RE).
 const PARTY_AFF = {
-  RN: ['PfE', 'PfE'], LFI: ['ELA', 'LEFT'], PCF: ['PEL', 'LEFT'], 'LÉ': ['EGP', 'G/EFA'], PS: ['PES', 'S&D'], PP: ['*', 'S&D'],
+  RN: ['PfE', 'PfE'], LFI: ['ELA', 'LEFT'], PCF: ['PEL', 'LEFT'], 'LÉ': ['EGP', 'G/EFA'], PS: ['PES', 'S&D'], PP: ['*', 'S&D'],   NÉ: ['*', '*'],
   HOR: ['*', 'RE'], RE: ['*', 'RE'], LR: ['EPP', 'EPP'], REC: ['ESN', 'ESN'], DLF: ['*', 'ECR'], UDB: ['EFA', 'G/EFA'], GRS: ['PEL', 'LEFT'],
 };
 const affTag = (party) => { const a = PARTY_AFF[party] || ['*', '*']; return `${party} (${a[0]}–${a[1]})`; };
