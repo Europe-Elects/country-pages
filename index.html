@@ -188,6 +188,13 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .proj-legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px}
 .proj-legend span{display:inline-flex;align-items:center;gap:6px}
 .proj-chart{position:relative;width:100%}
+.seatcheck{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;width:100%}
+.seatcheck th,.seatcheck td{padding:4px 8px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
+.seatcheck th:first-child,.seatcheck td:first-child{text-align:left}
+.seatcheck thead th{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--blue)}
+.seatcheck tfoot td{font-weight:700;border-top:2px solid var(--line)}
+.seatcheck .dot{display:inline-block;vertical-align:middle}
+.seatcheck.rules td{text-align:left;white-space:normal}
 .proj-chart svg{display:block}
 .proj-chart .ax{font:500 13px 'Advent Pro',system-ui,sans-serif;fill:#6B707A;font-variant-numeric:tabular-nums}
 .proj-chart .lab{font:500 14px 'Advent Pro',system-ui,sans-serif;font-variant-numeric:tabular-nums}
@@ -1852,6 +1859,207 @@ function drawPolling() {
 }
 let pollResize = null;
 window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize = setTimeout(drawPolling, 150); });
+
+/* ---------- National seat projection (from the polling average) ---------- */
+// One model per country, following its electoral law. The polling average on each date is turned into seats with
+// the country's threshold(s) and seat formula. Countries with constituency-level allocation (districts, single-member
+// seats, STV) need district results and are added one by one; countries not listed here show no projection.
+// method: 'dhondt' | 'sl' (Sainte-Laguë) | 'msl' (modified Sainte-Laguë, first divisor `first`) | 'hare' / 'droop' (largest remainder)
+// threshold: % for a single party; alliance: { members: % } for joint lists (key = number of member parties, highest key applies upward)
+// exempt: list abbreviations not bound by the threshold (national minorities); reserved: seats outside the projection
+// exact: true when the national calculation is the legal allocation; false = close approximation (notes say why)
+const SEAT_MODELS = {
+  AT: { seats: 183, method: 'dhondt', threshold: 4, exact: true, note: 'Nationwide D’Hondt over all 183 seats, 4% threshold. Parties can also qualify with a constituency seat, which is not modelled.' },
+  BG: { seats: 240, method: 'hare', threshold: 4, exact: true, note: 'Nationwide Hare-Niemeyer, 4% threshold.' },
+  CY: { seats: 56, method: 'hare', threshold: 3.6, exact: false, note: '56 Greek Cypriot seats, 3.6% threshold, nationwide Hare quota; the district stage can move a seat.' },
+  CZ: { seats: 200, method: 'droop', threshold: 5, alliance: { 2: 8, 3: 11 }, exact: false, note: '5% threshold for parties, 8% for two-party and 11% for larger coalitions. Seats nationwide by Hagenbach-Bischoff, which closely matches the two-stage regional allocation.' },
+  DE: { seats: 630, method: 'sl', threshold: 5, exempt: ['SSW'], exact: true, note: '630 seats by Sainte-Laguë, 5% threshold (SSW exempt as a minority party). The three-constituency rule is not modelled.' },
+  DK: { seats: 175, method: 'hare', threshold: 2, exact: true, reserved: [{ label: 'Faroe Islands and Greenland', n: 4 }], note: '175 seats in Denmark proper by national largest remainder, 2% threshold; plus 4 seats for the Faroe Islands and Greenland.' },
+  EE: { seats: 101, method: 'dhondt', threshold: 5, exact: false, note: '5% threshold; nationwide D’Hondt approximates the district and compensation seats.' },
+  GE: { seats: 150, method: 'hare', threshold: 5, exact: true, note: 'Full proportional representation, 150 seats, 5% threshold, largest remainder.' },
+  GR: { seats: 300, method: 'hare', threshold: 3, bonus: 'GR', exact: true, note: '3% threshold; the largest party gets 20 bonus seats at 25%, plus one per 0.5 points above that, up to 50 at 40%. The rest by largest remainder.' },
+  IS: { seats: 63, method: 'dhondt', threshold: 5, exact: false, note: '5% threshold for levelling seats; nationwide D’Hondt approximates the six constituencies plus levelling seats.' },
+  LU: { seats: 60, method: 'dhondt', threshold: 0, exact: false, note: 'Four constituencies (Hagenbach-Bischoff), approximated nationwide; no legal threshold.' },
+  LV: { seats: 100, method: 'sl', threshold: 5, exact: false, note: '5% threshold; nationwide Sainte-Laguë approximates the five constituencies.' },
+  MD: { seats: 101, method: 'dhondt', threshold: 5, alliance: { 2: 7 }, exact: true, note: 'Nationwide D’Hondt, 5% threshold for parties and 7% for blocs.' },
+  ME: { seats: 81, method: 'dhondt', threshold: 3, exact: true, note: 'Nationwide D’Hondt, 3% threshold (lower thresholds for minority lists are not modelled).' },
+  NL: { seats: 150, method: 'dhondt', threshold: 100 / 150, exact: true, note: 'Nationwide largest averages, the threshold is one full quota (0.67%).' },
+  NO: { seats: 169, method: 'msl', first: 1.4, threshold: 4, exact: false, note: 'Modified Sainte-Laguë (1.4), 4% threshold for levelling seats. Parties below 4% can still win constituency seats, which this does not show.' },
+  RO: { seats: 312, method: 'dhondt', threshold: 5, alliance: { 2: 8, 3: 9, 4: 10 }, exact: false, reserved: [{ label: 'National minorities', n: 18 }], note: '5% threshold, 8–10% for alliances; nationwide D’Hondt approximates the constituency and national stages. Plus 18 seats for national minorities.' },
+  RS: { seats: 250, method: 'dhondt', threshold: 3, exact: true, note: 'Nationwide D’Hondt, 3% threshold (minority lists, exempt by law, are not modelled).' },
+  SE: { seats: 349, method: 'msl', first: 1.2, threshold: 4, exact: true, note: 'Modified Sainte-Laguë (1.2) nationwide via adjustment seats, 4% threshold.' },
+  SI: { seats: 88, method: 'dhondt', threshold: 4, exact: false, reserved: [{ label: 'Hungarian and Italian minorities', n: 2 }], note: '4% threshold, 88 seats nationwide; plus 2 seats for the Hungarian and Italian minorities.' },
+  SK: { seats: 150, method: 'droop', threshold: 5, alliance: { 2: 7, 4: 10 }, exact: true, note: 'Single nationwide constituency, Hagenbach-Bischoff quota, 5% threshold; 7% for coalitions of two or three parties, 10% for four or more.' },
+  UA: { seats: 450, method: 'hare', threshold: 5, exact: false, note: '5% threshold, nationwide Hare quota. Seats in occupied territories, which cannot vote, are included.' },
+  XK: { seats: 100, method: 'sl', threshold: 5, exact: true, reserved: [{ label: 'Serb community', n: 10 }, { label: 'Other communities', n: 10 }], note: '100 seats by Sainte-Laguë, 5% threshold; plus 20 reserved seats (10 Serb, 10 other communities).' }
+};
+const SEAT_DIV = (m, first) => (i) => (m === 'dhondt' ? i + 1 : m === 'sl' ? 2 * i + 1 : i === 0 ? (first || 1.4) : 2 * i + 1);
+function allocateSeats(list, seats, method, first) {
+  const out = Object.fromEntries(list.map((x) => [x.key, 0]));
+  const sum = list.reduce((a, x) => a + x.v, 0); if (!list.length || sum <= 0 || seats <= 0) return out;
+  if (method === 'hare' || method === 'droop') {
+    const q = method === 'hare' ? sum / seats : sum / (seats + 1);
+    let left = seats; const rem = list.map((x) => { const n = Math.min(Math.floor(x.v / q), left); out[x.key] = n; left -= n; return { k: x.key, r: x.v / q - n }; });
+    rem.sort((a, b) => b.r - a.r).slice(0, Math.max(0, left)).forEach((r) => { out[r.k]++; });
+    return out;
+  }
+  const div = SEAT_DIV(method, first);
+  for (let s = 0; s < seats; s++) {
+    let best = null, bq = -1;
+    list.forEach((x) => { const qv = x.v / div(out[x.key]); if (qv > bq) { bq = qv; best = x.key; } });
+    out[best]++;
+  }
+  return out;
+}
+const seatThreshold = (model, x) => { let t = model.threshold || 0; if (model.alliance && x.members > 1) Object.keys(model.alliance).map(Number).sort((a, b) => a - b).forEach((k) => { if (x.members >= k) t = model.alliance[k]; }); return t; };
+const seatExempt = (model, x) => (model.exempt || []).some((a) => normKey(a) === normKey(x.abbr) || normKey(a) === normKey(x.key));
+function projectSeats(model, votes) {
+  // votes: [{ key, abbr, v, members }]
+  const q = votes.filter((x) => x.v > 0 && (x.v >= seatThreshold(model, x) || seatExempt(model, x)));
+  if (model.bonus === 'GR' && q.length) {
+    const top = q.reduce((a, b) => (b.v > a.v ? b : a));
+    const sum = q.reduce((a, x) => a + x.v, 0) || 1;
+    const share = top.v;  // bonus is based on the share of all valid votes
+    const bonus = share < 25 ? 0 : Math.min(50, 20 + Math.floor((Math.min(share, 40) - 25) / 0.5));
+    const res = allocateSeats(q, model.seats - bonus, 'hare'); res[top.key] += bonus; void sum;
+    return res;
+  }
+  return allocateSeats(q, model.seats, model.method, model.first);
+}
+// Polling average on date t (linear between the smoothed points), or null outside the average's segments.
+function avgAt(sr, t) {
+  for (const seg of sr.curve) {
+    if (!seg.length || t < seg[0].t.getTime() || t > seg[seg.length - 1].t.getTime()) continue;
+    for (let i = 1; i < seg.length; i++) { const a = seg[i - 1], b = seg[i]; const ta = a.t.getTime(), tb = b.t.getTime();
+      if (t >= ta && t <= tb) return tb === ta ? b.v : a.v + (b.v - a.v) * (t - ta) / (tb - ta); }
+    return seg[seg.length - 1].v;
+  }
+  return null;
+}
+let SEATP = null;
+function buildSeatProjection(poll) {
+  const model = SEAT_MODELS[ISO];
+  if (!model || !poll || !poll.series.some((sr) => sr.curve.some((seg) => seg.length > 1))) return null;
+  // Which lines stand: for alliance toggles the default view (the alliance, not its members); everything else counts.
+  const drop = new Set();
+  poll.groups.forEach((g0) => { if (poll.hidden.has(g0.alliance)) drop.add(g0.alliance); else g0.members.forEach((k) => drop.add(k)); });
+  const series = poll.series.filter((sr) => !drop.has(sr.key) && sr.curve.some((seg) => seg.length > 1));
+  const tEnd = Math.max(...series.flatMap((sr) => sr.curve.map((seg) => seg[seg.length - 1].t.getTime())));
+  const lastElection = poll.elections.length ? Math.max(...poll.elections.map((d) => d.getTime())) : null;
+  const tStartAll = Math.min(...series.flatMap((sr) => sr.curve.map((seg) => seg[0].t.getTime())));
+  const tStart = Math.max(tStartAll, lastElection || tEnd - 3 * 365.25 * 864e5);
+  const step = 7 * 864e5, dates = [];
+  for (let t = tStart; t < tEnd; t += step) dates.push(t);
+  dates.push(tEnd);
+  const members = (sr) => (sr.alliance && sr.alliance.members ? sr.alliance.members.length : sr.joint ? sr.joint.length : String(sr.key).split('+').length);
+  const lastVotes = series.map((sr) => ({ key: sr.key, abbr: sr.abbr, name: sr.name, color: sr.color, members: members(sr), v: avgAt(sr, tEnd) })).filter((x) => x.v != null);
+  const vals = Object.fromEntries(series.map((sr) => [sr.key, []]));
+  dates.forEach((t) => {
+    const votes = series.map((sr) => ({ key: sr.key, abbr: sr.abbr, members: members(sr), v: avgAt(sr, t) })).filter((x) => x.v != null);
+    const res = votes.length > 1 ? projectSeats(model, votes) : {};
+    series.forEach((sr) => vals[sr.key].push(votes.length > 1 && res[sr.key] != null ? res[sr.key] : null));
+  });
+  const out = series.map((sr) => ({ key: sr.key, short: sr.abbr, label: sr.name, tag: sr.tag, color: sr.color, soft: sr.soft, values: vals[sr.key] }))
+    .filter((sr) => sr.values.some((v) => v > 0));
+  const reserved = (model.reserved || []).reduce((a, r) => a + r.n, 0);
+  return { model, dates, series: out, total: model.seats + reserved, reserved, lastVotes, from: lastElection ? 'last election' : 'last three years' };
+}
+function viewSeatProjection(cfg) {
+  SEATP = (POLL && !NO_POLLING.includes(ISO)) ? buildSeatProjection(POLL) : null;
+  if (!SEATP) return '';
+  const { model, dates, series, total } = SEATP, last = dates.length - 1, maj = Math.floor(total / 2) + 1;
+  const now = series.map((sr) => ({ sr, n: sr.values[last] || 0 })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+  const res = (model.reserved || []);
+  const barBits = now.map((x) => `<div style="flex:${x.n} 0 0;background:${x.sr.soft ? stripes(x.sr.color) : x.sr.color}" title="${esc(seriesLabel(x.sr.short, x.sr.tag) + ': ' + x.n)}"></div>`).join('')
+    + res.map((r) => `<div style="flex:${r.n} 0 0;background:#C9C6BE" title="${esc(r.label + ': ' + r.n)}"></div>`).join('');
+  const day = new Date(dates[last]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return bar('Seat projection', `<span class="note">${esc(cfg.name)} · ${total} seats · ${maj} for a majority</span>`) + `<section class="card proj seatp">
+    <p class="note-s" style="margin:0"><strong>${esc(day)}:</strong> ${now.map((x) => `${esc(x.sr.short)} ${x.n}`).join(' · ')}${res.length ? ' · ' + res.map((r) => `${esc(r.label)} ${r.n}`).join(' · ') : ''}</p>
+    <div class="seatwrap"><div class="seatbar" role="img" aria-label="Projected seats ${esc(day)}: ${esc(now.map((x) => x.sr.short + ' ' + x.n).join(', '))}">${barBits}</div><div class="majline" aria-hidden="true" style="left:${(maj / total * 100).toFixed(2)}%"></div></div>
+    <div class="proj-chart" id="seatp-chart"></div>
+    <p class="note-s" style="margin:0">Seats each party would win if an election were held on that day with the result of the polling average, under the current electoral law. ${esc(model.note)}${model.exact ? '' : ' This is an approximation of the real allocation.'} Polls carry an error margin, so close calls at the threshold can go either way. Hover over the chart for earlier dates.</p></section>`;
+}
+function drawSeatProjection() {
+  const host = document.getElementById('seatp-chart'); if (!host || !SEATP) return;
+  const { dates, series, total } = SEATP, maj = Math.floor(total / 2) + 1;
+  const W = host.clientWidth, small = W < 560, H = small ? 260 : 320, m = { l: 34, r: small ? 84 : 170, t: 12, b: 28 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const t0 = dates[0], t1 = dates[dates.length - 1];
+  const x = (t) => m.l + (t1 === t0 ? iw / 2 : (t - t0) / (t1 - t0) * iw);
+  const vmax = Math.max(1, maj, ...series.flatMap((sr) => sr.values.filter((v) => v != null)));
+  const stepY = vmax <= 30 ? 5 : vmax <= 120 ? 20 : vmax <= 300 ? 50 : 100;
+  const ymax = Math.ceil((vmax + stepY / 4) / stepY) * stepY;
+  const y = (v) => m.t + ih - v / ymax * ih;
+  let svg = '';
+  for (let v = 0; v <= ymax; v += stepY) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+  svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(maj)}" y2="${y(maj)}" stroke="#C8202F" stroke-width="1.2" stroke-dasharray="5 4"/><text x="${m.l + 4}" y="${y(maj) - 5}" class="ax" fill="#C8202F" style="fill:#C8202F">Majority ${maj}</text>`;
+  // x ticks: January (or every 3 months for short spans)
+  const spanM = (t1 - t0) / (30.44 * 864e5), every = spanM <= 18 ? 3 : 12;
+  const d0 = new Date(t0); const tk = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+  for (; tk.getTime() <= t1; tk.setMonth(tk.getMonth() + 1)) if (tk.getMonth() % every === 0) svg += `<text x="${x(tk.getTime())}" y="${H - 8}" text-anchor="middle" class="ax">${tk.toLocaleDateString('en-GB', { month: 'short' })} ’${String(tk.getFullYear()).slice(2)}</text>`;
+  series.forEach((sr) => {
+    let d = '', pen = false;
+    sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(dates[i]).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ${sr.soft ? 'stroke-dasharray="6 4"' : ''}/>`;
+  });
+  const li = dates.length - 1;
+  const ends = series.filter((sr) => sr.values[li] > 0).map((sr) => ({ sr, v: sr.values[li], yy: y(sr.values[li]) })).sort((a, b) => a.yy - b.yy);
+  for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
+  ends.forEach((e) => { svg += endLabel(x(t1), y(e.v), x(t1) + 14, e.yy, e.sr.color,
+    `<tspan font-weight="700">${e.v}</tspan> ${esc(e.sr.short.length > 10 ? e.sr.short.slice(0, 9) + '…' : e.sr.short)}${!small && e.sr.tag ? ` <tspan font-weight="500">(${esc(e.sr.tag)})</tspan>` : ''}`, e.sr.label); });
+  host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="Seat projection over time">${svg}
+    <line id="seatp-x" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="#565B66" stroke-width="1" visibility="hidden"/><g id="seatp-marks"></g>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="seatp-hit"/></svg><div class="proj-tip" id="seatp-tip" hidden></div>`;
+  const hit = document.getElementById('seatp-hit'), cross = document.getElementById('seatp-x'), tip = document.getElementById('seatp-tip');
+  const show = (evt) => {
+    const r = host.getBoundingClientRect(), px = (evt.touches ? evt.touches[0].clientX : evt.clientX) - r.left;
+    let best = 0; dates.forEach((t, i) => { if (Math.abs(x(t) - px) < Math.abs(x(dates[best]) - px)) best = i; });
+    cross.setAttribute('x1', x(dates[best])); cross.setAttribute('x2', x(dates[best])); cross.setAttribute('visibility', 'visible');
+    document.getElementById('seatp-marks').innerHTML = series.filter((sr) => sr.values[best] != null).map((sr) => `<circle cx="${x(dates[best])}" cy="${y(sr.values[best])}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.5"/>`).join('');
+    const rowsHtml = series.map((sr) => ({ sr, v: sr.values[best] })).filter((o) => o.v > 0).sort((a, b) => b.v - a.v)
+      .map((o) => `<div><span class="dot" style="background:${o.sr.color}"></span><span>${esc(seriesLabel(o.sr.short, o.sr.tag))}</span><strong>${o.v}</strong></div>`).join('');
+    tip.innerHTML = `<strong>${new Date(dates[best]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No projection</div>'}`;
+    tip.hidden = false;
+    const tw = tip.offsetWidth; let left = x(dates[best]) + 12; if (left + tw > W) left = x(dates[best]) - tw - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); document.getElementById('seatp-marks').innerHTML = ''; };
+  hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
+  hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+// Check page (?view=seats): country picker, the rules in force, and the calculation for the latest date.
+const METHOD_NAMES = { dhondt: 'D’Hondt', sl: 'Sainte-Laguë', msl: 'Modified Sainte-Laguë', hare: 'Largest remainder (Hare quota)', droop: 'Largest remainder (Hagenbach-Bischoff / Droop quota)' };
+function viewSeatCheckHead(cfg) {
+  const opts = Object.keys(SEAT_MODELS).sort().map((k) => `<option value="${k}"${k === ISO ? ' selected' : ''}>${k}</option>`).join('');
+  return `<div class="card status" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;text-align:left">
+    <strong>Seat projection check · ${esc(cfg.name)}</strong>
+    <label>Country <select id="seat-country" style="font:inherit;padding:2px 6px">${SEAT_MODELS[ISO] ? '' : `<option selected>${esc(ISO)}</option>`}${opts}</select></label>
+    <span class="muted">Test page, not linked from the country pages. ${Object.keys(SEAT_MODELS).length} countries have a model.</span></div>`;
+}
+function viewSeatCheck() {
+  const model = SEAT_MODELS[ISO]; if (!model) return '';
+  const al = model.alliance ? Object.entries(model.alliance).map(([k, v]) => `${k}+ parties: ${v}%`).join(', ') : '–';
+  const rules = [['Seats projected', model.seats], ['Reserved seats (not projected)', (model.reserved || []).map((r) => `${r.label} ${r.n}`).join(', ') || '–'],
+    ['Seat formula', METHOD_NAMES[model.method] + (model.method === 'msl' ? ` (first divisor ${model.first})` : '')], ['Threshold', (+model.threshold.toFixed(2)) + '%'],
+    ['Alliance thresholds', al], ['Exempt from threshold', (model.exempt || []).join(', ') || '–'], ['Bonus', model.bonus === 'GR' ? 'Greek sliding bonus (20–50 seats)' : '–'],
+    ['Status', model.exact ? 'Exact national rule' : 'Approximation'], ['Note', model.note]];
+  let calc = '';
+  if (SEATP) {
+    const last = SEATP.dates.length - 1, seatsOf = Object.fromEntries(SEATP.series.map((sr) => [sr.key, sr.values[last] || 0]));
+    const rows = SEATP.lastVotes.slice().sort((a, b) => b.v - a.v);
+    const sumV = rows.reduce((a, x) => a + x.v, 0), sumQ = rows.filter((x) => x.v >= seatThreshold(model, x) || seatExempt(model, x)).reduce((a, x) => a + x.v, 0);
+    calc = `<h3 style="margin:14px 0 6px;font-size:16px">Calculation on ${new Date(SEATP.dates[last]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+      <div style="overflow-x:auto"><table class="seatcheck"><thead><tr><th>Party / list</th><th>Key</th><th>Members</th><th>Average %</th><th>Threshold</th><th>Passes?</th><th>Share of qualified votes</th><th>Seats</th><th>Seat share</th></tr></thead><tbody>
+      ${rows.map((x) => { const t = seatThreshold(model, x), ex = seatExempt(model, x), ok = x.v >= t || ex, n = seatsOf[x.key] || 0;
+        return `<tr><td><span class="dot" style="background:${x.color}"></span> ${esc(x.abbr)} <span class="muted">${esc(x.name || '')}</span></td><td>${esc(x.key)}</td><td>${x.members}</td><td>${x.v.toFixed(1)}</td><td>${ex ? 'exempt' : (+t.toFixed(2)) + '%'}</td><td>${ok ? '✓' : '✗'}</td><td>${ok ? (x.v / sumQ * 100).toFixed(1) + '%' : '–'}</td><td><strong>${n}</strong></td><td>${(n / model.seats * 100).toFixed(1)}%</td></tr>`; }).join('')}
+      </tbody><tfoot><tr><td colspan="3">Total</td><td>${sumV.toFixed(1)}</td><td></td><td></td><td>${sumQ.toFixed(1)} % qualified</td><td><strong>${Object.values(seatsOf).reduce((a, b) => a + b, 0)}</strong> / ${model.seats}</td><td></td></tr></tfoot></table></div>
+      <p class="note-s" style="margin:6px 0 0">Average % = the polling-average line on that date. Lines counted: every polled party or list; for alliance toggles only the default (the alliance). The chart starts ${SEATP.from === 'last election' ? 'at the last election' : 'three years back'} and is recalculated weekly.</p>`;
+  }
+  return bar('Rules and calculation', '<span class="note">for checking</span>') + `<section class="card" style="padding:14px 18px">
+    <table class="seatcheck rules"><tbody>${rules.map(([k, v]) => `<tr><th style="text-align:left;width:220px">${esc(k)}</th><td>${esc(String(v))}</td></tr>`).join('')}</tbody></table>${calc}</section>`;
+}
+let seatpResize = null;
+window.addEventListener('resize', () => { clearTimeout(seatpResize); seatpResize = setTimeout(drawSeatProjection, 150); });
 function viewAlliances(alliances) {
   if (!alliances.length) return '';
   return bar('Multiparty alliances', '<span class="note">Electoral, parliamentary and governing alliances</span>') + `<div class="grid-a" id="al-grid">${alliances.map((a) => `
@@ -2031,6 +2239,19 @@ async function main() {
     NEXT = await pickNext(calendarRows, partyRows);
     if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
     ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); IS_EUROPE = EUROPE.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
+  }
+  if (VIEW === 'seats') {
+    if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
+    const { list: parties } = buildParties(partyRows, ISO, cfg);
+    cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+    document.title = `Europe Elects – Seat projection check, ${cfg.name}`;
+    const alliances = buildAlliances(allianceRows, ISO, parties);
+    const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
+    app.innerHTML = viewSeatCheckHead(cfg) + (viewPolling(cfg, poll) || '') + (SEAT_MODELS[ISO] ? (viewSeatProjection(cfg) || `<div class="card status">No polling average for ${esc(cfg.name)}, so no projection.</div>`) + viewSeatCheck() : `<div class="card status">No seat model for ${esc(cfg.name)} yet.</div>`);
+    bindPolling(); drawPolling(); drawSeatProjection();
+    const sel = document.getElementById('seat-country'); if (sel) sel.onchange = () => { const u = new URL(location.href); u.searchParams.set('country', sel.value); location.href = u.toString(); };
+    postHeight();
+    return;
   }
   if (VIEW === 'polling') {
     if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
