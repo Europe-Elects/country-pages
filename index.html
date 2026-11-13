@@ -1960,7 +1960,7 @@ function drawPollStack(host) {
   const meanV = (sr) => { const v = sr.curve.flat().map((q) => q.v); return v.reduce((x, y) => x + y, 0) / (v.length || 1); };
   series.sort((a, b) => rank(a) - rank(b) || meanV(b) - meanV(a));
   const t0 = POLL.view.a, t1 = Math.min(POLL.view.b, Math.max(...series.map(lastT)));
-  const W = host.clientWidth, small = W < 560, H = small ? 300 : 380, m = { l: 34, r: small ? 88 : 150, t: 10, b: 28 };
+  const W = host.clientWidth, small = W < 560, H = small ? 300 : 380, m = { l: 34, r: small ? 88 : 210, t: 10, b: 28 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const N = Math.max(40, Math.min(240, Math.round(iw / 4)));
   const ts = Array.from({ length: N + 1 }, (_, i) => t0 + (t1 - t0) * i / N);
@@ -1973,12 +1973,24 @@ function drawPollStack(host) {
   let svg = '';
   for (let v = 0; v <= 100; v += 20) svg += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#1A1D23' : '#DEDBD3'}" stroke-width="1" ${v === 0 ? '' : 'stroke-dasharray="2 4"'}/><text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
   svg += `<rect x="${m.l}" y="${y(100)}" width="${iw}" height="${y(0) - y(100)}" fill="url(#oth-hatch)"/>`;
+  // Each band takes the colour of the party's affiliation at that time (as the lines do), so it changes colour
+  // where the party changed EP group / Europarty (e.g. a party that left S&D turns grey from then on).
+  let hatchN = 0;
   series.forEach((sr, k) => {
-    const top = ts.map((t, i) => `${x(t).toFixed(1)},${y(upper[k][i] * scale[i]).toFixed(1)}`);
-    const bot = ts.map((t, i) => `${x(t).toFixed(1)},${y(lower[k][i] * scale[i]).toFixed(1)}`).reverse();
-    const fill = sr.soft ? `url(#hatch-${k})` : sr.color;
-    if (sr.soft) svg = `<defs><pattern id="hatch-${k}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#fff"/><rect width="4" height="7" fill="${sr.color}"/></pattern></defs>` + svg;
-    svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${fill}" stroke="#fff" stroke-width=".8"><title>${esc(seriesLabel(sr.abbr, sr.tag))}</title></polygon>`;
+    const colAt = (i) => (sr.colorAt ? sr.colorAt(ts[i]) : sr.color);
+    let a = 0;
+    while (a <= N) {
+      const col = colAt(a); let b = a;
+      while (b < N && colAt(b + 1) === col) b++;
+      const hi = Math.min(N, b + 1);  // run up to the next point so the bands join without gaps
+      const idx = []; for (let i = a; i <= hi; i++) idx.push(i);
+      const top = idx.map((i) => `${x(ts[i]).toFixed(1)},${y(upper[k][i] * scale[i]).toFixed(1)}`);
+      const bot = idx.map((i) => `${x(ts[i]).toFixed(1)},${y(lower[k][i] * scale[i]).toFixed(1)}`).reverse();
+      let fill = col;
+      if (sr.soft) { const id = `hatch-${hatchN++}`; svg = `<defs><pattern id="${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#fff"/><rect width="4" height="7" fill="${col}"/></pattern></defs>` + svg; fill = `url(#${id})`; }
+      svg += `<polygon points="${top.join(' ')} ${bot.join(' ')}" fill="${fill}" stroke="#fff" stroke-width=".8"><title>${esc(seriesLabel(sr.abbr, sr.tag))}</title></polygon>`;
+      a = b + 1;
+    }
   });
   svg = `<defs><pattern id="oth-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#F2F1EC"/><rect width="3" height="7" fill="#E4E2DB"/></pattern></defs>` + svg;
   // x ticks
@@ -1993,7 +2005,7 @@ function drawPollStack(host) {
   ends.forEach((e) => { e.yy = e.mid; });
   for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k - 1].yy < 15) ends[k].yy = ends[k - 1].yy + 15;
   const over = ends.length ? ends[ends.length - 1].yy - (y(0) - 4) : 0; if (over > 0) ends.forEach((e) => { e.yy -= over; });
-  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${e.sr.color}" stroke-width="1" opacity=".7"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(e.sr.color)}"><tspan font-weight="700">${Math.round(e.v)}%</tspan> ${esc(e.sr.abbr.length > 10 ? e.sr.abbr.slice(0, 9) + '…' : e.sr.abbr)}</text>`; });
+  ends.forEach((e) => { svg += `<polyline points="${x(t1) + 2},${e.mid} ${x(t1) + 10},${e.yy}" fill="none" stroke="${e.sr.colorAt ? e.sr.colorAt(t1) : e.sr.color}" stroke-width="1" opacity=".7"/><text x="${x(t1) + 13}" y="${e.yy + 4}" class="lab" fill="${inkFor(e.sr.colorAt ? e.sr.colorAt(t1) : e.sr.color)}"><title>${esc(e.sr.name || '')}</title><tspan font-weight="700">${Math.round(e.v)}%</tspan> ${(() => { const nm = small ? e.sr.abbr : seriesLabel(e.sr.abbr, e.sr.tag); return esc(nm.length > 28 ? nm.slice(0, 27) + '…' : nm); })()}</text>`; });
   const othNow = Math.max(0, 100 - base[li]);
   host.innerHTML = `<svg width="${W}" height="${H}" role="img" aria-label="Polling average, stacked: ${esc(ends.map((e) => e.sr.abbr + ' ' + Math.round(e.v) + '%').join(', '))}">${svg}
     <line id="pst-x" x1="0" x2="0" y1="${m.t}" y2="${y(0)}" stroke="#1A1D23" stroke-width="1" visibility="hidden"/>
@@ -2007,7 +2019,7 @@ function drawPollStack(host) {
     const rows = series.map((sr, k) => ({ sr, v: V[k][i] })).filter((o) => o.v >= 0.05).reverse();
     const oth = Math.max(0, 100 - base[i]);
     tip.innerHTML = `<strong>${new Date(ts[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>`
-      + rows.map((o) => `<div><span class="dot" style="background:${o.sr.soft ? stripes(o.sr.color) : o.sr.color}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('')
+      + rows.map((o) => `<div><span class="dot" style="background:${(() => { const cc = o.sr.colorAt ? o.sr.colorAt(ts[i]) : o.sr.color; return o.sr.soft ? stripes(cc) : cc; })()}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('')
       + (oth >= 0.05 ? `<div><span class="dot" style="background:#E4E2DB"></span><span>Others</span><strong>${oth.toFixed(1)}%</strong></div>` : '');
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(ts[i]) + 12; if (left + tw > W) left = x(ts[i]) - tw - 12;
@@ -2365,10 +2377,19 @@ function epaPollsAt(c, t) {
     && c.lines.some((l) => p.v[l.key] != null));
   const byFirm = new Map(); win.forEach((p) => { const k = normKey(p.pf || '?'); const o = byFirm.get(k); if (!o || p.t > o.t) byFirm.set(k, p); });
   const out = [...byFirm.values()].map((p) => ({ label: p.pf || 'Poll', t: p.t.getTime(), n: p.n || EPA_DEFAULT_N, nKnown: !!p.n, v: Object.fromEntries(c.lines.filter((l) => p.v[l.key] != null).map((l) => [l.key, +p.v[l.key]])) }));
+  // France: presidential first-round polls are a proxy too. Whichever of the two kinds is more recent is used;
+  // when both were published in the same month, the national parliamentary polls are used (methodology).
+  if (c.presPolls && c.presPolls.length) {
+    const pw = c.presPolls.filter((p) => p.t <= t && p.t > t - EPA_POLL_DAYS * 864e5 && (!p.n || p.n >= EPA_MIN_N));
+    const pf = new Map(); pw.forEach((p) => { const k = normKey(p.pf); const o = pf.get(k); if (!o || p.t > o.t) pf.set(k, p); });
+    const pres = [...pf.values()].map((p) => ({ label: p.pf + ' (presidential)', t: p.t, n: p.n || EPA_DEFAULT_N, nKnown: !!p.n, pres: true, v: p.v }));
+    const month = (list) => (list.length ? (() => { const d = new Date(Math.max(...list.map((x) => x.t))); return d.getFullYear() * 12 + d.getMonth(); })() : -1);
+    if (pres.length && month(pres) > month(out)) return pres;
+  }
   if (out.length) return out;
   // fallback: the polling average on (or last before) t
   const tc = Math.min(t, c.end || t);
-  const v = Object.fromEntries(c.lines.map((l) => [l.key, avgAt(l.sr, tc)]).filter(([, x]) => x != null && x > 0));
+  const v = Object.fromEntries(c.lines.filter((l) => l.sr).map((l) => [l.key, avgAt(l.sr, tc)]).filter(([, x]) => x != null && x > 0));
   return Object.keys(v).length >= 2 ? [{ label: 'Polling average (no recent polls)', t: tc, n: EPA_DEFAULT_N, nKnown: false, avg: true, v }] : [];
 }
 // Seat pmfs per unit (country|party|group) for country c on date t
@@ -2449,6 +2470,7 @@ function epaProjectAt(countries, t, sims, seed, keepPmf) {
 async function buildEPAuto(partyRows, allianceRows, projRows, progress) {
   const keepISO = ISO, keepEU = IS_EU, countries = [];
   const isos = Object.keys(EP_RULES);
+  const presFR = await fetch('fr-2027/averages.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const files = await Promise.all(isos.map((iso) => (NO_POLLING.includes(iso) ? Promise.resolve(null)
     : fetch(`polling/${iso}.json`, { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null))));
   isos.forEach((iso, i) => {
@@ -2475,10 +2497,53 @@ async function buildEPAuto(partyRows, allianceRows, projRows, progress) {
     }
     const poll = files[i] ? buildPolling(files[i], parties, [], name, alliances) : null;
     const { lines, end } = epaMakeLines(poll, sheet);
-    countries.push({ iso, name, rule: EP_RULES[iso], lines, end, polls: poll ? poll.polls : [] });
+    const c = { iso, name, rule: EP_RULES[iso], lines, end, polls: poll ? poll.polls : [] };
+    if (iso === 'FR' && presFR) epaAddPresidential(c, presFR, parties, sheet);
+    countries.push(c);
   });
   ISO = keepISO; IS_EU = keepEU;
   return epaFinish(countries, progress);
+}
+// French presidential first-round polls (the fr-2027 page's Sheet, published as fr-2027/averages.json).
+// Each candidate counts for their party (as on the fr-2027 page: Mélenchon → LFI, Philippe → HOR …). A poll with
+// several scenarios counts each party with its mean over the scenarios in which it has a candidate.
+const PRES_PARTY = { lepen: 'RN', bardella: 'RN', melenchon: 'LFI', philippe: 'HOR', attal: 'RE', glucksmann: 'PP', retailleau: 'LR', zemmour: 'REC',
+  tondelier: 'LÉ', roussel: 'PCF', dupontaignan: 'DLF', arthaud: 'LO', hollande: 'PS', ruffin: 'D!', bertrand: 'LR', lisnard: 'NÉ', villepin: 'LFH', devillepin: 'LFH',
+  kazib: 'RP', asselineau: 'UPR', philippot: 'LP', knafo: 'REC', lemaire: 'RE', poutou: 'NPA', wauquiez: 'LR', faure: 'PS', jadot: 'LÉ', lassalle: 'RES', cazeneuve: 'CONV' };
+const presFold = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function epaAddPresidential(c, data, parties, sheet) {
+  const tab = (data.tabs || []).find((t) => presFold(t.tab) === 'firstround'); if (!tab || tab.rows.length < 2) return;
+  const h = tab.rows[0].map(presFold), iP = h.indexOf('pollster'), iS = h.indexOf('fieldworkstart'), iE = h.indexOf('fieldworkend'), iN = h.indexOf('sample');
+  const num = (v) => { if (v == null || v === '') return null; const n = typeof v === 'number' ? v : parseFloat(String(v).replace('%', '').replace(',', '.').replace('<', '')); return isFinite(n) ? n : null; };
+  const date = (v) => (typeof v === 'number' ? Date.UTC(1899, 11, 30) + v * 864e5 : (Date.parse(v) || null));
+  // party abbreviation -> line key: a polled line of that party alone, else a new line for the party
+  const keyOf = {};
+  const lineFor = (abbr) => {
+    if (keyOf[abbr] !== undefined) return keyOf[abbr];
+    const own = c.lines.find((l) => l.members.length === 1 && normKey(l.members[0].abbr) === normKey(abbr));
+    if (own) return (keyOf[abbr] = own.key);
+    const p = parties.find((x) => x.latest !== false && normKey(x.abbr) === normKey(abbr)) || parties.find((x) => normKey(x.abbr) === normKey(abbr));
+    if (!p) return (keyOf[abbr] = null);
+    const key = 'PRES:' + abbr;
+    c.lines.push({ sr: null, key, abbr: p.abbr, name: p.english, color: p.color, members: epaLineParties({ party: p }, sheet), end: 0 });
+    return (keyOf[abbr] = key);
+  };
+  const polls = new Map();
+  tab.rows.slice(1).forEach((r) => {
+    const pf = String(r[iP] || '').trim(), te = date(r[iE]) || date(r[iS]), n = num(r[iN]);
+    if (!pf || !te) return;
+    const k = pf + '|' + r[iS] + '|' + r[iE]; let poll = polls.get(k); if (!poll) { poll = { pf, t: te, n: n || 0, rows: [] }; polls.set(k, poll); }
+    const row = {};
+    h.forEach((col, i) => { if ([iP, iS, iE, iN].includes(i) || !col) return; const v = num(r[i]); const ab = PRES_PARTY[col]; if (v == null || !ab) return;
+      const lk = lineFor(ab); if (lk) row[lk] = (row[lk] || 0) + v; });
+    if (Object.keys(row).length) poll.rows.push(row);
+  });
+  c.presPolls = [...polls.values()].filter((p) => p.rows.length).map((p) => {
+    const keys = [...new Set(p.rows.flatMap((r) => Object.keys(r)))], v = {};
+    keys.forEach((k) => { const xs = p.rows.filter((r) => r[k] != null).map((r) => r[k]); v[k] = xs.reduce((a, b) => a + b, 0) / xs.length; });
+    return { pf: p.pf, t: p.t, n: p.n, v };
+  });
+  if (c.presPolls.length) c.end = Math.max(c.end || 0, ...c.presPolls.map((p) => p.t));
 }
 function epaMakeLines(poll, sheet) {
     const lines = [];
@@ -2531,7 +2596,7 @@ function viewEPAuto() {
     <div id="epa-head"></div>
     <div class="poll-range"><span class="poll-shape" role="group" aria-label="Chart type"><button type="button" class="shpbtn epa-shp" data-s="lines" aria-pressed="${EPA.shape !== 'stack'}">Lines</button><button type="button" class="shpbtn epa-shp" data-s="stack" aria-pressed="${EPA.shape === 'stack'}">Stacked</button></span><span class="note-s" id="epa-prog"></span></div>
     <div class="proj-chart" id="epa-chart"></div>
-    <p class="note-s" style="margin:0">Method: for every country, the polls of the last ${EPA_POLL_DAYS} days with a sample of at least ${EPA_MIN_N} (latest poll per firm; without any, the latest polling average) are each simulated ${EPA_SIMS_NOW.toLocaleString('en-GB')} times under the country’s EP election law. The seat distributions are averaged over the polls, convolved per EP group (or Europarty), and each median is scaled to the 720 seats; brackets show the 90% range. Groups as in our EP projection sheet, Europarties from the party database; alliances split by the Projection Weight in the alliance sheet. Monthly history (first of each month, ${EPA_SIMS_HIST} simulations per poll) plus today. Not yet included: EP-specific polls preferred over national ones, presidential polls for France, the German minor-party trajectory model, and manual pollster exclusions.</p></section>`
+    <p class="note-s" style="margin:0">Method: for every country, the polls of the last ${EPA_POLL_DAYS} days with a sample of at least ${EPA_MIN_N} (latest poll per firm; without any, the latest polling average) are each simulated ${EPA_SIMS_NOW.toLocaleString('en-GB')} times under the country’s EP election law. The seat distributions are averaged over the polls, convolved per EP group (or Europarty), and each median is scaled to the 720 seats; brackets show the 90% range. Groups as in our EP projection sheet, Europarties from the party database; alliances split by the Projection Weight in the alliance sheet. Monthly history (first of each month, ${EPA_SIMS_HIST} simulations per poll) plus today. France: presidential first-round polls are used when more recent than national parliamentary polls (same month: parliamentary). Not yet included: EP-specific polls preferred over national ones, the German minor-party trajectory model, and manual pollster exclusions.</p></section>`
     + bar('Probability distributions', '<span class="note">chance of each seat total, before scaling to 720</span>') + `<section class="card" style="padding:12px 16px">
     <div class="epa-dist" id="epa-dist-eu"></div>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:14px 0 6px"><strong>Parties in</strong><select id="epa-country" style="font:inherit;padding:3px 6px">${countryOpts}</select><span class="note-s" id="epa-country-note"></span></div>
@@ -2557,8 +2622,8 @@ function epaTableHtml() {
       const units = [...r.units.entries()].map(([uk, pmf]) => ({ ...r.unitInfo.get(uk), med: epaQuant(pmf, 0.5), lo: epaQuant(pmf, 0.05), hi: epaQuant(pmf, 0.95), mean: epaMean(pmf) }))
         .filter((u) => u.hi > 0).sort((a, b) => b.mean - a.mean);
       units.forEach((u) => { const k = kOf(u); by[k] = (by[k] || 0) + u.med; });
-      const basisOf = (abbr) => { for (const l of c.lines) for (const m of l.members) if (m.abbr === abbr) return { list: l, m }; return null; };
-      detail = `<p class="note-s" style="margin:0 0 6px"><strong>Polls used:</strong> ${r.polls.map((p) => `${esc(p.label)} (${fmtD(p.t)}, n=${p.nKnown ? p.n : '–'})`).join(' · ')}</p>
+      const basisOf = (abbr) => { const used = new Set(r.polls.flatMap((p) => Object.keys(p.v))); const ls = c.lines.filter((l) => used.has(l.key)).concat(c.lines).sort((x, y) => x.members.length - y.members.length); for (const l of ls) for (const m of l.members) if (m.abbr === abbr) return { list: l, m }; return null; };
+      detail = `<p class="note-s" style="margin:0 0 6px"><strong>Polls used${r.polls.some((p) => p.pres) ? ' (presidential first round, as proxy: more recent than the national parliamentary polls)' : ''}:</strong> ${r.polls.map((p) => `${esc(p.label)} (${fmtD(p.t)}, n=${p.nKnown ? p.n : '–'})`).join(' · ')}</p>
         <table class="seatcheck"><thead><tr><th>Party</th><th>List</th><th>Median seats</th><th>90% range</th><th>Mean</th><th>EP group</th><th>Europarty</th><th>Group based on</th></tr></thead><tbody>${units.map((u) => { const b = basisOf(u.abbr);
           return `<tr><td>${esc(u.abbr)}</td><td class="muted">${b && b.list.members.length > 1 ? esc(b.list.abbr) + (b.m.wFromSheet ? ' (weight ' + b.m.w + ')' : ' (equal share)') : ''}</td><td><strong>${u.med}</strong></td><td>${u.lo}–${u.hi}</td><td>${u.mean.toFixed(1)}</td><td><span class="dot" style="background:${epaColor(u.g)}"></span> ${esc(u.g === 'UNA' ? 'Unaffiliated' : u.g)}</td><td>${u.eu ? `<span class="dot" style="background:${EUROPARTY_COLORS[u.eu] || '#B9B6AE'}"></span> ${esc(epName(u.eu) || u.eu)}` : '<span class="muted">none</span>'}</td><td class="muted" style="white-space:normal">${b ? esc(b.m.groups.find((q) => q.g === u.g)?.basis || b.m.groups[0].basis) : ''}</td></tr>`; }).join('')}</tbody></table>
         <p class="note-s" style="margin:4px 0 0">${esc(METHOD_NAMES[c.rule.method] || c.rule.method)}, ${c.rule.seats} seats, threshold ${c.rule.threshold ? (+c.rule.threshold.toFixed(2)) + '%' : 'none'}.${c.rule.approx ? ' ' + esc(c.rule.approx) : ''}${c.rule.note ? ' ' + esc(c.rule.note) : ''} Party medians are shown before the EU-wide normalisation, so they need not add up to ${c.rule.seats}.</p>`;
