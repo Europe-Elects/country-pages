@@ -201,6 +201,14 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .epa-d tr.sub td{border-bottom-style:dotted}
 .epa-dist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 18px}
 .epa-h{margin:0}
+.dl-row{display:flex;justify-content:flex-end;margin-top:6px}
+.dl-btn{min-height:34px;padding:0 14px;border:1px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font:600 14px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
+.dl-btn:hover{background:var(--navy);color:#fff}
+.dl-btn:disabled{opacity:.5;cursor:progress}
+.map-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:14px;margin-top:8px}
+.map-legend>span{display:inline-flex;align-items:center;gap:6px}
+#map-svg svg{display:block;max-width:640px;margin:0 auto}
+#map-svg path:hover{stroke:#1A1D23;stroke-width:1.5}
 .epa-h figcaption{font-size:14px;line-height:1.2;margin-bottom:2px}
 .epa-h svg{display:block;overflow:visible}
 .epa-h .ax{font:500 11px 'Advent Pro',system-ui,sans-serif;fill:#6B707A}
@@ -1326,12 +1334,12 @@ function ideoOf(ent) {
 // Keeps the affiliation styling of polling series / seat segments and swaps in the ideology styling when needed.
 function applyColorMode(list, kind) {
   (list || []).forEach((x) => {
-    if (!x.aff) x.aff = kind === 'poll' ? { color: x.color, colorAt: x.colorAt, thinAt: x.thinAt, dashAt: x.dashAt, tag: x.tag, soft: x.soft, interest: x.interest }
+    if (!x.aff) x.aff = kind === 'poll' ? { color: x.color, colorAt: x.colorAt, thinAt: x.thinAt, dashAt: x.dashAt, tag: x.tag, tagAt: x.tagAt, soft: x.soft, interest: x.interest }
       : { color: x.color, soft: x.soft, tag: x.tag };
     const ide = x.ide || { name: '', color: NONE };
     if (COLOR_MODE === 'ideo') {
       x.color = ide.color; x.tag = ide.name; x.soft = false;
-      if (kind === 'poll') { x.colorAt = () => ide.color; x.thinAt = () => false; x.dashAt = () => false; x.interest = ''; }
+      if (kind === 'poll') { x.colorAt = () => ide.color; x.tagAt = () => ide.name; x.thinAt = () => false; x.dashAt = () => false; x.interest = ''; }
     } else Object.assign(x, x.aff);
   });
   // Seats: ideology order in Ideology mode (largest party first within an ideology), affiliation order otherwise.
@@ -1626,7 +1634,18 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
     abbr = toLatin(abbr, pp.roman);
     const alSoft = !!(al && al.soft && !m);
     if (alSoft && !tag) tag = al.softLabel;
-    return { key: pp.key, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
+    // Affiliation label at time t (hover): the Europarty and EP group in force then, from the dated history.
+    // From the last change onwards (and for parties without dated history) the current label, with any interest arrows.
+    const lastChange = history ? Math.max(-Infinity, ...history.ep.map((i) => i.a), ...(IS_EU ? history.grp.map((i) => i.a) : [])) : -Infinity;
+    const pickAt = (list, t) => { const hit = list.filter((i) => t >= i.a && t <= i.b).sort((p1, p2) => (p1.a - p2.a) || (p1.ver - p2.ver)); return hit.length ? hit[hit.length - 1].v : null; };
+    const curTag = tag;
+    const tagAt = (t) => {
+      if (!history || !isFinite(lastChange) || t >= lastChange || (al && !m)) return curTag;
+      const ep = pickAt(history.ep, t), gp = IS_EU ? pickAt(history.grp, t) : null;
+      const out = ep || gp ? partyTag(ep || '', gp === 'NI' ? 'NI' : gp || '') : '';
+      return out || (m && !m.europartyShort && !m.epGroup ? curTag : 'unaffiliated');
+    };
+    return { key: pp.key, tagAt, party: m || null, alliance: al || null, joint, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
       soft: alSoft || (!!(curGrpCol || ori) && !iCol), niAt, colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
@@ -1775,7 +1794,8 @@ function viewPolling(cfg, poll) {
       ${POLL.series.some((sr) => sr.soft) ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#5B6170" stroke-width="2" stroke-dasharray="6 4"/></svg> Dashed: no ${AFF_WORD_L()}, but an EP group or (~) an affiliation with a related organisation</p>` : ''}
       ${modeNote()}
       ${POLL.elections.length ? `<p class="poll-key"><svg width="22" height="10" aria-hidden="true"><line x1="1" x2="21" y1="5" y2="5" stroke="#C8202F" stroke-width="1.5" stroke-dasharray="4 3"/></svg> National parliamentary election</p>` : ''}
-      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures, with each party’s margin of error (95%).' : ' The shaded band is the 95% uncertainty range of the average, based on how much the polls scatter around it.'} Larger dots are polls with larger samples. Margins of error cover random sampling only; real polling error, including differences between pollsters, is typically larger.${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p></section>`;
+      <p>${esc(note)}${POLL.bold ? ' There are not yet enough polls for an average, so each dot shows one poll; hover over a dot to see the pollster, date and figures, with each party’s margin of error (95%).' : ' The shaded band is the 95% uncertainty range of the average, based on how much the polls scatter around it.'} Larger dots are polls with larger samples. Margins of error cover random sampling only; real polling error, including differences between pollsters, is typically larger.${POLL.updated ? ' Updated ' + esc(new Date(POLL.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '.' : ''}</p>
+      <div class="dl-row"><button type="button" class="dl-btn" id="poll-download" title="Download this chart as an image, with legend, note and logo">↓ Download image (PNG)</button></div></section>`;
   }
   const id = POLLING_CHARTS[ISO];
   const p = cfg.polling || (id ? { embed: `https://datawrapper.dwcdn.net/${id}/`, title: `Polling average of ${cfg.name}`, height: 420, note } : null);
@@ -1786,6 +1806,11 @@ function viewPolling(cfg, poll) {
 }
 function bindPolling() {
   if (!POLL) return;
+  const dl = document.getElementById('poll-download');
+  if (dl) dl.onclick = async () => { dl.disabled = true; const t = dl.textContent; dl.textContent = 'Preparing image…';
+    try { await downloadChartPNG(document.getElementById('poll-chart'), dl.closest('.card') || document, `${ISO}-polling-average`); }
+    catch (e) { console.error(e); alertless('Sorry, the image could not be created in this browser.'); }
+    dl.disabled = false; dl.textContent = t; };
   document.querySelectorAll('.poll .shpbtn').forEach((b) => { b.onclick = () => {
     POLL.shape = b.dataset.s; document.querySelectorAll('.poll .shpbtn').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
     drawPolling(); postHeight();
@@ -1904,7 +1929,7 @@ function drawPolling() {
     document.getElementById('poll-marks').innerHTML = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5)
       .map((o) => `<circle cx="${px}" cy="${y(o.v)}" r="4.5" fill="${o.sr.colorAt(t)}" stroke="#fff" stroke-width="2"/>`).join('');
     const rowsHtml = series.map((sr) => ({ sr, v: valueAt(sr, t) })).filter((o) => o.v != null && o.v >= 0.5).sort((p1, p2) => p2.v - p1.v)
-      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
+      .map((o) => `<div><span class="dot" style="background:${o.sr.colorAt(t)}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tagAt ? o.sr.tagAt(t) : o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('');
     // Countries without any average: the pop-up shows the nearest poll instead (pollster, fieldwork date, figures).
     if (POLL.bold) {
       let best = null, bd = 21;
@@ -1918,7 +1943,7 @@ function drawPolling() {
         const c = byKey[k].colorAt(best.t.getTime()), y1 = y(v + e), y2 = y(Math.max(0, v - e));
         return `<line x1="${bx}" x2="${bx}" y1="${y1}" y2="${y2}" stroke="${c}" stroke-width="2"/><line x1="${bx - 4}" x2="${bx + 4}" y1="${y1}" y2="${y1}" stroke="${c}" stroke-width="2"/><line x1="${bx - 4}" x2="${bx + 4}" y1="${y2}" y2="${y2}" stroke="${c}" stroke-width="2"/>`; }).join('');
       tip.innerHTML = `<strong>${esc(best.pf || 'Poll')}</strong><span class="pf">Fieldwork midpoint: ${best.t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${best.n ? ` · ${best.n.toLocaleString('en-GB')} respondents` : ''}</span>` +
-        rows0.map(([k, v]) => { const e = moeOf(v, best.n); return `<div><span class="dot" style="background:${byKey[k].colorAt(best.t.getTime())}"></span><span>${esc(seriesLabel(byKey[k].abbr, byKey[k].tag))}</span><strong>${v.toFixed(1)}%${e ? ` <span style="font-weight:400;color:var(--muted)">±${e.toFixed(1)}</span>` : ''}</strong></div>`; }).join('');
+        rows0.map(([k, v]) => { const e = moeOf(v, best.n); return `<div><span class="dot" style="background:${byKey[k].colorAt(best.t.getTime())}"></span><span>${esc(seriesLabel(byKey[k].abbr, byKey[k].tagAt ? byKey[k].tagAt(best.t.getTime()) : byKey[k].tag))}</span><strong>${v.toFixed(1)}%${e ? ` <span style="font-weight:400;color:var(--muted)">±${e.toFixed(1)}</span>` : ''}</strong></div>`; }).join('');
     } else
     tip.innerHTML = `<strong>${new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>${rowsHtml || '<div>No average</div>'}`;
     tip.hidden = false;
@@ -2019,7 +2044,7 @@ function drawPollStack(host) {
     const rows = series.map((sr, k) => ({ sr, v: V[k][i] })).filter((o) => o.v >= 0.05).reverse();
     const oth = Math.max(0, 100 - base[i]);
     tip.innerHTML = `<strong>${new Date(ts[i]).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>`
-      + rows.map((o) => `<div><span class="dot" style="background:${(() => { const cc = o.sr.colorAt ? o.sr.colorAt(ts[i]) : o.sr.color; return o.sr.soft ? stripes(cc) : cc; })()}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('')
+      + rows.map((o) => `<div><span class="dot" style="background:${(() => { const cc = o.sr.colorAt ? o.sr.colorAt(ts[i]) : o.sr.color; return o.sr.soft ? stripes(cc) : cc; })()}"></span><span>${esc(seriesLabel(o.sr.abbr, o.sr.tagAt ? o.sr.tagAt(ts[i]) : o.sr.tag))}</span><strong>${o.v.toFixed(1)}%</strong></div>`).join('')
       + (oth >= 0.05 ? `<div><span class="dot" style="background:#E4E2DB"></span><span>Others</span><strong>${oth.toFixed(1)}%</strong></div>` : '');
     tip.hidden = false;
     const tw = tip.offsetWidth; let left = x(ts[i]) + 12; if (left + tw > W) left = x(ts[i]) - tw - 12;
@@ -2028,6 +2053,83 @@ function drawPollStack(host) {
   const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
   hit.addEventListener('mousemove', show); hit.addEventListener('mouseleave', hide);
   hit.addEventListener('touchstart', show, { passive: true }); hit.addEventListener('touchmove', show, { passive: true });
+}
+
+/* ---------- Download a chart as a branded PNG (polling average) ---------- */
+// The chart's SVG (lines or stacked) with its styles and the Advent Pro font inlined, then the keys and the note
+// below it, the Europe Elects logo bottom right and the yellow band — drawn on a canvas at 2× and saved.
+const EE_LOGO_PNG = 'data:image/png;base64,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';
+const alertless = (msg) => { const n = document.getElementById('poll-hint'); if (n) n.textContent = msg; };
+let EE_FONT_CSS = null;
+async function eeFontCss() {
+  if (EE_FONT_CSS != null) return EE_FONT_CSS;
+  try {
+    let css = await fetch('https://fonts.googleapis.com/css2?family=Advent+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap').then((r) => r.text());
+    const urls = [...new Set(css.match(/url\([^)]+\)/g) || [])];
+    for (const u of urls) {
+      const href = u.slice(4, -1).replace(/["']/g, '');
+      const buf = await fetch(href).then((r) => r.arrayBuffer());
+      let bin = ''; const bytes = new Uint8Array(buf); for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      css = css.split(u).join(`url(data:font/woff2;base64,${btoa(bin)})`);
+    }
+    EE_FONT_CSS = css;
+  } catch (e) { EE_FONT_CSS = ''; }
+  return EE_FONT_CSS;
+}
+function inlineSvgStyles(src, dst) {
+  const props = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-variant-numeric', 'letter-spacing', 'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-opacity', 'opacity', 'visibility', 'text-anchor', 'dominant-baseline'];
+  const a = [src, ...src.querySelectorAll('*')], b = [dst, ...dst.querySelectorAll('*')];
+  a.forEach((el, i) => { const cs = getComputedStyle(el), t = b[i]; if (!t || !t.setAttribute) return;
+    t.setAttribute('style', props.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(';')); });
+}
+const loadImg = (src) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+function wrapText(ctx, text, maxW) {
+  const words = text.split(/\s+/), lines = []; let line = '';
+  words.forEach((w) => { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+  if (line) lines.push(line); return lines;
+}
+async function downloadChartPNG(host, card, name) {
+  const svg = host && host.querySelector('svg'); if (!svg) throw new Error('no chart');
+  const W = svg.width.baseVal.value || svg.getBoundingClientRect().width, H = svg.height.baseVal.value || svg.getBoundingClientRect().height;
+  const clone = svg.cloneNode(true);
+  inlineSvgStyles(svg, clone);
+  clone.querySelectorAll('[id$="-hit"], #poll-hit, [visibility="hidden"]').forEach((el) => el.remove());
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width', W); clone.setAttribute('height', H);
+  const css = await eeFontCss();
+  if (css) { const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = css; clone.insertBefore(st, clone.firstChild); }
+  const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  const [chartImg, logo] = await Promise.all([loadImg(svgUrl), loadImg(EE_LOGO_PNG)]);
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+  // keys and note under the chart, as on the page
+  const keys = [...card.querySelectorAll('.poll-key')].map((p) => ({ text: p.textContent.trim(), line: p.querySelector('line') }));
+  const noteEl = [...card.querySelectorAll('p')].find((p) => /polling average is the result/i.test(p.textContent));
+  const note = noteEl ? noteEl.textContent.trim() : '';
+  const S = 2, pad = 40, outW = Math.max(W + pad * 2, 900), meas = document.createElement('canvas').getContext('2d');
+  meas.font = "italic 400 17px 'Advent Pro', system-ui, sans-serif";
+  const noteLines = note ? wrapText(meas, note, outW - pad * 2) : [];
+  const keyH = keys.length * 26, noteH = noteLines.length * 23, logoH = 72, band = 16;
+  const outH = pad + H + 18 + keyH + 10 + noteH + 26 + logoH + 22 + band;
+  const cv = document.createElement('canvas'); cv.width = outW * S; cv.height = outH * S;
+  const ctx = cv.getContext('2d'); ctx.scale(S, S);
+  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, outW, outH);
+  ctx.drawImage(chartImg, (outW - W) / 2, pad, W, H);
+  let y = pad + H + 18;
+  ctx.textBaseline = 'middle';
+  keys.forEach((k) => {
+    const st = k.line ? { c: k.line.getAttribute('stroke') || '#C8202F', d: (k.line.getAttribute('stroke-dasharray') || '4 3').split(/\s+/).map(Number), w: +(k.line.getAttribute('stroke-width') || 1.5) } : null;
+    if (st) { ctx.save(); ctx.strokeStyle = st.c; ctx.lineWidth = st.w; ctx.setLineDash(st.d); ctx.beginPath(); ctx.moveTo(pad, y + 10); ctx.lineTo(pad + 26, y + 10); ctx.stroke(); ctx.restore(); }
+    ctx.fillStyle = '#3A3F4A'; ctx.font = "500 17px 'Advent Pro', system-ui, sans-serif"; ctx.fillText(k.text, pad + (st ? 36 : 0), y + 10);
+    y += 26;
+  });
+  y += 10; ctx.fillStyle = '#4A4F59'; ctx.font = "italic 400 17px 'Advent Pro', system-ui, sans-serif";
+  noteLines.forEach((l) => { ctx.fillText(l, pad, y + 10); y += 23; });
+  const lw = logoH * logo.width / logo.height;
+  ctx.drawImage(logo, outW - pad - lw, outH - band - 22 - logoH, lw, logoH);
+  ctx.fillStyle = '#F2B705'; ctx.fillRect(0, outH - band, outW, band);
+  const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `${name}-${new Date().toISOString().slice(0, 10)}.png`; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 let pollResize = null;
 window.addEventListener('resize', () => { clearTimeout(pollResize); pollResize = setTimeout(drawPolling, 150); });
@@ -2712,6 +2814,140 @@ function drawEPAuto() {
 }
 window.addEventListener('resize', () => { clearTimeout(window.epaResize); window.epaResize = setTimeout(drawEPAuto, 150); });
 
+
+/* ---------- Live projection maps (test page: ?view=map&country=NL) ---------- */
+// The last parliamentary election per province and municipality (results Sheet → results/areas.json), moved by
+// the change between that election and today's national polling average. Swing per party and area: the mean of a
+// proportional swing (local × now / then) and a uniform swing (local + now − then), kept between 0 and 100; an
+// area's parties are scaled down together if they would add up to more than 100. Parties that did not run then
+// get their national average everywhere.
+const MAP_GEO = { NL: { province: 'geo/NL/provinces.topojson', municipality: 'geo/NL/municipalities.topojson', code: 'statcode', name: 'statnaam' } };
+const MAP_LEVEL_NAMES = { province: 'Provinces', municipality: 'Municipalities' };
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+const mapNum = (v) => { if (v == null || v === '') return null; const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\s/g, '').replace('%', '').replace(',', '.')); return isFinite(n) ? n : null; };
+// Results tab → { election, national: {key: %}, areas: { level: { code: { name, votes, v: {key: %} } } } }
+function mapResults(tab, series) {
+  const rows = tab.rows; if (!rows || rows.length < 2) return null;
+  const head = rows[0].map((h) => String(h || '').trim()), low = head.map((h) => h.toLowerCase());
+  const iE = low.indexOf('election'), iL = low.indexOf('level'), iC = low.indexOf('code'), iN = low.indexOf('name'), iV = low.findIndex((h) => /valid/.test(h));
+  // party columns → polling line keys (ROPF key, abbreviation or Europe Elects ID)
+  const colKey = {};
+  head.forEach((h, i) => { if ([iE, iL, iC, iN, iV].includes(i) || !h) return;
+    const sr = series.find((s) => normKey(s.key) === normKey(h) || normKey(s.abbr) === normKey(h) || (s.party && s.party.entityId === h) || (s.alliance && s.alliance.id === h));
+    colKey[i] = sr ? sr.key : 'COL:' + h; });
+  const latest = iE >= 0 ? Math.max(...rows.slice(1).map((r) => mapNum(r[iE]) || 0)) : 0;
+  const out = { election: latest, national: null, areas: {}, columns: colKey, unmatched: Object.entries(colKey).filter(([, k]) => k.startsWith('COL:')).map(([i]) => head[i]) };
+  rows.slice(1).forEach((r) => {
+    if (iE >= 0 && latest && (mapNum(r[iE]) || 0) !== latest) return;
+    const lvl = String(r[iL] || '').trim().toLowerCase().replace(/^region$/, 'province').replace(/^gemeente$/, 'municipality').replace(/^provincie$/, 'province');
+    const votes = iV >= 0 ? mapNum(r[iV]) : null, raw = {};
+    Object.entries(colKey).forEach(([i, k]) => { const x = mapNum(r[+i]); if (x != null) raw[k] = (raw[k] || 0) + x; });
+    const sum = Object.values(raw).reduce((a, b) => a + b, 0);
+    const asPct = sum > 100.5 ? (votes || sum) : null;  // counts → shares
+    const v = Object.fromEntries(Object.entries(raw).map(([k, x]) => [k, asPct ? x / asPct * 100 : x]));
+    if (lvl === 'national') out.national = { votes, v };
+    else if (lvl) { (out.areas[lvl] = out.areas[lvl] || {})[String(r[iC] || '').trim()] = { name: String(r[iN] || '').trim(), votes, v }; }
+  });
+  // national result from the areas if there is no national row (vote-weighted)
+  if (!out.national) { const lv = out.areas.municipality || out.areas.province; if (lv) { const nat = {}; let tot = 0;
+    Object.values(lv).forEach((a) => { const w = a.votes || 1; tot += w; Object.entries(a.v).forEach(([k, x]) => { nat[k] = (nat[k] || 0) + x * w; }); });
+    out.national = { votes: tot, v: Object.fromEntries(Object.entries(nat).map(([k, x]) => [k, x / tot])) }; } }
+  return out;
+}
+function mapSwing(local, then, now) {
+  const keys = new Set([...Object.keys(local), ...Object.keys(now)]), out = {};
+  keys.forEach((k) => {
+    const l = local[k] || 0, t = then[k] || 0, n = now[k];
+    if (n == null) { out[k] = l; return; }                     // not in today's polls: unchanged
+    if (!t) { out[k] = n; return; }                             // did not run last time: national average everywhere
+    const prop = l * n / t, unif = l + n - t;
+    out[k] = Math.min(100, Math.max(0, (prop + unif) / 2));
+  });
+  const sum = Object.values(out).reduce((a, b) => a + b, 0);
+  if (sum > 100) Object.keys(out).forEach((k) => { out[k] *= 100 / sum; });
+  return out;
+}
+let MAPS = null;
+async function viewMapPage(cfg, poll) {
+  const iso = ISO, geoCfg = MAP_GEO[iso];
+  const app = document.getElementById('app');
+  const opts = Object.keys(MAP_GEO).map((k) => `<option value="${k}"${k === iso ? ' selected' : ''}>${k}</option>`).join('');
+  const head = `<div class="card status" style="text-align:left;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center"><strong>Live projection map · test page · ${esc(cfg.name)}</strong><label>Country <select id="map-country" style="font:inherit">${geoCfg ? '' : `<option selected>${esc(iso)}</option>`}${opts}</select></label><span class="muted">Not linked from the site.</span></div>`;
+  if (!geoCfg) { app.innerHTML = head + '<div class="card status">No map boundaries for this country yet.</div>'; return; }
+  if (!poll) { app.innerHTML = head + '<div class="card status">No polling average for this country.</div>'; return; }
+  const res = await fetch('results/areas.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const tab = res && (res.tabs || []).find((t) => String(t.tab).trim().toUpperCase() === iso);
+  const R = tab ? mapResults(tab, poll.series) : null;
+  if (!R || !R.national) { app.innerHTML = head + `<div class="card status">No results for ${esc(cfg.name)} in the results Sheet yet (tab “${esc(iso)}”).</div>`; return; }
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js');
+  await loadScript('https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js');
+  const geo = {};
+  for (const lvl of ['province', 'municipality']) {
+    if (!geoCfg[lvl] || !R.areas[lvl]) continue;
+    const t = await fetch(geoCfg[lvl]).then((r) => r.json());
+    geo[lvl] = topojson.feature(t, Object.values(t.objects)[0]);
+  }
+  // today's national average per line
+  const tEnd = Math.max(...poll.series.flatMap((sr) => sr.curve.map((seg) => (seg.length ? seg[seg.length - 1].t.getTime() : 0))));
+  const now = {}; poll.series.forEach((sr) => { const v = avgAt(sr, tEnd); if (v != null && v > 0 && !poll.hidden.has(sr.key)) now[sr.key] = v; });
+  const byKey = Object.fromEntries(poll.series.map((sr) => [sr.key, sr]));
+  const levels = Object.keys(geo);
+  MAPS = { R, geo, now, byKey, tEnd, level: levels.includes('municipality') ? 'municipality' : levels[0], show: 'lead', geoCfg, levels };
+  const parties = Object.keys(now).sort((a, b) => now[b] - now[a]);
+  app.innerHTML = head + bar('Projected result by area', `<span class="note">${esc(cfg.name)} · polling average ${new Date(tEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>`)
+    + `<section class="card" style="padding:12px 16px">
+    <div class="poll-range" style="gap:10px;flex-wrap:wrap">
+      <span class="poll-shape" role="group" aria-label="Level">${levels.map((l) => `<button type="button" class="shpbtn map-lvl" data-l="${l}" aria-pressed="${l === MAPS.level}">${MAP_LEVEL_NAMES[l]}</button>`).join('')}</span>
+      <label style="font-weight:600">Show <select id="map-show" style="font:inherit;padding:3px 6px"><option value="lead">Leading party</option>${parties.map((k) => `<option value="${esc(k)}">${esc(seriesLabel(byKey[k].abbr, byKey[k].tag))}</option>`).join('')}</select></label>
+    </div>
+    <div class="map-wrap" style="position:relative"><div id="map-svg"></div><div class="proj-tip" id="map-tip" hidden></div></div>
+    <div id="map-legend" class="map-legend"></div>
+    <p class="note-s" style="margin:6px 0 0">Each area’s result at the last parliamentary election, moved by how far every party has gained or lost nationally since then according to today’s polling average: the mean of a proportional swing (local share × national change ratio) and a uniform swing (local share + national change in points), never below 0% or above 100%. Parties that did not run last time get their national average everywhere. Not a forecast: local campaigns, candidates and turnout are not modelled. Boundaries: CBS / Kadaster (PDOK), via cartomap.${R.unmatched.length ? ` Columns in the results Sheet not matched to a polled party: ${esc(R.unmatched.join(', '))}.` : ''}</p></section>`;
+  document.querySelectorAll('.map-lvl').forEach((b) => { b.onclick = () => { MAPS.level = b.dataset.l; document.querySelectorAll('.map-lvl').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); drawMap(); }; });
+  document.getElementById('map-show').onchange = (e) => { MAPS.show = e.target.value; drawMap(); };
+  drawMap();
+}
+function drawMap() {
+  const host = document.getElementById('map-svg'); if (!host || !MAPS) return;
+  const { R, geo, now, byKey, geoCfg } = MAPS, fc = geo[MAPS.level], areas = R.areas[MAPS.level] || {};
+  const W = Math.min(640, host.clientWidth || 600), H = Math.round(W * 1.15);
+  const proj = d3.geoMercator().fitSize([W, H], fc), path = d3.geoPath(proj);
+  const then = R.national.v;
+  const colorOf = (k) => (byKey[k] ? (byKey[k].colorAt ? byKey[k].colorAt(MAPS.tEnd) : byKey[k].color) : '#B9B6AE');
+  const labelOf = (k) => (byKey[k] ? byKey[k].abbr : k.replace(/^COL:/, ''));
+  const proj1 = {};
+  fc.features.forEach((f) => { const code = f.properties[geoCfg.code], a = areas[code]; if (a) proj1[code] = mapSwing(a.v, then, now); });
+  const maxShare = MAPS.show === 'lead' ? 0 : Math.max(1, ...Object.values(proj1).map((p) => p[MAPS.show] || 0));
+  const fillOf = (code) => {
+    const p = proj1[code]; if (!p) return '#ECEAE4';
+    if (MAPS.show === 'lead') {
+      const s = Object.entries(p).sort((a, b) => b[1] - a[1]); if (!s.length) return '#ECEAE4';
+      const margin = s[0][1] - (s[1] ? s[1][1] : 0), c = d3.color(colorOf(s[0][0]));
+      return d3.interpolateRgb('#FFFFFF', c)(Math.min(1, 0.45 + margin / 20)).toString();
+    }
+    return d3.interpolateRgb('#F6F5F1', colorOf(MAPS.show))(Math.min(1, (p[MAPS.show] || 0) / maxShare)).toString();
+  };
+  const svg = d3.select(host).html('').append('svg').attr('width', W).attr('height', H).attr('role', 'img').attr('aria-label', 'Projected result map');
+  svg.selectAll('path').data(fc.features).join('path').attr('d', path).attr('fill', (f) => fillOf(f.properties[geoCfg.code]))
+    .attr('stroke', '#fff').attr('stroke-width', MAPS.level === 'municipality' ? 0.4 : 1)
+    .on('mousemove', (ev, f) => {
+      const code = f.properties[geoCfg.code], a = areas[code], p = proj1[code], tip = document.getElementById('map-tip');
+      const rows = p ? Object.entries(p).sort((x, y) => y[1] - x[1]).slice(0, 7) : [];
+      tip.innerHTML = `<strong>${esc(f.properties[geoCfg.name] || (a && a.name) || code)}</strong>` + (p ? rows.map(([k, v]) => `<div><span class="dot" style="background:${colorOf(k)}"></span><span>${esc(labelOf(k))} <span class="muted">${a.v[k] != null ? a.v[k].toFixed(1) : '–'} →</span></span><strong>${v.toFixed(1)}%</strong></div>`).join('') : '<div>No results</div>');
+      tip.hidden = false; const r = host.getBoundingClientRect(); let lx = ev.clientX - r.left + 14; if (lx + tip.offsetWidth > r.width) lx = ev.clientX - r.left - tip.offsetWidth - 14;
+      tip.style.left = Math.max(0, lx) + 'px'; tip.style.top = Math.max(0, ev.clientY - r.top - 20) + 'px';
+    })
+    .on('mouseleave', () => { document.getElementById('map-tip').hidden = true; });
+  // legend
+  const leg = document.getElementById('map-legend');
+  if (MAPS.show === 'lead') {
+    const cnt = {}; Object.values(proj1).forEach((p) => { const s = Object.entries(p).sort((a, b) => b[1] - a[1]); if (s.length) cnt[s[0][0]] = (cnt[s[0][0]] || 0) + 1; });
+    leg.innerHTML = Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span><span class="dot" style="background:${colorOf(k)}"></span><strong>${esc(labelOf(k))}</strong> leads in ${n}</span>`).join('') + '<span class="muted">Paler = closer race</span>';
+  } else leg.innerHTML = `<span>0%</span><span style="display:inline-block;width:140px;height:10px;background:linear-gradient(90deg,#F6F5F1,${colorOf(MAPS.show)})"></span><span>${maxShare.toFixed(0)}%</span><span class="muted">National: ${(now[MAPS.show] || 0).toFixed(1)}% (last election ${(then[MAPS.show] || 0).toFixed(1)}%)</span>`;
+  postHeight();
+}
+window.addEventListener('resize', () => { clearTimeout(window.mapResize); window.mapResize = setTimeout(drawMap, 150); });
+
 let seatpResize = null;
 window.addEventListener('resize', () => { clearTimeout(seatpResize); seatpResize = setTimeout(drawSeatProjection, 150); });
 function viewAlliances(alliances) {
@@ -2909,6 +3145,18 @@ async function main() {
     postHeight();
     if (EPA) { const pr = document.getElementById('epa-prog');
       await epaRunHistory((k, n) => { if (pr) pr.textContent = k < n ? `calculating history ${k}/${n}…` : ''; if (k % 4 === 0 || k === n) drawEPAuto(); }); }
+    return;
+  }
+  if (VIEW === 'map') {
+    if (!pollData && !NO_POLLING.includes(ISO)) { try { const r = await fetch(`polling/${ISO}.json`, { cache: 'no-cache' }); if (r.ok) pollData = await r.json(); } catch (e) { /* none */ } }
+    const { list: parties } = buildParties(partyRows, ISO, cfg);
+    cfg.name = cfg.name || (parties[0] && parties[0].country) || ISO;
+    document.title = `Europe Elects – Projection map (test), ${cfg.name}`;
+    const alliances = buildAlliances(allianceRows, ISO, parties);
+    const poll = buildPolling(pollData, parties, calendarRows, cfg.name, alliances);
+    await viewMapPage(cfg, poll);
+    const sel = document.getElementById('map-country'); if (sel) sel.onchange = () => { const u = new URL(location.href); u.searchParams.set('country', sel.value); location.href = u.toString(); };
+    postHeight();
     return;
   }
   if (VIEW === 'seats') {
