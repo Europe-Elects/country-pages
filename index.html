@@ -3039,7 +3039,7 @@ function viewParties(parties, cfg, activeOnly) {
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
   const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
     <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
-  return bar(hasSeats ? 'In national parliament' : (IS_EUROPE ? 'Parties with European or international affiliations' : 'Parties with international affiliations'), `<span class="note">Top colour = ${AFF_WORD_L()}${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+  return bar(hasSeats ? 'In national parliament (at the start of the current legislative period)' : (IS_EUROPE ? 'Parties with European or international affiliations' : 'Parties with international affiliations'), `<span class="note">Top colour = ${AFF_WORD_L()}${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
     bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : (IS_EUROPE ? 'No European or international affiliation' : 'No international affiliation')} · hover for the native name</span>`) +
     `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
