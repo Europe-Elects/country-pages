@@ -459,6 +459,16 @@ const IDEOLOGIES = [
   "Christian fundamentalist parties are political movements whose primary political concern is the preservation of religiously informed public ethics and socially conservative understandings of family and community. They tend to advocate policies rooted in Christian or religious values, often viewing the Christian Bible as a foundational guide for policymaking, alongside support for traditional family structures, cultural continuity, and a cautious approach to rapid social change, frequently opposing the liberalization of issues such as abortion, euthanasia, or changes to marriage and gender norms. They distinguish themselves from national-conservative parties by placing greater emphasis on religious doctrine and biblical morality rather than national identity, sovereignty, or cultural nationalism, while distinguishing themselves from broader centre-right parties by giving moral and religious values precedence over economic liberalism, pragmatic governance, or broad ideological coalitions. They further distinguish themselves from centre-left parties by promoting a vision of social justice rooted more in charity, community responsibility, and faith-based solidarity than in redistribution, labour politics, or class-based bargaining."
  ],
  [
+  "Diverse left",
+  "#C77B7B",
+  "Used for multiparty alliances whose member parties are all on the left (centre-left to far-left) but differ in their exact ideology, e.g. a joint list of social democrats and communists."
+ ],
+ [
+  "Diverse right",
+  "#6F8FB8",
+  "Used for multiparty alliances whose member parties are all on the right (centre-right to far-right) but differ in their exact ideology, e.g. a joint list of conservatives and national conservatives."
+ ],
+ [
   "Eurofederalism",
   "#502379",
   "European federalist parties are political movements whose primary political concern is the deepening of European integration and the strengthening of supranational democratic governance across Europe. They tend to advocate a more politically integrated or federal European Union, stronger common institutions, transnational democracy, coordinated responses to challenges such as climate change and migration, and policies that transcend traditional national politics. They distinguish themselves from mainstream centrist and pro-European parties by placing European integration itself at the centre of their political agenda, often advocating far-reaching institutional reform or federalism, while distinguishing themselves from Eurosceptic and nationalist parties by viewing shared sovereignty, cross-border cooperation, and a stronger European political identity as solutions rather than threats to democracy and prosperity."
@@ -700,6 +710,14 @@ function leadColour(noEuroparty, members) {
   }
   return {};
 }
+// Alliance sheet "Ideological Orientation" (e.g. Diverse left / Diverse right): first entry, with its legend colour.
+// Used for the alliance's polling line in Ideology mode.
+function alliance_ideo(v) {
+  const name = String(v || '').split(/[,;]/).map((x) => x.trim()).filter(Boolean)[0];
+  if (!name) return null;
+  const k = norm(name).replace(/-/g, ' '), r = IDEOLOGIES.find((x) => norm(x[0]).replace(/-/g, ' ') === k);
+  return { name: r ? r[0] : name, color: r ? r[1] : NONE };
+}
 function buildAlliances(rows, iso, parties) {
   const byId = {};
   parties.forEach((p) => { if (p.versionId) byId[p.versionId] = p; if (p.entityId && (!byId[p.entityId] || p.latest)) byId[p.entityId] = p; });
@@ -736,6 +754,7 @@ function buildAlliances(rows, iso, parties) {
       o, idx, entityId: g(o, 'Europe Elects Entity ID'), version: +g(o, 'Europe Elects Entity Version') || 1, a, b,
       inactive: /inactive/i.test(g(o, 'Status', 'x')),
       abbr: g(o, 'Abbreviation'), native: g(o, 'Name (Native)'), english: g(o, 'Name (English)'),
+      ideoSheet: alliance_ideo(g(o, 'Ideological Orientation')),
       since: year(g(o, 'Political Activity Started')),
       europarty: isNone(europarty) ? 'None' : europarty, europartyLabel: isNone(europarty) ? 'None' : epName(europarty), epGroup: isNone(epGroup) ? '' : epGroup,
       color: EUROPARTY_COLORS[isNone(europarty) ? '' : europarty.split(/[|;,]/)[0].trim()] || NONE,
@@ -1361,12 +1380,12 @@ function applyColorMode(list, kind) {
   }
 }
 // Seat / stack order in Ideology mode, left to right (Diverse in the centre). Ideologies not listed here go to the end.
-const IDEOLOGY_ORDER = ['Far-left', 'Left-wing', 'Animal rights', 'Green politics', 'Pirate politics', 'Centre-left', 'Regionalism', 'Eurofederalism',
-  'Liberalism', 'Centrism', 'Diverse', 'Agrarianism', 'Libertarianism', 'Centre-right', 'Christian fundamentalism', 'National conservatism', 'Monarchism',
+const IDEOLOGY_ORDER = ['Far-left', 'Left-wing', 'Animal rights', 'Green politics', 'Pirate politics', 'Centre-left', 'Regionalism', 'Eurofederalism', 'Diverse left',
+  'Liberalism', 'Centrism', 'Diverse', 'Agrarianism', 'Libertarianism', 'Diverse right', 'Centre-right', 'Christian fundamentalism', 'National conservatism', 'Monarchism',
   'Right-wing', 'Far-right', 'Islamism'];
 const ideoRank = (name) => { const k = norm(name).replace(/-/g, ' '); const i = IDEOLOGY_ORDER.findIndex((x) => norm(x).replace(/-/g, ' ') === k); return i < 0 ? IDEOLOGY_ORDER.length : i; };
 const modeToggle = () => `<span class="cmode" role="group" aria-label="Colour parties by"><span class="cm-l">Colour by</span><button type="button" data-m="aff" aria-pressed="${COLOR_MODE === 'aff'}">Affiliation</button><button type="button" data-m="ideo" aria-pressed="${COLOR_MODE === 'ideo'}">Ideology</button></span>`;
-const modeNote = () => (COLOR_MODE === 'ideo' ? `<p class="note-s" style="margin:0">Colours show each party's main ideology (first entry in our party database); alliances take the most common ideology of their members. See the ideology legend below.</p>` : '');
+const modeNote = () => (COLOR_MODE === 'ideo' ? `<p class="note-s" style="margin:0">Colours show each party's main ideology (first entry in our party database); alliances take the most common ideology of their members; in the polling average, an alliance marked Diverse left or Diverse right in our alliance database shows that instead. See the ideology legend below.</p>` : '');
 const segBg = (sg) => (sg.soft ? stripes(sg.color) : sg.color);
 let PARLS = [];
 function viewParliament(cfg, parties) {
@@ -1672,7 +1691,7 @@ function buildPolling(data, parties, calendarRows, countryName, alliances) {
       const out = ep || gp ? partyTag(ep || '', gp === 'NI' ? 'NI' : gp || '') : '';
       return out || (m && !m.europartyShort && !m.epGroup ? curTag : 'unaffiliated');
     };
-    return { key: pp.key, tagAt, party: m || null, alliance: al || null, joint, via, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: ideoOf(m || al || (joint && joint[0]) || null),
+    return { key: pp.key, tagAt, party: m || null, alliance: al || null, joint, via, abbr, name, tag, interest: interestTag(m), interestNote: m ? epName(m.interestNote) : '', color, curve, ide: (!m && al && al.ideoSheet) || ideoOf(m || al || (joint && joint[0]) || null),
       soft: alSoft || (!!(curGrpCol || ori) && !iCol), niAt, colorAt: alSoft ? () => color : (t) => (thinAt(t) ? iCol : dashAt(t) ? softAt(t) : baseAt(t)), thinAt, dashAt: alSoft ? () => true : dashAt };
   }).filter((sr) => sr.curve.length || data.polls.some((p) => p.v[sr.key] != null && new Date(p.d) >= from));
   applyColorMode(series, 'poll');
