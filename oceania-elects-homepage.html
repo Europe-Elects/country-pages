@@ -461,7 +461,16 @@ async function loadPartyDb() {
     try { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) continue; const t = parseCSV(await r.text()); if (t.length && 'europe elects entity id' in t[0]) { rows = t.filter((o) => AFRICA.has((o['iso-2'] || '').toUpperCase())); break; } } catch (e) { /* try the next source */ }
   }
   if (!rows) { list.innerHTML = '<li class="eeh-status err">Couldn\'t load the party database.</li>'; return; }
-  const year = (v) => { const m = String(v || '').match(/(\d{4})/); return m ? +m[1] : 0; };
+  const year = (v) => {
+    const s = String(v == null ? '' : v).trim(); if (!s) return 0;
+    // A spreadsheet date can arrive as its day count (45620 = 24 Nov 2024) when the column mixes
+    // plain years and full dates; convert it. 1000-2199 is read as a year as written.
+    if (/^-?\d+(\.\d+)?(e\+?\d+)?$/i.test(s)) { const n = +s;
+      if (n >= 1000 && n < 2200) return (Math.floor(n));
+      if (n >= 2200 && n < 100000 || n < 0) return (new Date(Date.UTC(1899, 11, 30) + Math.floor(n) * 864e5).getUTCFullYear()); }
+    // Otherwise the first plausible four-digit year in the text ("16-01-2012", "2021", "March 1998").
+    const m = s.match(/(?:^|\D)(1[5-9]\d\d|20\d\d|21\d\d)(?!\d)/); return m ? (+m[1]) : 0;
+  };
   // One row per party: the newest version (column "Latest" = Yes, else the highest version number).
   const byId = {};
   rows.forEach((o) => { const id = o['europe elects entity id']; if (!id) return;
