@@ -524,7 +524,16 @@ const IDEOLOGIES = [
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
 const isNone = (v) => !v || /^(unaffiliated|\*|none|-|–|n\/a|no)$/i.test(String(v).trim());
-const year = (v) => { const m = String(v || '').match(/\d{4}/); return m ? m[0] : ''; };
+const year = (v) => {
+  const s = String(v == null ? '' : v).trim(); if (!s) return '';
+  // A spreadsheet date can arrive as its day count (45620 = 24 Nov 2024) when the column mixes
+  // plain years and full dates; convert it. 1000-2199 is read as a year as written.
+  if (/^-?\d+(\.\d+)?(e\+?\d+)?$/i.test(s)) { const n = +s;
+    if (n >= 1000 && n < 2200) return String(Math.floor(n));
+    if (n >= 2200 && n < 100000 || n < 0) return String(new Date(Date.UTC(1899, 11, 30) + Math.floor(n) * 864e5).getUTCFullYear()); }
+  // Otherwise the first plausible four-digit year in the text ("16-01-2012", "2021", "March 1998").
+  const m = s.match(/(?:^|\D)(1[5-9]\d\d|20\d\d|21\d\d)(?!\d)/); return m ? String(+m[1]) : '';
+};
 const inParens = (v) => { const m = String(v || '').match(/\(([^)]+)\)/); return m ? m[1] : ''; };
 
 function parseCSV(text) {
@@ -3007,8 +3016,12 @@ const barFill = (p) => { if (p.color !== NONE) return p.color; const so = softOf
 const kv2 = (p) => ((p.affs2 || []).length ? `<div class="kv kv2"><div class="kv2h">Related organisations</div>${p.affs2.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '');
 const kv = (rows) => rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>` : '';
 function bigTile(p, years) {
-  if (!p.seats) { const affs0 = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
-    return `<article class="tile" style="${tileEdge(p)}" title="${tileTitle(p)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}</article>`; }
+  // No seats of its own at the last election: in parliament via a joint list, or through a parliamentary group.
+  const via = p.seatsNow ? '' : p.viaList
+    ? `<div class="seats"><span class="lbl">SEATS ${years[years.length - 1]} · VIA ${esc(p.viaList.abbr)}</span><span class="num">${p.viaList.seats}</span></div>`
+    : p.inGroup ? `<div class="seats"><span class="lbl">IN PARLIAMENT · GROUP</span><span class="num" style="font-size:20px">${esc(p.inGroup)}</span></div>` : '';
+  if (!p.seats || via) { const affs0 = p.affs.length || (p.affs2 || []).length ? p.affs : [['Affiliation', 'None']];
+    return `<article class="tile" style="${tileEdge(p)}" title="${tileTitle(p)}"><div class="top"><span class="nm">${logoImg(p, 32)}<span class="abbr">${esc(p.abbr)}</span></span><span class="yr">${p.founded ? 'est. ' + p.founded : ''}</span></div><h3>${esc(p.english)}</h3>${nativeLine(p)}${tags(p)}${kv(affs0)}${kv2(p)}${via}</article>`; }
   const max = Math.max(1, ...p.seats.map((v) => v || 0));
   const yy = years.map((y) => '’' + String(y).slice(2));
   const hist = p.seats.map((v, i) => `${years[i]}: ${v == null ? 'did not contest' : v}`).join(', ');
@@ -3034,14 +3047,15 @@ function viewParties(parties, cfg, activeOnly) {
   const vis = parties.filter(shown);
   const hidden = parties.filter((p) => p.status === 'inactive').length;
   const hasSeats = !!(cfg.seats && cfg.seats.parties);
-  const isMajor = (p) => (hasSeats ? p.seatsNow > 0 : p.european);
-  const major = vis.filter(isMajor).sort((a, b) => b.seatsNow - a.seatsNow || b.affs.length - a.affs.length || a.english.localeCompare(b.english));
+  const isMajor = (p) => (hasSeats ? p.seatsNow > 0 || !!p.viaList || !!p.inGroup : p.european);
+  const seatsOf = (p) => p.seatsNow || (p.viaList ? p.viaList.seats : 0);
+  const major = vis.filter(isMajor).sort((a, b) => seatsOf(b) - seatsOf(a) || b.affs.length - a.affs.length || a.english.localeCompare(b.english));
   const minor = vis.filter((p) => !isMajor(p)).sort((a, b) => (b.seats ? 1 : 0) - (a.seats ? 1 : 0) || a.english.localeCompare(b.english));
   const filter = !hidden ? '' : `<div class="card filter"><label for="active-only"><input id="active-only" type="checkbox" ${activeOnly ? 'checked' : ''}> Active parties only</label>
     <span class="muted" style="font-size:14px">${activeOnly ? `${hidden} inactive ${hidden === 1 ? 'party' : 'parties'} hidden` : `Including ${hidden} inactive ${hidden === 1 ? 'party' : 'parties'}`}</span></div>`;
-  return bar(hasSeats ? 'In national parliament (at the start of the current legislative period)' : (IS_EUROPE ? 'Parties with European or international affiliations' : 'Parties with international affiliations'), `<span class="note">Top colour = ${AFF_WORD_L()}${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
+  return bar(hasSeats ? 'In national parliament' : (IS_EUROPE ? 'Parties with European or international affiliations' : 'Parties with international affiliations'), `<span class="note">Top colour = ${AFF_WORD_L()}${hasSeats ? ' · seats over time' : ''}</span>`) + filter +
     `<div class="grid-p">${major.map((p) => bigTile(p, years)).join('')}</div>` +
-    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'No seats in the current parliament' : (IS_EUROPE ? 'No European or international affiliation' : 'No international affiliation')} · hover for the native name</span>`) +
+    bar(`Other parties · ${minor.length}`, `<span class="note">${hasSeats ? 'Not in parliament: no seats at the last election and no parliamentary group' : (IS_EUROPE ? 'No European or international affiliation' : 'No international affiliation')} · hover for the native name</span>`) +
     `<div class="grid-m">${minor.map((p) => smallTile(p, years)).join('')}</div>`;
 }
 function viewLegend(parties, showAll) {
@@ -3122,7 +3136,6 @@ async function main() {
   try { partyRows = await loadWithFallback(SOURCES.parties); }
   catch (e) { app.innerHTML = `<div class="card status">Couldn't load the party sheet (${esc(e.message)}). Check that it is shared as “Anyone with the link can view” or published to the web.</div>`; postHeight(); return; }
   allianceRows = await early.alliances;
-  useFederations(partyRows); useFederations(allianceRows);
   let calendarRows = await early.calendar, projectionRows = [], teamRows = [];
   let pollData = await early.polling;
   if (ISO === 'NEXT') {
@@ -3130,6 +3143,9 @@ async function main() {
     if (!NEXT) { app.innerHTML = '<div class="card status">No upcoming national parliament election with a recent polling average.</div>'; postHeight(); return; }
     ISO = NEXT.iso; IS_EU = EU_MEMBERS.includes(ISO); IS_EUROPE = EUROPE.includes(ISO); pollData = NEXT.data; Object.assign(cfg, COUNTRIES[ISO] || {});
   }
+  // Only once the country is known (?country=next decides it above): outside Europe the Europarty columns
+  // are replaced by the international federation. Doing this earlier turned Europe's parties into federations.
+  useFederations(partyRows); useFederations(allianceRows);
   if (VIEW === 'ep') {
     document.title = 'Europe Elects – Automatic EP projection (test)';
     app.innerHTML = '<div class="card status" id="epa-status">Loading polls for 27 countries…</div>';
@@ -3220,7 +3236,19 @@ async function main() {
     mainCh.segs.forEach((sg) => { if (sg.entityId) parties.filter((p) => p.entityId === sg.entityId).forEach((p) => { (p.abbrs || [p.abbr]).concat(p.abbr).forEach((a) => { S.parties[a] = sg.vals; }); }); });
     cfg.seats = S; cfg.chamber = { name: mainCh.name, type: mainCh.type, seats: mainCh.totals[mainCh.totals.length - 1], elected: mainCh.elections[mainCh.elections.length - 1].label };
     parties.forEach((p) => { const own = [p.abbr, ...(p.abbrs || [])]; p.seats = own.map((a) => S.parties[a]).find(Boolean) || null; p.seatsNow = p.seats ? (p.seats[p.seats.length - 1] || 0) : 0; });
+    // Parties whose seats were won on a joint list or alliance (e.g. CDU and CSU via CDU/CSU) are in parliament too.
+    const li = mainCh.elections.length - 1;
+    mainCh.segs.filter((sg) => (sg.memberIds || []).length && sg.vals[li] > 0).forEach((sg) => {
+      parties.filter((p) => sg.memberIds.includes(p.entityId) && !p.seatsNow && !p.viaList).forEach((p) => { p.viaList = { abbr: sg.a, seats: sg.vals[li] }; });
+    });
   }
+  // Parties in a national parliamentary group today (Alliances tab: "National parliamentary group" = Yes,
+  // member without an Exit date) are in parliament even if they won no seats of their own at the last election,
+  // e.g. parties founded or joined by MPs after it.
+  (alliances || []).filter((a) => !a.inactive && (a.types || []).includes('Parliamentary group')).forEach((a) => {
+    a.members.forEach((m) => { const id = m.party && m.party.entityId; if (!id) return;
+      parties.filter((p) => p.entityId === id && !p.seatsNow && !p.viaList && !p.inGroup).forEach((p) => { p.inGroup = a.abbr || a.english; }); });
+  });
   // Government box from the sheet (falls back to cfg.government if the country has no rows there)
   const gov = buildGovernment(governmentRows, cfg, parties);
   if (gov) { cfg.government = gov; if (gov.govIds.size) parties.forEach((p) => { p.gov = gov.govIds.has(p.entityId); }); }
