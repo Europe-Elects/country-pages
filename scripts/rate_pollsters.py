@@ -23,8 +23,13 @@ Rules
   * Every pollster in an election is compared on the SAME parties: those with at least 5 % of the official
     vote (RESULT_MIN). A pollster whose poll has no figure for one of them is skipped for that election.
   * Error = mean absolute difference (percentage points) between poll and result over those parties.
-  * A pollster's rating = the mean of its per-election errors in ONE country. Lower is better.
-    A pollster active in several countries gets a separate rating in each.
+  * Per pollster and country (a pollster active in several countries is rated separately in each):
+      - average error: mean of its per-election errors (absolute measure, lower is better);
+      - vs rivals: per election, the other pollsters' average error minus its own (+ = better than the field),
+        averaged over its elections; labelled with RIVAL_LABELS; the ranking follows this score;
+      - confidence: High (3+ elections), Medium (2), Low (1);
+      - house effect: parties it over- or understated in the same direction in 2+ elections, by BIAS_MIN points or
+        more on average (poll − result).
 
 Output (written to the ratings Sheet, replacing the tabs' contents)
   * "Ratings": one row per pollster and country.
@@ -48,19 +53,36 @@ RESULT_MIN = 5.0   # every pollster is compared on the parties with at least thi
 API = 'https://sheets.googleapis.com/v4/spreadsheets/'
 COUNTRY = {}  # ISO-2 -> country name, from the results tab
 
-# Grades from the average error (percentage points), fixed cut-offs: grade applies while error < limit.
-# Only ratings based on at least MIN_GRADED elections get a grade.
-MIN_GRADED = 2
-GRADES_US = [(0.75, 'A+'), (1.00, 'A'), (1.25, 'A−'), (1.50, 'B+'), (1.75, 'B'), (2.00, 'B−'), (2.25, 'C+'),
-             (2.50, 'C'), (2.75, 'C−'), (3.00, 'D+'), (3.50, 'D'), (4.00, 'D−'), (None, 'F')]
-GRADES_ECTS = [(1.00, 'A'), (1.50, 'B'), (2.00, 'C'), (2.50, 'D'), (3.00, 'E'), (None, 'F')]
+# Score against rivals: in each election, the average error of the OTHER pollsters minus this pollster's error
+# (positive = better than the field). Labels for a pollster's average score (points):
+RIVAL_LABELS = [(0.5, 'Much better than rivals'), (0.2, 'Better than rivals'), (-0.2, 'About average'),
+                (-0.5, 'Worse than rivals'), (None, 'Much worse than rivals')]
+# Confidence from the number of elections a rating rests on.
+CONFIDENCE = [(3, 'High'), (2, 'Medium'), (1, 'Low')]
+BIAS_MIN = 0.5     # house effect: parties over-/understated by at least this much on average (points) ...
+BIAS_ELECTIONS = 2  # ... in this many elections or more, always in the same direction
 
 
-def grade(err, k, scale):
-    if k < MIN_GRADED:
-        return ''
-    e = round(err, 2)
-    return next(g for lim, g in scale if lim is None or e < lim)
+def rival_label(score):
+    if score is None:
+        return 'No rivals polled'
+    return next(lab for lim, lab in RIVAL_LABELS if lim is None or score >= lim)
+
+
+def confidence(k):
+    return next(lab for n, lab in CONFIDENCE if k >= n)
+
+
+def house_effects(ds):
+    """Parties a pollster consistently over- or understated: in at least BIAS_ELECTIONS of its elections, always in the
+    same direction, by BIAS_MIN points or more on average. [(party, average poll − result, elections)], largest first."""
+    by = {}
+    for d in ds:
+        for lab, v, r in d['pairs']:
+            by.setdefault(lab, []).append(v - r)
+    out = [(lab, mean(x), len(x)) for lab, x in by.items()
+           if len(x) >= BIAS_ELECTIONS and (all(e > 0 for e in x) or all(e < 0 for e in x)) and abs(mean(x)) >= BIAS_MIN]
+    return sorted(out, key=lambda t: -abs(t[1]))
 
 
 # ---------------------------------------------------------------- polls
@@ -277,34 +299,53 @@ def rate(apopod, results):
                            'n': p['n'], 'err': err, 'k': len(pairs),
                            'pairs': [(party_label(k, parties, iso), v, r) for k, v, r in pairs],
                            'parties': ', '.join(f'{party_label(k, parties, iso)} {v:.1f} ({r:.1f})' for k, v, r in pairs)})
+    # Score against rivals, per election
+    field = {}
+    for d in detail:
+        field.setdefault((d['iso'], d['area'], d['date']), []).append(d)
+    for ds in field.values():
+        for d in ds:
+            others = [o['err'] for o in ds if o is not d]
+            d['rivals'] = len(others)
+            d['rival_err'] = mean(others) if others else None
+            d['vs'] = (d['rival_err'] - d['err']) if others else None
     # One rating per pollster AND country: the same pollster in two countries is rated twice, separately.
     ratings = {}
     for d in detail:
         ratings.setdefault((d['pf'], d['iso']), []).append(d)
-    summary = sorted(({'pf': pf, 'iso': iso, 'k': len(ds), 'err': mean(d['err'] for d in ds),
-                       'best': min(d['err'] for d in ds), 'worst': max(d['err'] for d in ds),
-                       'last': max(d['date'] for d in ds), 'ds': ds} for (pf, iso), ds in ratings.items()),
-                     key=lambda s: (s['err'], -s['k']))
+    summary = []
+    for (pf, iso), ds in ratings.items():
+        vs = [d['vs'] for d in ds if d['vs'] is not None]
+        score = mean(vs) if vs else None
+        summary.append({'pf': pf, 'iso': iso, 'k': len(ds), 'err': mean(d['err'] for d in ds), 'vs': score, 'kv': len(vs),
+                        'label': rival_label(score), 'conf': confidence(len(ds)), 'bias': house_effects(ds),
+                        'best': min(d['err'] for d in ds), 'worst': max(d['err'] for d in ds),
+                        'last': max(d['date'] for d in ds), 'ds': ds})
+    # Ranked by the score against rivals (best first); ratings without rivals last, by error.
+    summary.sort(key=lambda s: (s['vs'] is None, -(s['vs'] or 0), s['err']))
     return summary, detail, notes
 
 
 def tables(summary, detail):
-    r = [['Rank', 'Pollster', 'ISO-2', 'Country', 'Elections rated', 'Average error (pts)', 'Grade (US)', 'Grade (ECTS)',
-          'Best election', 'Worst election', 'Latest election rated']]
+    r = [['Rank', 'Pollster', 'ISO-2', 'Country', 'Vs rivals (pts, + = better)', 'Rating', 'Average error (pts)',
+          'Elections rated', 'Confidence', 'House effect (avg poll − result)', 'Best election', 'Worst election',
+          'Latest election rated']]
     for i, s in enumerate(summary, 1):
-        r.append([i, romanise(s['pf'], s['iso']), s['iso'], COUNTRY.get(s['iso'], s['iso']), s['k'], round(s['err'], 2),
-                  grade(s['err'], s['k'], GRADES_US), grade(s['err'], s['k'], GRADES_ECTS),
+        r.append([i, romanise(s['pf'], s['iso']), s['iso'], COUNTRY.get(s['iso'], s['iso']),
+                  '' if s['vs'] is None else round(s['vs'], 2), s['label'], round(s['err'], 2), s['k'], s['conf'],
+                  ', '.join(f'{lab} {b:+.1f}' for lab, b, n in s['bias']),
                   round(s['best'], 2), round(s['worst'], 2), s['last'].isoformat()])
     d = [['ISO-2', 'Area', 'Election date', 'Pollster', 'Commissioner', 'Fieldwork end', 'Days before election',
-          'Sample size', 'Parties compared', 'Average error (pts)', 'Poll (result) per party']]
+          'Sample size', 'Parties compared', 'Average error (pts)', 'Rivals', 'Rivals\' average error', 'Vs rivals',
+          'Poll (result) per party']]
     for x in sorted(detail, key=lambda x: (x['iso'], x['area'], x['date'], x['err'])):
         d.append([x['iso'], x['area'], x['date'].isoformat(), romanise(x['pf'], x['iso']), romanise(x['c'], x['iso']), x['fe'].isoformat(), x['days'],
-                  x['n'] or '', x['k'], round(x['err'], 2), x['parties']])
+                  x['n'] or '', x['k'], round(x['err'], 2), x['rivals'],
+                  '' if x['rival_err'] is None else round(x['rival_err'], 2), '' if x['vs'] is None else round(x['vs'], 2),
+                  x['parties']])
     stamp = 'Updated ' + dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC') + \
             f' · last poll per pollster with fieldwork ending 1–{WINDOW_DAYS} days before election day' + \
-            f' · grades only from {MIN_GRADED}+ elections; US: ' + \
-            ', '.join(f'{g} <{lim:.2f}' if lim else f'{g} ≥{GRADES_US[-2][0]:.2f}' for lim, g in GRADES_US) + \
-            '; ECTS: ' + ', '.join(f'{g} <{lim:.2f}' if lim else f'{g} ≥{GRADES_ECTS[-2][0]:.2f}' for lim, g in GRADES_ECTS)
+            f' · parties with {RESULT_MIN:g}%+ of the vote · vs rivals = rivals\' average error − own error'
     r.append([]); r.append([stamp])
     return r, d
 
@@ -314,13 +355,15 @@ def write_json(path, summary, detail):
     data = {
         'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         'window': WINDOW_DAYS,
-        'grades': {'min': MIN_GRADED, 'us': GRADES_US, 'ects': GRADES_ECTS},
         'countries': {iso: COUNTRY.get(iso, iso) for iso in sorted({d['iso'] for d in detail})},
+        'labels': RIVAL_LABELS, 'confidence': CONFIDENCE, 'bias_min': BIAS_MIN, 'bias_elections': BIAS_ELECTIONS, 'result_min': RESULT_MIN,
         'pollsters': [{'name': romanise(s['pf'], s['iso']), **({'orig': s['pf']} if romanise(s['pf'], s['iso']) != s['pf'] else {}),
                        'iso': s['iso'], 'err': round(s['err'], 2),
-                       'us': grade(s['err'], s['k'], GRADES_US), 'ects': grade(s['err'], s['k'], GRADES_ECTS), 'elections': [
+                       'vs': None if s['vs'] is None else round(s['vs'], 2), 'kv': s['kv'], 'label': s['label'], 'conf': s['conf'],
+                       'bias': [[lab, round(b, 1), n] for lab, b, n in s['bias']], 'elections': [
             {'iso': d['iso'], 'area': d['area'], 'date': d['date'].isoformat(), 'fe': d['fe'].isoformat(),
              'days': d['days'], 'n': d['n'], 'c': romanise(d['c'], d['iso']), 'err': round(d['err'], 2),
+             'rivals': d['rivals'], 'rival_err': None if d['rival_err'] is None else round(d['rival_err'], 2),
              'parties': [[a, round(v, 1), round(r, 2)] for a, v, r in d['pairs']]}
             for d in sorted(s['ds'], key=lambda d: d['date'], reverse=True)]} for s in summary],
     }
