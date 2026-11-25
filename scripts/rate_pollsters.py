@@ -18,8 +18,9 @@ Input
 Rules
   * Per election and pollster, only the pollster's LAST poll with fieldwork ending 1-30 days before
     election day counts. Pollsters without such a poll are left out of that election.
-  * Figures are compared as published. Seat projections (•U: S) become seat shares; polls whose base includes
-    a non-choice share (•N: undecided, won't vote, refused …) are rescaled to valid choices: × 100 / (100 − N).
+  * Figures are compared as published. Seat projections (•U: S) become seat shares; polls that report a non-choice
+    share (•N: undecided, won't vote, refused …) or give figures as a share of all respondents (•VS) are rescaled
+    so that parties + others (•O) = 100.
   * Every pollster in an election is compared on the SAME parties: those with at least 5 % of the official
     vote (RESULT_MIN). A pollster whose poll has no figure for one of them is skipped for that election.
   * Error = mean absolute difference (percentage points) between poll and result over those parties.
@@ -27,7 +28,7 @@ Rules
       - average error: mean of its per-election errors (absolute measure, lower is better);
       - vs rivals: per election, the other pollsters' average error minus its own (+ = better than the field),
         averaged over its elections; labelled with RIVAL_LABELS; the ranking follows this score;
-      - confidence: High (3+ elections), Medium (2), Low (1);
+      - confidence: High (more than 10 elections), Medium (6–10), Low (5 or fewer);
       - house effect: parties it over- or understated in the same direction in 2+ elections, by BIAS_MIN points or
         more on average (poll − result).
 
@@ -58,7 +59,7 @@ COUNTRY = {}  # ISO-2 -> country name, from the results tab
 RIVAL_LABELS = [(0.5, 'Much better than rivals'), (0.2, 'Better than rivals'), (-0.2, 'About average'),
                 (-0.5, 'Worse than rivals'), (None, 'Much worse than rivals')]
 # Confidence from the number of elections a rating rests on.
-CONFIDENCE = [(3, 'High'), (2, 'Medium'), (1, 'Low')]
+CONFIDENCE = [(11, 'High'), (6, 'Medium'), (1, 'Low')]  # more than 10 elections / more than 5 / fewer
 BIAS_MIN = 0.5     # house effect: parties over-/understated by at least this much on average (points) ...
 BIAS_ELECTIONS = 2  # ... in this many elections or more, always in the same direction
 
@@ -136,18 +137,20 @@ def read_polls(text):
                 except (TypeError, ValueError): return None
             # Figures are compared as published, except:
             #  * seat projections (•U: S) become seat shares: seats × 100 / total seats (•VS, else the seats listed);
-            #  * polls that include a non-choice share in the base (•N: undecided, won't vote, refused, …) are
-            #    rescaled to valid choices: × 100 / (100 − N).
+            #  * polls that report a non-choice share (•N: undecided, won't vote, refused …) or whose figures are a share
+            #    of all respondents (•VS = their sum, not 100) are rescaled so that the parties plus "others" (•O)
+            #    add up to 100, i.e. to valid choices only.
             # (•EX, where given, is reported next to figures that already add up to 100 without it: no change.)
+            other = max(num(fields.get('O')) or 0.0, 0.0)
             if fields.get('U') == 'S':
-                seats = num(fields.get('VS')) or (sum(values.values()) + max(num(fields.get('O')) or 0.0, 0.0))
+                seats = num(fields.get('VS')) or (sum(values.values()) + other)
                 if not seats:
                     continue
                 values = {k: v * 100 / seats for k, v in values.items()}
-            else:
-                nonchoice = num(fields.get('N')) or 0.0
-                if 0 < nonchoice < 100:
-                    values = {k: v * 100 / (100 - nonchoice) for k, v in values.items()}
+            elif (num(fields.get('N')) or 0) > 0 or fields.get('VS'):
+                valid = sum(values.values()) + other
+                if valid > 0:
+                    values = {k: v * 100 / valid for k, v in values.items()}
             ss = num(fields.get('SS'))
             polls.append({'fe': fe, 'pf': pf, 'c': com, 'a': fields.get('A', ''), 'v': values, 'n': int(ss) if ss else None})
             done = True
