@@ -22,11 +22,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Two jobs: "build" makes the site and uploads it; "deploy" publishes it. Publishing in the same job right after
+  # the upload sometimes fails with "No artifacts named github-pages were found" (actions/deploy-pages#451).
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out the country pages
         uses: actions/checkout@v4
@@ -80,6 +79,13 @@ jobs:
           mkdir -p site/fr-2027 && cp fr-2027/index.html site/fr-2027/
           [ -f EMBED-CODES.md ] && cp EMBED-CODES.md site/ || true
           python3 scripts/build_polling.py apopod site/polling
+          mkdir -p site/pollster-ratings && cp pollster-ratings/index.html site/pollster-ratings/
+
+      - name: Pollster ratings data (pollster-ratings page)
+        env:
+          GOOGLE_TOKEN: ${{ steps.google.outputs.access_token }}
+          RATINGS_SHEET_ID: ${{ secrets.RATINGS_SHEET_ID }}
+        run: python3 scripts/rate_pollsters.py apopod --json site/pollster-ratings/data.json || echo "pollster ratings not updated"
 
       - uses: actions/configure-pages@v5
 
@@ -87,5 +93,12 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
