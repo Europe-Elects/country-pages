@@ -37,7 +37,7 @@ input[type=search]{width:min(240px,100%)}
 .seg button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff;position:relative}
 select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-visible,.more:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .board{padding:6px 0 10px}
-.cols,.row{display:grid;grid-template-columns:44px minmax(150px,1.1fr) 64px minmax(200px,2fr) 54px;align-items:center;gap:0 12px;padding:0 16px}
+.cols,.row{display:grid;grid-template-columns:44px minmax(150px,1.1fr) 56px 64px minmax(200px,2fr) 54px;align-items:center;gap:0 12px;padding:0 16px}
 .cols{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding-top:8px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
 .cols .num,.row .num{text-align:right}
 .axis{position:relative;height:16px;margin:0 12px}
@@ -58,6 +58,13 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
 .avg{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--navy);box-shadow:0 0 0 2px #fff}
 .hit{position:absolute;top:0;bottom:0;width:22px;margin-left:-11px;cursor:pointer}
 .err{font-size:18px;font-weight:700;text-align:right}
+.gr{font-style:normal;justify-self:center;min-width:38px;padding:3px 6px;border-radius:6px;text-align:center;font-size:17px;font-weight:700;line-height:1.1;border:1px solid transparent}
+.gr.gA{background:var(--navy);color:#fff}.gr.gB{background:var(--blue);color:#fff}.gr.gC{background:#C9D6EC;color:var(--ink)}
+.gr.gD{background:#E4EAF4;color:var(--ink)}.gr.gE,.gr.gF{background:#fff;color:var(--ink);border-color:#C9C6BE}
+.gr.none{background:none;color:var(--muted);font-weight:600;font-size:15px}
+.scale{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.scale span{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
+.scale .gr{font-size:14px;min-width:32px}
 .key{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);padding:10px 16px 0}
 .key span{display:inline-flex;align-items:center;gap:6px}
 .key i{display:inline-block;position:relative}
@@ -82,11 +89,11 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
 .method ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 @media (max-width:700px){
   h1{font-size:24px;padding:10px 20px}
-  .cols,.row{grid-template-columns:28px 1fr 48px;gap:0 10px;padding:0 12px}
-  .cols{grid-template-areas:"r w e" ". s s";row-gap:4px}
-  .cols .c-k{display:none}.cols .c-strip{grid-area:s}.cols>span:first-child{grid-area:r}.cols>span:nth-child(2){grid-area:w}.cols>span:last-child{grid-area:e}
-  .row{grid-template-areas:"r w e" ". s s";padding-top:6px;padding-bottom:4px}
-  .row .rank{grid-area:r}.row .who{grid-area:w}.row .err{grid-area:e}.row .strip{grid-area:s}.row .k{display:none}
+  .cols,.row{grid-template-columns:28px 1fr 44px 48px;gap:0 10px;padding:0 12px}
+  .cols{grid-template-areas:"r w g e" ". s s s";row-gap:4px}
+  .cols .c-k{display:none}.cols .c-strip{grid-area:s}.cols>span:first-child{grid-area:r}.cols>span:nth-child(2){grid-area:w}.cols .c-g{grid-area:g}.cols>span:last-child{grid-area:e}
+  .row{grid-template-areas:"r w g e" ". s s s";padding-top:6px;padding-bottom:4px}
+  .row .rank{grid-area:r}.row .who{grid-area:w}.row .gr{grid-area:g}.row .err{grid-area:e}.row .strip{grid-area:s}.row .k{display:none}
   .detail{padding:12px}
 }
 </style>
@@ -110,11 +117,14 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
     <div><span class="grp-l" id="min-l">Elections rated</span><div class="seg" role="group" aria-labelledby="min-l" id="f-min">
       <button type="button" data-v="1" aria-pressed="false">1+</button><button type="button" data-v="2" aria-pressed="true">2+</button><button type="button" data-v="3" aria-pressed="false">3+</button>
     </div></div>
+    <div><span class="grp-l" id="sys-l">Grades</span><div class="seg" role="group" aria-labelledby="sys-l" id="f-sys">
+      <button type="button" data-v="us" aria-pressed="true">US</button><button type="button" data-v="ects" aria-pressed="false">EU (ECTS)</button>
+    </div></div>
     <div><label for="f-q">Pollster</label><input type="search" id="f-q" placeholder="Search…" autocomplete="off"></div>
   </div>
 
   <section class="card board" aria-label="Pollster ranking">
-    <div class="cols" aria-hidden="true"><span class="num">#</span><span>Pollster</span><span class="c-k" style="text-align:center">Elections</span><span class="c-strip axis" id="axis"></span><span class="num">Error</span></div>
+    <div class="cols" aria-hidden="true"><span class="num">#</span><span>Pollster</span><span class="c-g" style="text-align:center">Grade</span><span class="c-k" style="text-align:center">Elections</span><span class="c-strip axis" id="axis"></span><span class="num">Error</span></div>
     <div id="rows" role="list"></div>
     <div class="key" aria-hidden="true"><span><i class="ka"></i>Average across elections</span><span><i class="kd"></i>One election</span><span>Click a pollster to see each election</span></div>
     <button type="button" class="more" id="more" hidden></button>
@@ -137,8 +147,11 @@ const f1 = (x) => x.toFixed(1), f2 = (x) => x.toFixed(2);
 const AREA = { GBN: 'Great Britain' };
 
 let D = null, shown = PAGE, open = new Set();
-const state = { country: '', min: 2, q: '' };
-try { const u = new URLSearchParams(location.search); if (u.get('country')) state.country = u.get('country').toUpperCase(); if (u.get('min')) state.min = Math.max(1, Math.min(3, +u.get('min') || 2)); } catch (e) {}
+const state = { country: '', min: 2, q: '', sys: 'us' };
+try { const u = new URLSearchParams(location.search); if (u.get('country')) state.country = u.get('country').toUpperCase(); if (u.get('min')) state.min = Math.max(1, Math.min(3, +u.get('min') || 2));
+  if (u.get('grades') === 'ects' || u.get('grades') === 'eu') state.sys = 'ects'; } catch (e) {}
+const gcls = (g) => g ? 'g' + g[0] : 'none';
+const gname = () => state.sys === 'us' ? 'US grade' : 'ECTS grade';
 
 fetch(DATA_URL, { cache: 'no-cache' }).then((r) => r.json()).then((d) => { D = d; init(); }).catch(() => {
   $('#rows').innerHTML = '<p class="empty">The ratings could not be loaded.</p>';
@@ -157,22 +170,35 @@ function init() {
   $('#f-min').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.min = +b.dataset.v;
     document.querySelectorAll('#f-min button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); reset(); });
   $('#more').addEventListener('click', () => { shown += PAGE * 5; render(); });
+  document.querySelectorAll('#f-sys button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.sys)));
+  $('#f-sys').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.sys = b.dataset.v;
+    document.querySelectorAll('#f-sys button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); method(); render(); });
+  method();
+  render();
+}
+
+function scaleHtml() {
+  const sc = D.grades[state.sys];
+  return sc.map(([lim, g], i) => `<span><i class="gr ${gcls(g)}">${esc(g)}</i>${lim == null ? `${f2(sc[i - 1][0])}+` : `under ${f2(lim)}`}</span>`).join('');
+}
+
+function method() {
   const elections = new Set(D.pollsters.flatMap((p) => p.elections.map((e) => p.iso + e.area + e.date)));
   $('#method').innerHTML = [
     `Only the <b>last poll</b> each pollster published with fieldwork ending 1–${D.window} days before election day counts. Pollsters without such a poll are left out of that election.`,
-    'Polls are scaled to 100% across the parties they list (plus "others"), then compared with the official vote share of each of those parties.',
+    'In each election, all pollsters are compared on the <b>same parties</b>: those that won 5% or more of the official vote. A pollster whose poll gave no figure for one of them is left out of that election.',
+    'Figures are taken as published. Polls that include undecided voters, non-voters or refusals in their base are rescaled to valid answers only; seat projections are converted to seat shares.',
     'The <b>error</b> is the average gap per party in percentage points. A pollster\'s rating is the average of its errors across the elections it was rated in, in that country.',
-    'Pollsters with only one or two elections can rank high or low by chance; the number of elections rated is shown with each rating.',
+    `<b>Grades</b> follow fixed cut-offs of the average error (points) and are only given to pollsters rated on ${D.grades.min} or more elections in a country; a single election can be luck. ${state.sys === 'us' ? 'US letter grades' : 'EU grades on the ECTS scale'}:<div class="scale">${scaleHtml()}</div>`,
     `Updated ${fmtDate(D.updated.slice(0, 10))}. ${elections.size} elections in ${Object.keys(D.countries).length} countries and territories.`,
   ].map((t) => `<li>${t}</li>`).join('');
-  render();
 }
 
 function reset() { shown = PAGE; open.clear(); render(); }
 
 function visible() {
   return D.pollsters.filter((p) => (!state.country || p.iso === state.country) && p.elections.length >= state.min
-    && (!state.q || p.name.toLowerCase().includes(state.q)));
+    && (!state.q || p.name.toLowerCase().includes(state.q) || (p.orig || '').toLowerCase().includes(state.q)));
 }
 
 function render() {
@@ -196,10 +222,12 @@ function render() {
     const id = p.iso + '|' + p.name, errs = p.elections.map((e) => e.err);
     const lo = Math.min(...errs), hi = Math.max(...errs);
     const rank = list.indexOf(p) + 1;
-    const label = `${rank}. ${p.name}, ${cname(p.iso)}: average error ${f2(p.err)} points over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
+    const g = p[state.sys];
+    const label = `${rank}. ${p.name}, ${cname(p.iso)}: ${g ? gname() + ' ' + g + ', ' : 'no grade, '}average error ${f2(p.err)} points over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
     return `<div class="row" role="listitem" tabindex="0" data-id="${esc(id)}" aria-expanded="${open.has(id)}" aria-label="${esc(label)}">
       <span class="rank">${rank}</span>
       <span class="who"><b>${esc(p.name)}</b><small>${esc(cname(p.iso))}</small></span>
+      <span class="gr ${gcls(g)}" title="${g ? esc(gname()) : 'No grade: fewer than ' + D.grades.min + ' elections'}">${g ? esc(g) : '–'}</span>
       <span class="k">${p.elections.length}</span>
       <span class="strip">${ticks.map((t) => `<i class="g" style="left:${x(t)}%"></i>`).join('')}
         ${p.elections.length > 1 ? `<i class="rng" style="left:${x(lo)}%;width:${x(hi) - x(lo)}%"></i>` : ''}
@@ -240,7 +268,7 @@ $('#rows').addEventListener('mousemove', (ev) => {
   const [iso, ...n] = row.dataset.id.split('|'); const p = D.pollsters.find((q) => q.iso === iso && q.name === n.join('|'));
   if (hit) { const e = p.elections[+hit.dataset.e];
     tip.innerHTML = `<b>${esc(p.name)} · ${esc(fmtDate(e.date))}</b>Error ${f2(e.err)} pts · ${e.parties.length} parties<br>Fieldwork ended ${e.days} day${e.days > 1 ? 's' : ''} before`;
-  } else tip.innerHTML = `<b>${esc(p.name)}</b>Average error ${f2(p.err)} pts over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
+  } else tip.innerHTML = `<b>${esc(p.name)}${p[state.sys] ? ' · ' + esc(p[state.sys]) : ''}</b>Average error ${f2(p.err)} pts over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
   tip.hidden = false;
   const w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, ev.clientX - w / 2)) + 'px';
