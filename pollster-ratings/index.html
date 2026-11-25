@@ -9,11 +9,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Advent+Pro:wght@400;500;600;700&display=swap">
 <style>
 /* Same look as the country pages (light only, like them). */
-:root{--bg:#F7F6F2;--line:#E4E2DB;--line2:#ECEAE4;--navy:#1B2A4A;--blue:#2A5DB0;--gold:#F2B705;--ink:#1A1D23;--muted:#565B66;--chip:#EFEDE7;--tag:#E7EEF9;--tagInk:#1E4C99;--grid:#E9E7E1}
+:root{--bg:#F7F6F2;--line:#E4E2DB;--line2:#ECEAE4;--navy:#1B2A4A;--blue:#2A5DB0;--gold:#F2B705;--ink:#1A1D23;--muted:#565B66;--tagInk:#1E4C99;--grid:#E9E7E1;
+  /* diverging scale for "vs rivals": blue = better, rust = worse, grey = about average */
+  --b2:#1E4C99;--b1:#D3E0F5;--mid:#ECEAE4;--w1:#F6DCCB;--w2:#A8441A}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg)}
 body{font-family:'Advent Pro',system-ui,sans-serif;font-size:16px;color:var(--ink);line-height:1.35}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .wrap{max-width:1120px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:16px}
 .head{display:flex;flex-direction:column;align-items:center;gap:14px}
 .eyebrow{margin:0;font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--muted)}
@@ -21,6 +22,8 @@ h1{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-size:30px;l
 .card{background:#fff;border:1px solid var(--line);border-radius:6px}
 .lead{border-top:4px solid var(--blue);border-radius:8px;padding:16px 22px;display:flex;flex-direction:column;gap:12px}
 .lead p{margin:0;font-size:17px}
+.measures{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px 22px;font-size:15px;color:var(--muted)}
+.measures b{display:block;color:var(--ink);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
 .stats{display:flex;flex-wrap:wrap;gap:10px 28px}
 .stat .v{font-size:26px;font-weight:700;line-height:1}
 .stat .l{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
@@ -30,26 +33,35 @@ h1{margin:0;padding:12px 40px;background:var(--navy);color:#fff;font-size:30px;l
 .ctl{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px}
 .ctl label,.ctl .grp-l{display:block;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--blue);text-transform:uppercase;margin-bottom:4px}
 select,input[type=search]{min-height:40px;padding:0 10px;border:1px solid #D5D3CC;border-radius:6px;background:#fff;color:var(--ink);font:600 16px 'Advent Pro',system-ui,sans-serif}
-input[type=search]{width:min(240px,100%)}
+input[type=search]{width:min(220px,100%)}
 .seg{display:inline-flex}
 .seg button{min-height:40px;min-width:52px;padding:0 12px;border:1px solid #D5D3CC;background:#fff;color:var(--ink);font:700 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer;margin-left:-1px}
 .seg button:first-child{border-radius:6px 0 0 6px;margin-left:0}.seg button:last-child{border-radius:0 6px 6px 0}
 .seg button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff;position:relative}
 select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-visible,.more:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .board{padding:6px 0 10px}
-.cols,.row{display:grid;grid-template-columns:44px minmax(150px,1.1fr) 56px 64px minmax(200px,2fr) 54px;align-items:center;gap:0 12px;padding:0 16px}
+.cols,.row{display:grid;grid-template-columns:40px minmax(140px,1fr) 150px 92px minmax(170px,1.5fr) 54px;align-items:center;gap:0 12px;padding:0 16px}
 .cols{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding-top:8px;padding-bottom:6px;border-bottom:1px solid var(--line2)}
 .cols .num,.row .num{text-align:right}
 .axis{position:relative;height:16px;margin:0 12px}
 .axis span{position:absolute;transform:translateX(-50%);font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
-.row{min-height:46px;border-bottom:1px solid var(--line2);cursor:pointer;background:#fff}
+.row{min-height:50px;border-bottom:1px solid var(--line2);cursor:pointer;background:#fff}
 .row:hover{background:#FBFAF7}
 .row[aria-expanded="true"]{background:#F4F7FC}
 .rank{font-size:15px;font-weight:700;color:var(--muted);text-align:right}
 .who{display:flex;flex-direction:column;min-width:0}
 .who b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .who small{font-size:13px;color:var(--muted)}
-.k{font-size:16px;font-weight:600;text-align:center}
+.vs{display:flex;align-items:center;gap:8px;min-width:0}
+.chip{display:inline-block;padding:3px 8px;border-radius:6px;font-size:14px;font-weight:700;white-space:nowrap;border:1px solid transparent;font-style:normal}
+.chip.s2{background:var(--b2);color:#fff}.chip.s1{background:var(--b1);color:var(--ink)}.chip.s0{background:var(--mid);color:var(--ink)}
+.chip.s-1{background:var(--w1);color:var(--ink)}.chip.s-2{background:var(--w2);color:#fff}.chip.na{background:#fff;color:var(--muted);border-color:#D5D3CC;font-weight:600}
+.vs .sc{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.conf{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.conf .bars{display:inline-flex;align-items:flex-end;gap:2px;height:16px}
+.conf i{display:inline-block;width:6px;border-radius:1px;background:#D5D3CC}
+.conf i:nth-child(1){height:8px}.conf i:nth-child(2){height:12px}.conf i:nth-child(3){height:16px}
+.conf i.on{background:var(--navy)}
 .strip{position:relative;height:30px;margin:0 12px}
 .strip .g{position:absolute;top:4px;bottom:4px;width:1px;background:var(--grid)}
 .strip .rng{position:absolute;top:14px;height:2px;background:#C9D6EC;border-radius:1px}
@@ -58,22 +70,21 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
 .avg{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--navy);box-shadow:0 0 0 2px #fff}
 .hit{position:absolute;top:0;bottom:0;width:22px;margin-left:-11px;cursor:pointer}
 .err{font-size:18px;font-weight:700;text-align:right}
-.gr{font-style:normal;justify-self:center;min-width:38px;padding:3px 6px;border-radius:6px;text-align:center;font-size:17px;font-weight:700;line-height:1.1;border:1px solid transparent}
-.gr.gA{background:var(--navy);color:#fff}.gr.gB{background:var(--blue);color:#fff}.gr.gC{background:#C9D6EC;color:var(--ink)}
-.gr.gD{background:#E4EAF4;color:var(--ink)}.gr.gE,.gr.gF{background:#fff;color:var(--ink);border-color:#C9C6BE}
-.gr.none{background:none;color:var(--muted);font-weight:600;font-size:15px}
-.scale{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.scale span{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
-.scale .gr{font-size:14px;min-width:32px}
 .key{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);padding:10px 16px 0}
 .key span{display:inline-flex;align-items:center;gap:6px}
-.key i{display:inline-block;position:relative}
+.key i{display:inline-block}
 .key .ka{width:12px;height:12px;border-radius:50%;background:var(--navy)}
 .key .kd{width:10px;height:10px;border-radius:50%;border:2px solid var(--blue);background:#fff}
-.detail{padding:12px 16px 16px 72px;border-bottom:1px solid var(--line2);background:#F4F7FC;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
+.detail{padding:12px 16px 16px 68px;border-bottom:1px solid var(--line2);background:#F4F7FC;display:flex;flex-direction:column;gap:10px}
+.house{font-size:15px}
+.house b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin-right:8px}
+.house .pt{display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:600;font-variant-numeric:tabular-nums}
+.house .m{color:var(--muted)}
+.els{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px}
 .el{background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px}
 .el h3{margin:0 0 2px;font-size:16px;display:flex;justify-content:space-between;gap:8px}
-.el .meta{font-size:13px;color:var(--muted);margin-bottom:6px}
+.el .meta{font-size:13px;color:var(--muted);margin-bottom:4px}
+.el .riv{font-size:14px;margin-bottom:6px}
 .el table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .el th{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;text-align:right;padding:2px 0 4px}
 .el th:first-child,.el td:first-child{text-align:left}
@@ -81,19 +92,20 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
 .el td.d{color:var(--muted)}
 .more{display:block;margin:12px auto 0;min-height:40px;padding:0 18px;border:1px solid var(--navy);border-radius:6px;background:#fff;color:var(--navy);font:700 16px 'Advent Pro',system-ui,sans-serif;cursor:pointer}
 .empty{padding:24px 16px;color:var(--muted);text-align:center}
-.tip{position:fixed;z-index:10;pointer-events:none;background:var(--navy);color:#fff;border-radius:6px;padding:8px 10px;font-size:14px;line-height:1.3;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.tip{position:fixed;z-index:10;pointer-events:none;background:var(--navy);color:#fff;border-radius:6px;padding:8px 10px;font-size:14px;line-height:1.3;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
 .tip b{display:block;font-size:15px}
 .tip[hidden]{display:none}
 .method{padding:14px 22px;font-size:15px;color:var(--muted)}
 .method h2{margin:0 0 6px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
-.method ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
-@media (max-width:700px){
+.method ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.method .chips{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;color:var(--ink)}
+@media (max-width:760px){
   h1{font-size:24px;padding:10px 20px}
-  .cols,.row{grid-template-columns:28px 1fr 44px 48px;gap:0 10px;padding:0 12px}
-  .cols{grid-template-areas:"r w g e" ". s s s";row-gap:4px}
-  .cols .c-k{display:none}.cols .c-strip{grid-area:s}.cols>span:first-child{grid-area:r}.cols>span:nth-child(2){grid-area:w}.cols .c-g{grid-area:g}.cols>span:last-child{grid-area:e}
-  .row{grid-template-areas:"r w g e" ". s s s";padding-top:6px;padding-bottom:4px}
-  .row .rank{grid-area:r}.row .who{grid-area:w}.row .gr{grid-area:g}.row .err{grid-area:e}.row .strip{grid-area:s}.row .k{display:none}
+  .cols,.row{grid-template-columns:26px 1fr auto;gap:4px 10px;padding:0 12px}
+  .cols{grid-template-areas:"r w e" ". s s"}
+  .cols .c-v,.cols .c-c{display:none}.cols .c-strip{grid-area:s}.cols>span:first-child{grid-area:r}.cols>span:nth-child(2){grid-area:w}.cols>span:last-child{grid-area:e}
+  .row{grid-template-areas:"r w e" ". v c" ". s s";padding-top:8px;padding-bottom:6px}
+  .row .rank{grid-area:r}.row .who{grid-area:w}.row .err{grid-area:e}.row .vs{grid-area:v}.row .conf{grid-area:c;justify-self:end}.row .strip{grid-area:s}
   .detail{padding:12px}
 }
 </style>
@@ -107,26 +119,32 @@ select:focus-visible,input:focus-visible,.seg button:focus-visible,.row:focus-vi
 
   <section class="card lead" aria-label="About the ratings">
     <p>How close did each pollster's final poll come to the official result? Each pollster is rated separately in every country it polls, on its last poll before each election.</p>
+    <div class="measures">
+      <div><b>Vs rivals</b>More or less accurate than the other pollsters in the same elections, in points.</div>
+      <div><b>Error</b>How far off its polls were, on average, in points per party.</div>
+      <div><b>Confidence</b>How many elections the rating rests on.</div>
+      <div><b>House effect</b>Parties it keeps over- or understating. Click a pollster to see it.</div>
+    </div>
     <div class="stats" id="stats"></div>
   </section>
 
-  <div class="bar"><h2>Ranking</h2><span class="note">Average error per party, in percentage points · lower is better</span></div>
+  <div class="bar"><h2>Ranking</h2><span class="note" id="sortnote"></span></div>
 
   <div class="ctl" role="group" aria-label="Filters">
     <div><label for="f-country">Country</label><select id="f-country"><option value="">All countries</option></select></div>
     <div><span class="grp-l" id="min-l">Elections rated</span><div class="seg" role="group" aria-labelledby="min-l" id="f-min">
       <button type="button" data-v="1" aria-pressed="false">1+</button><button type="button" data-v="2" aria-pressed="true">2+</button><button type="button" data-v="3" aria-pressed="false">3+</button>
     </div></div>
-    <div><span class="grp-l" id="sys-l">Grades</span><div class="seg" role="group" aria-labelledby="sys-l" id="f-sys">
-      <button type="button" data-v="us" aria-pressed="true">US</button><button type="button" data-v="ects" aria-pressed="false">EU (ECTS)</button>
+    <div><span class="grp-l" id="sort-l">Rank by</span><div class="seg" role="group" aria-labelledby="sort-l" id="f-sort">
+      <button type="button" data-v="vs" aria-pressed="true">Vs rivals</button><button type="button" data-v="err" aria-pressed="false">Error</button>
     </div></div>
     <div><label for="f-q">Pollster</label><input type="search" id="f-q" placeholder="Search…" autocomplete="off"></div>
   </div>
 
   <section class="card board" aria-label="Pollster ranking">
-    <div class="cols" aria-hidden="true"><span class="num">#</span><span>Pollster</span><span class="c-g" style="text-align:center">Grade</span><span class="c-k" style="text-align:center">Elections</span><span class="c-strip axis" id="axis"></span><span class="num">Error</span></div>
+    <div class="cols" aria-hidden="true"><span class="num">#</span><span>Pollster</span><span class="c-v">Vs rivals</span><span class="c-c">Confidence</span><span class="c-strip axis" id="axis"></span><span class="num">Error</span></div>
     <div id="rows" role="list"></div>
-    <div class="key" aria-hidden="true"><span><i class="ka"></i>Average across elections</span><span><i class="kd"></i>One election</span><span>Click a pollster to see each election</span></div>
+    <div class="key" aria-hidden="true"><span><i class="ka"></i>Average error</span><span><i class="kd"></i>Error in one election</span><span>Click a pollster for each election and its house effect</span></div>
     <button type="button" class="more" id="more" hidden></button>
   </section>
 
@@ -144,72 +162,75 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmtDate = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const f1 = (x) => x.toFixed(1), f2 = (x) => x.toFixed(2);
+const sgn = (x, f = f2) => (x > 0 ? '+' : x < 0 ? '−' : '±') + f(Math.abs(x));
 const AREA = { GBN: 'Great Britain' };
+const SHORT = { 'Much better than rivals': 'Much better', 'Better than rivals': 'Better', 'About average': 'Average',
+  'Worse than rivals': 'Worse', 'Much worse than rivals': 'Much worse', 'No rivals polled': 'No rivals' };
+const STEP = { 'Much better than rivals': 's2', 'Better than rivals': 's1', 'About average': 's0', 'Worse than rivals': 's-1', 'Much worse than rivals': 's-2' };
+const CONF_N = { High: 3, Medium: 2, Low: 1 };
 
 let D = null, shown = PAGE, open = new Set();
-const state = { country: '', min: 2, q: '', sys: 'us' };
-try { const u = new URLSearchParams(location.search); if (u.get('country')) state.country = u.get('country').toUpperCase(); if (u.get('min')) state.min = Math.max(1, Math.min(3, +u.get('min') || 2));
-  if (u.get('grades') === 'ects' || u.get('grades') === 'eu') state.sys = 'ects'; } catch (e) {}
-const gcls = (g) => g ? 'g' + g[0] : 'none';
-const gname = () => state.sys === 'us' ? 'US grade' : 'ECTS grade';
+const state = { country: '', min: 2, q: '', sort: 'vs' };
+try { const u = new URLSearchParams(location.search); if (u.get('country')) state.country = u.get('country').toUpperCase();
+  if (u.get('min')) state.min = Math.max(1, Math.min(3, +u.get('min') || 2)); if (u.get('sort') === 'error') state.sort = 'err'; } catch (e) {}
 
 fetch(DATA_URL, { cache: 'no-cache' }).then((r) => r.json()).then((d) => { D = d; init(); }).catch(() => {
   $('#rows').innerHTML = '<p class="empty">The ratings could not be loaded.</p>';
 });
 
 function cname(iso) { return (D.countries && D.countries[iso]) || iso; }
+function chip(label) { return `<i class="chip ${STEP[label] || 'na'}">${esc(SHORT[label] || label)}</i>`; }
+function confHtml(c) {
+  const n = CONF_N[c] || 1;
+  return `<span class="bars" aria-hidden="true">${[1, 2, 3].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span><span>${esc(c)}</span>`;
+}
+function setPressed(sel, v) { document.querySelectorAll(sel + ' button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === String(v)))); }
 
 function init() {
   const isos = Object.keys(D.countries).sort((a, b) => cname(a).localeCompare(cname(b)));
   $('#f-country').insertAdjacentHTML('beforeend', isos.map((i) => `<option value="${i}">${esc(cname(i))}</option>`).join(''));
   if (!D.countries[state.country]) state.country = '';
   $('#f-country').value = state.country;
-  document.querySelectorAll('#f-min button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.v === state.min)));
+  setPressed('#f-min', state.min); setPressed('#f-sort', state.sort);
   $('#f-country').addEventListener('change', (e) => { state.country = e.target.value; reset(); });
   $('#f-q').addEventListener('input', (e) => { state.q = e.target.value.trim().toLowerCase(); reset(); });
-  $('#f-min').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.min = +b.dataset.v;
-    document.querySelectorAll('#f-min button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); reset(); });
+  $('#f-min').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.min = +b.dataset.v; setPressed('#f-min', state.min); reset(); });
+  $('#f-sort').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.sort = b.dataset.v; setPressed('#f-sort', state.sort); reset(); });
   $('#more').addEventListener('click', () => { shown += PAGE * 5; render(); });
-  document.querySelectorAll('#f-sys button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.sys)));
-  $('#f-sys').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.sys = b.dataset.v;
-    document.querySelectorAll('#f-sys button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); method(); render(); });
-  method();
-  render();
-}
-
-function scaleHtml() {
-  const sc = D.grades[state.sys];
-  return sc.map(([lim, g], i) => `<span><i class="gr ${gcls(g)}">${esc(g)}</i>${lim == null ? `${f2(sc[i - 1][0])}+` : `under ${f2(lim)}`}</span>`).join('');
-}
-
-function method() {
   const elections = new Set(D.pollsters.flatMap((p) => p.elections.map((e) => p.iso + e.area + e.date)));
+  const L = D.labels;
+  const bands = L.map(([lim, lab], i) => `<span>${chip(lab)} ${lim == null ? 'below ' + sgn(L[i - 1][0]) : i === 0 ? sgn(lim) + ' or more' : sgn(lim) + ' to ' + sgn(L[i - 1][0])}</span>`);
   $('#method').innerHTML = [
     `Only the <b>last poll</b> each pollster published with fieldwork ending 1–${D.window} days before election day counts. Pollsters without such a poll are left out of that election.`,
-    'In each election, all pollsters are compared on the <b>same parties</b>: those that won 5% or more of the official vote. A pollster whose poll gave no figure for one of them is left out of that election.',
+    `In each election, all pollsters are compared on the <b>same parties</b>: those that won ${D.result_min}% or more of the official vote. A pollster whose poll gave no figure for one of them is left out of that election.`,
     'Figures are taken as published. Polls that include undecided voters, non-voters or refusals in their base are rescaled to valid answers only; seat projections are converted to seat shares.',
-    'The <b>error</b> is the average gap per party in percentage points. A pollster\'s rating is the average of its errors across the elections it was rated in, in that country.',
-    `<b>Grades</b> follow fixed cut-offs of the average error (points) and are only given to pollsters rated on ${D.grades.min} or more elections in a country; a single election can be luck. ${state.sys === 'us' ? 'US letter grades' : 'EU grades on the ECTS scale'}:<div class="scale">${scaleHtml()}</div>`,
+    '<b>Error</b> is the average gap per party in percentage points, averaged over the pollster\'s elections in that country. It is an absolute measure: some elections are harder to poll than others, so errors are best compared within a country.',
+    `<b>Vs rivals</b> compares each poll with the other pollsters' polls in the same election: their average error minus this pollster's error, averaged over its elections. Positive means more accurate than the field. Ratings:<div class="chips">${bands.join('')}</div>`,
+    '<b>Confidence</b>: High with 3 or more elections, Medium with 2, Low with 1. A single election can be luck.',
+    `<b>House effect</b>: parties a pollster over- or understated in the same direction in at least ${D.bias_elections} elections, by ${D.bias_min} points or more on average.`,
     `Updated ${fmtDate(D.updated.slice(0, 10))}. ${elections.size} elections in ${Object.keys(D.countries).length} countries and territories.`,
   ].map((t) => `<li>${t}</li>`).join('');
+  render();
 }
 
 function reset() { shown = PAGE; open.clear(); render(); }
 
 function visible() {
-  return D.pollsters.filter((p) => (!state.country || p.iso === state.country) && p.elections.length >= state.min
+  const list = D.pollsters.filter((p) => (!state.country || p.iso === state.country) && p.elections.length >= state.min
     && (!state.q || p.name.toLowerCase().includes(state.q) || (p.orig || '').toLowerCase().includes(state.q)));
+  return state.sort === 'err' ? list.slice().sort((a, b) => a.err - b.err) : list; // data.json is ranked by vs rivals
 }
 
 function render() {
   const list = visible();
+  $('#sortnote').textContent = state.sort === 'vs' ? 'Ranked by accuracy compared with rival pollsters · higher is better'
+    : 'Ranked by average error per party, in points · lower is better';
   const all = D.pollsters.filter((p) => !state.country || p.iso === state.country);
   const els = new Set(all.flatMap((p) => p.elections.map((e) => p.iso + e.area + e.date)));
-  $('#stats').innerHTML = [[list.length, state.min > 1 ? `Ratings (${state.min}+ elections)` : 'Ratings'],
+  $('#stats').innerHTML = [[list.length, state.min > 1 ? `Pollsters (${state.min}+ elections)` : 'Pollsters'],
     [els.size, 'Elections'], [state.country ? cname(state.country) : Object.keys(D.countries).length, state.country ? 'Country' : 'Countries']]
     .map(([v, l]) => `<div class="stat"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
 
-  // One error scale for the whole view: up to the largest single-election error shown, at most 8 points.
   const page = list.slice(0, shown);
   const maxE = Math.max(1, ...page.flatMap((p) => p.elections.map((e) => e.err)));
   const top = Math.min(8, Math.ceil(maxE));
@@ -218,19 +239,18 @@ function render() {
   $('#axis').innerHTML = ticks.map((t) => `<span style="left:${x(t)}%">${t}</span>`).join('');
 
   if (!list.length) { $('#rows').innerHTML = '<p class="empty">No pollster matches these filters.</p>'; $('#more').hidden = true; post(); return; }
-  $('#rows').innerHTML = page.map((p, i) => {
+  $('#rows').innerHTML = page.map((p) => {
     const id = p.iso + '|' + p.name, errs = p.elections.map((e) => e.err);
-    const lo = Math.min(...errs), hi = Math.max(...errs);
+    const lo = Math.min(...errs), hi = Math.max(...errs), k = p.elections.length;
     const rank = list.indexOf(p) + 1;
-    const g = p[state.sys];
-    const label = `${rank}. ${p.name}, ${cname(p.iso)}: ${g ? gname() + ' ' + g + ', ' : 'no grade, '}average error ${f2(p.err)} points over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
+    const label = `${rank}. ${p.name}, ${cname(p.iso)}: ${p.label}${p.vs != null ? ' (' + sgn(p.vs) + ' points)' : ''}, average error ${f2(p.err)} points, ${p.conf.toLowerCase()} confidence (${k} election${k > 1 ? 's' : ''})`;
     return `<div class="row" role="listitem" tabindex="0" data-id="${esc(id)}" aria-expanded="${open.has(id)}" aria-label="${esc(label)}">
       <span class="rank">${rank}</span>
       <span class="who"><b>${esc(p.name)}</b><small>${esc(cname(p.iso))}</small></span>
-      <span class="gr ${gcls(g)}" title="${g ? esc(gname()) : 'No grade: fewer than ' + D.grades.min + ' elections'}">${g ? esc(g) : '–'}</span>
-      <span class="k">${p.elections.length}</span>
+      <span class="vs" title="${esc(p.label)}">${chip(p.label)}${p.vs != null ? `<span class="sc">${sgn(p.vs)}</span>` : ''}</span>
+      <span class="conf" title="${esc(p.conf)} confidence: ${k} election${k > 1 ? 's' : ''}">${confHtml(p.conf)}</span>
       <span class="strip">${ticks.map((t) => `<i class="g" style="left:${x(t)}%"></i>`).join('')}
-        ${p.elections.length > 1 ? `<i class="rng" style="left:${x(lo)}%;width:${x(hi) - x(lo)}%"></i>` : ''}
+        ${k > 1 ? `<i class="rng" style="left:${x(lo)}%;width:${x(hi) - x(lo)}%"></i>` : ''}
         ${p.elections.map((e, j) => `<i class="dot${e.err > top ? ' over' : ''}" style="left:${x(e.err)}%"></i><i class="hit" data-e="${j}" style="left:${x(e.err)}%"></i>`).join('')}
         <i class="avg" style="left:${x(p.err)}%"></i></span>
       <span class="err">${f2(p.err)}</span>
@@ -243,12 +263,16 @@ function render() {
 }
 
 function detail(p) {
-  return `<div class="detail">${p.elections.map((e) => `<div class="el">
-    <h3><span>${esc(fmtDate(e.date))}${e.area ? ' · ' + esc(AREA[e.area] || e.area) : ''}</span><span>${f2(e.err)}</span></h3>
+  const house = p.bias.length
+    ? p.bias.map(([a, b]) => `<span class="pt">${esc(a)} ${sgn(b, f1)}</span>`).join('') + '<span class="m">average poll minus result, in points</span>'
+    : `<span class="m">${p.elections.length < D.bias_elections ? 'Needs at least ' + D.bias_elections + ' elections.' : 'No party consistently over- or understated.'}</span>`;
+  return `<div class="detail"><div class="house"><b>House effect</b>${house}</div><div class="els">${p.elections.map((e) => `<div class="el">
+    <h3><span>${esc(fmtDate(e.date))}${e.area ? ' · ' + esc(AREA[e.area] || e.area) : ''}</span><span>Error ${f2(e.err)}</span></h3>
     <div class="meta">Fieldwork ended ${esc(fmtDate(e.fe))} (${e.days} day${e.days > 1 ? 's' : ''} before)${e.n ? ' · n = ' + e.n.toLocaleString('en-GB') : ''}${e.c ? ' · for ' + esc(e.c) : ''}</div>
+    <div class="riv">${e.rival_err == null ? 'No other pollster in this election' : `${e.rivals} rival${e.rivals > 1 ? 's' : ''} averaged ${f2(e.rival_err)} · this poll <b>${sgn(e.rival_err - e.err)}</b> vs rivals`}</div>
     <table><thead><tr><th scope="col">Party</th><th scope="col">Poll</th><th scope="col">Result</th><th scope="col">Gap</th></tr></thead>
-    <tbody>${e.parties.map(([a, v, r]) => `<tr><td>${esc(a)}</td><td>${f1(v)}</td><td>${f1(r)}</td><td class="d">${v - r >= 0 ? '+' : '−'}${f1(Math.abs(v - r))}</td></tr>`).join('')}</tbody></table>
-  </div>`).join('')}</div>`;
+    <tbody>${e.parties.map(([a, v, r]) => `<tr><td>${esc(a)}</td><td>${f1(v)}</td><td>${f1(r)}</td><td class="d">${sgn(v - r, f1)}</td></tr>`).join('')}</tbody></table>
+  </div>`).join('')}</div></div>`;
 }
 
 function toggle(row) {
@@ -267,8 +291,8 @@ $('#rows').addEventListener('mousemove', (ev) => {
   if (!row || (!hit && !avg)) { tip.hidden = true; return; }
   const [iso, ...n] = row.dataset.id.split('|'); const p = D.pollsters.find((q) => q.iso === iso && q.name === n.join('|'));
   if (hit) { const e = p.elections[+hit.dataset.e];
-    tip.innerHTML = `<b>${esc(p.name)} · ${esc(fmtDate(e.date))}</b>Error ${f2(e.err)} pts · ${e.parties.length} parties<br>Fieldwork ended ${e.days} day${e.days > 1 ? 's' : ''} before`;
-  } else tip.innerHTML = `<b>${esc(p.name)}${p[state.sys] ? ' · ' + esc(p[state.sys]) : ''}</b>Average error ${f2(p.err)} pts over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
+    tip.innerHTML = `<b>${esc(p.name)} · ${esc(fmtDate(e.date))}</b>Error ${f2(e.err)} pts${e.rival_err != null ? ` · rivals ${f2(e.rival_err)}` : ''}<br>Fieldwork ended ${e.days} day${e.days > 1 ? 's' : ''} before`;
+  } else tip.innerHTML = `<b>${esc(p.name)}</b>Average error ${f2(p.err)} pts over ${p.elections.length} election${p.elections.length > 1 ? 's' : ''}`;
   tip.hidden = false;
   const w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, ev.clientX - w / 2)) + 'px';
