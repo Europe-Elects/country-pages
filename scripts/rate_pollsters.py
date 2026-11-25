@@ -19,15 +19,17 @@ Rules
   * The poll is scaled to 100 % across its listed parties plus "others" (as for the polling averages).
   * Error = mean absolute difference (percentage points) between poll and result, over the parties
     that are both in the poll and in the results tab (at least 2).
-  * A pollster's rating = the mean of its per-election errors. Lower is better.
+  * A pollster's rating = the mean of its per-election errors in ONE country. Lower is better.
+    A pollster active in several countries gets a separate rating in each.
 
 Output (written to the ratings Sheet, replacing the tabs' contents)
-  * "Ratings": one row per pollster.
+  * "Ratings": one row per pollster and country.
   * "Detail":  one row per pollster and election.
 
 Usage
   python3 scripts/rate_pollsters.py <path-to-apopod>                       (Sheet via GOOGLE_TOKEN, RATINGS_SHEET_ID)
   python3 scripts/rate_pollsters.py <path-to-apopod> --results results.csv --out <dir>   (local test, CSV in/out)
+  add --json <file> to write the data file for the web page (pollster-ratings/data.json) instead of the tabs
 """
 import csv, datetime as dt, json, os, re, sys, urllib.parse, urllib.request
 from statistics import mean
@@ -38,6 +40,7 @@ from build_polling import FIELD, RESULT, parse_date, NO_POLLING  # same ROPF rea
 WINDOW_DAYS = 30
 MIN_PARTIES = 2
 API = 'https://sheets.googleapis.com/v4/spreadsheets/'
+COUNTRY = {}  # ISO-2 -> country name, from the results tab
 
 
 # ---------------------------------------------------------------- polls
@@ -146,6 +149,8 @@ def read_results(rows):
         iso = str(cell(r, 'ISO-2')).strip().upper()
         if not iso:
             continue
+        if str(cell(r, 'Country')).strip():
+            COUNTRY.setdefault(iso, str(cell(r, 'Country')).strip())
         for i, d in dates.items():
             v = r[i] if i < len(r) else ''
             try:
@@ -214,25 +219,27 @@ def rate(apopod, results):
             err = mean(abs(v - r) for _, v, r in pairs)
             detail.append({'iso': iso, 'area': area, 'date': eday, 'pf': pf, 'c': p['c'], 'fe': p['fe'], 'days': (eday - p['fe']).days,
                            'n': p['n'], 'err': err, 'k': len(pairs),
+                           'pairs': [(parties.get(k, {}).get('abbr') or k, v, r) for k, v, r in pairs],
                            'parties': ', '.join(f'{k} {v:.1f} ({r:.1f})' for k, v, r in pairs)})
         if unmatched:
             notes.append(f'{where}: poll parties without a results row (not compared): {", ".join(sorted(unmatched))}')
+    # One rating per pollster AND country: the same pollster in two countries is rated twice, separately.
     ratings = {}
     for d in detail:
-        ratings.setdefault(d['pf'], []).append(d)
-    summary = sorted(({'pf': pf, 'k': len(ds), 'err': mean(d['err'] for d in ds),
+        ratings.setdefault((d['pf'], d['iso']), []).append(d)
+    summary = sorted(({'pf': pf, 'iso': iso, 'k': len(ds), 'err': mean(d['err'] for d in ds),
                        'best': min(d['err'] for d in ds), 'worst': max(d['err'] for d in ds),
-                       'countries': ', '.join(sorted({d['iso'] for d in ds})),
-                       'last': max(d['date'] for d in ds)} for pf, ds in ratings.items()),
+                       'last': max(d['date'] for d in ds), 'ds': ds} for (pf, iso), ds in ratings.items()),
                      key=lambda s: (s['err'], -s['k']))
     return summary, detail, notes
 
 
 def tables(summary, detail):
-    r = [['Rank', 'Pollster', 'Elections rated', 'Average error (pts)', 'Best election', 'Worst election',
-          'Countries', 'Latest election rated']]
+    r = [['Rank', 'Pollster', 'ISO-2', 'Country', 'Elections rated', 'Average error (pts)', 'Best election', 'Worst election',
+          'Latest election rated']]
     for i, s in enumerate(summary, 1):
-        r.append([i, s['pf'], s['k'], round(s['err'], 2), round(s['best'], 2), round(s['worst'], 2), s['countries'], s['last'].isoformat()])
+        r.append([i, s['pf'], s['iso'], COUNTRY.get(s['iso'], s['iso']), s['k'], round(s['err'], 2), round(s['best'], 2),
+                  round(s['worst'], 2), s['last'].isoformat()])
     d = [['ISO-2', 'Area', 'Election date', 'Pollster', 'Commissioner', 'Fieldwork end', 'Days before election',
           'Sample size', 'Parties compared', 'Average error (pts)', 'Poll (result) per party']]
     for x in sorted(detail, key=lambda x: (x['iso'], x['area'], x['date'], x['err'])):
@@ -242,6 +249,24 @@ def tables(summary, detail):
             f' · last poll per pollster with fieldwork ending 1–{WINDOW_DAYS} days before election day'
     r.append([]); r.append([stamp])
     return r, d
+
+
+def write_json(path, summary, detail):
+    """Data file for the pollster-ratings web page."""
+    data = {
+        'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+        'window': WINDOW_DAYS,
+        'countries': {iso: COUNTRY.get(iso, iso) for iso in sorted({d['iso'] for d in detail})},
+        'pollsters': [{'name': s['pf'], 'iso': s['iso'], 'err': round(s['err'], 2), 'elections': [
+            {'iso': d['iso'], 'area': d['area'], 'date': d['date'].isoformat(), 'fe': d['fe'].isoformat(),
+             'days': d['days'], 'n': d['n'], 'c': d['c'], 'err': round(d['err'], 2),
+             'parties': [[a, round(v, 1), round(r, 2)] for a, v, r in d['pairs']]}
+            for d in sorted(s['ds'], key=lambda d: d['date'], reverse=True)]} for s in summary],
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as fh:
+        json.dump(data, fh, ensure_ascii=False, separators=(',', ':'))
+    print(f'{path}: {len(summary)} pollsters')
 
 
 def write_sheet(sheet_id, tabs):
@@ -275,8 +300,10 @@ def main(argv):
     for n in notes:
         print('  note:', n)
     r, d = tables(summary, detail)
-    print(f'{len(summary)} pollsters rated from {len(detail)} final polls')
-    if local:
+    print(f'{len(summary)} ratings (pollster per country) from {len(detail)} final polls')
+    if '--json' in argv:  # web page data only; the Sheet is left alone
+        write_json(argv[argv.index('--json') + 1], summary, detail)
+    elif local:
         out = argv[argv.index('--out') + 1] if '--out' in argv else '.'
         os.makedirs(out, exist_ok=True)
         for name, rows in (('ratings', r), ('detail', d)):
