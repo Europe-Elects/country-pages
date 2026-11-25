@@ -10,15 +10,19 @@ Input
         ISO-2 | Country | Area | Party (as given) | Europe Elects Entity ID | 2023-07-23 | 2019-11-10 | ...
     Area is left blank for national results; otherwise it is the poll file's area code (•A).
     Each date column is one election (election day) holding the official vote shares in %.
+    "A / B" in Party (as given) means: the poll files list this party as A or as B (e.g. "TV / TV+UL").
+    "X+Y" also matches polls that list X and Y separately (their figures are added up).
     A party is matched to the poll file by its Entity ID (•EE / •ID in the .ropf header), or else
     by "Party (as given)" = the poll file's key or abbreviation (•A).
 
 Rules
   * Per election and pollster, only the pollster's LAST poll with fieldwork ending 1-30 days before
     election day counts. Pollsters without such a poll are left out of that election.
-  * The poll is scaled to 100 % across its listed parties plus "others" (as for the polling averages).
-  * Error = mean absolute difference (percentage points) between poll and result, over the parties
-    that are both in the poll and in the results tab (at least 2).
+  * Figures are compared as published. Seat projections (•U: S) become seat shares; polls whose base includes
+    a non-choice share (•N: undecided, won't vote, refused …) are rescaled to valid choices: × 100 / (100 − N).
+  * Every pollster in an election is compared on the SAME parties: those with at least 5 % of the official
+    vote (RESULT_MIN). A pollster whose poll has no figure for one of them is skipped for that election.
+  * Error = mean absolute difference (percentage points) between poll and result over those parties.
   * A pollster's rating = the mean of its per-election errors in ONE country. Lower is better.
     A pollster active in several countries gets a separate rating in each.
 
@@ -36,11 +40,27 @@ from statistics import mean
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_polling import FIELD, RESULT, parse_date, NO_POLLING  # same ROPF reading as the averages
+from translit import romanise  # Latin script for Cyrillic, Greek and Armenian names
 
 WINDOW_DAYS = 30
 MIN_PARTIES = 2
+RESULT_MIN = 5.0   # every pollster is compared on the parties with at least this share of the official vote
 API = 'https://sheets.googleapis.com/v4/spreadsheets/'
 COUNTRY = {}  # ISO-2 -> country name, from the results tab
+
+# Grades from the average error (percentage points), fixed cut-offs: grade applies while error < limit.
+# Only ratings based on at least MIN_GRADED elections get a grade.
+MIN_GRADED = 2
+GRADES_US = [(0.75, 'A+'), (1.00, 'A'), (1.25, 'A−'), (1.50, 'B+'), (1.75, 'B'), (2.00, 'B−'), (2.25, 'C+'),
+             (2.50, 'C'), (2.75, 'C−'), (3.00, 'D+'), (3.50, 'D'), (4.00, 'D−'), (None, 'F')]
+GRADES_ECTS = [(1.00, 'A'), (1.50, 'B'), (2.00, 'C'), (2.50, 'D'), (3.00, 'E'), (None, 'F')]
+
+
+def grade(err, k, scale):
+    if k < MIN_GRADED:
+        return ''
+    e = round(err, 2)
+    return next(g for lim, g in scale if lim is None or e < lim)
 
 
 # ---------------------------------------------------------------- polls
@@ -59,7 +79,7 @@ def read_polls(text):
             own = {}
             for k, v in FIELD.findall(line):
                 own.setdefault(k, v)
-            fields = {k: v for k, v in head_fields.items() if k in ('FS', 'FE', 'A', 'SS')}
+            fields = {k: v for k, v in head_fields.items() if k in ('FS', 'FE', 'A', 'SS', 'U', 'VS')}
             fields.update(own)
             if 'O' not in own:
                 fields.pop('O', None)
@@ -92,9 +112,20 @@ def read_polls(text):
             def num(x):
                 try: return float(str(x).replace(',', '.'))
                 except (TypeError, ValueError): return None
-            total = sum(values.values()) + max(num(fields.get('O')) or 0.0, 0.0)
-            if total > 0:
-                values = {k: v * 100 / total for k, v in values.items()}
+            # Figures are compared as published, except:
+            #  * seat projections (•U: S) become seat shares: seats × 100 / total seats (•VS, else the seats listed);
+            #  * polls that include a non-choice share in the base (•N: undecided, won't vote, refused, …) are
+            #    rescaled to valid choices: × 100 / (100 − N).
+            # (•EX, where given, is reported next to figures that already add up to 100 without it: no change.)
+            if fields.get('U') == 'S':
+                seats = num(fields.get('VS')) or (sum(values.values()) + max(num(fields.get('O')) or 0.0, 0.0))
+                if not seats:
+                    continue
+                values = {k: v * 100 / seats for k, v in values.items()}
+            else:
+                nonchoice = num(fields.get('N')) or 0.0
+                if 0 < nonchoice < 100:
+                    values = {k: v * 100 / (100 - nonchoice) for k, v in values.items()}
             ss = num(fields.get('SS'))
             polls.append({'fe': fe, 'pf': pf, 'c': com, 'a': fields.get('A', ''), 'v': values, 'n': int(ss) if ss else None})
             done = True
@@ -102,7 +133,8 @@ def read_polls(text):
             m = re.match(r'^(\S+):\s+(\S+)\s+(.*)$', line)
             if m and '•A:' in line:
                 attrs = {k: v.strip() for k, v in re.findall(r'•([A-Z]+):\s*(.*?)\s*(?=•|$)', m.group(3))}
-                parties[m.group(1)] = {'id': attrs.get('EE') or attrs.get('ID', ''), 'abbr': attrs.get('A', m.group(1))}
+                parties[m.group(1)] = {'id': attrs.get('EE') or attrs.get('ID', ''), 'abbr': attrs.get('A', m.group(1)),
+                                       'r': attrs.get('R', '')}
     return polls, parties
 
 
@@ -169,6 +201,15 @@ def read_results(rows):
 
 # ---------------------------------------------------------------- rating
 
+def party_label(key, parties, iso):
+    """Display name of a poll-file party key in Latin script: the file's romanised abbreviation (•R) if it has one,
+    else its abbreviation (•A) romanised. Joint keys ("ВОЛЯ+НФСБ") are labelled part by part."""
+    def one(k):
+        p = parties.get(k, {})
+        return romanise(p.get('r') or p.get('abbr') or k, iso)
+    return one(key) if key in parties or '+' not in key else '+'.join(one(k) for k in key.split('+'))
+
+
 def rate(apopod, results):
     detail, notes = [], []
     cache = {}
@@ -184,17 +225,33 @@ def rate(apopod, results):
         if not cache[iso]:
             notes.append(f'{where}: no poll file {iso.lower()}.ropf'); continue
         polls, parties = cache[iso]
-        # poll key -> result share
-        by_id = {x['id']: x['pct'] for x in res if x['id']}
-        by_name = {x['name'].casefold(): x['pct'] for x in res if x['name']}
-        def result_for(key):
-            p = parties.get(key, {})
-            if p.get('id') and p['id'] in by_id:
-                return by_id[p['id']]
-            for n in (key, p.get('abbr', '')):
-                if n and n.casefold() in by_name:
-                    return by_name[n.casefold()]
+        # The parties every pollster is compared on: those with at least RESULT_MIN % of the official vote.
+        units = [x for x in res if x['pct'] >= RESULT_MIN]
+        if len(units) < MIN_PARTIES:
+            notes.append(f'{where}: fewer than {MIN_PARTIES} parties with {RESULT_MIN:g}%+ in the results tab'); continue
+
+        def poll_value(unit, v):
+            """The poll's figure for one results row, or None. A row matches a poll key by Entity ID, by key or
+            abbreviation; "A / B" in Party (as given) lists alternative keys; "X+Y" also matches a poll that
+            lists X and Y separately (their sum)."""
+            idx = {}
+            for k, val in v.items():
+                ph = parties.get(k, {})
+                for n in (k, ph.get('abbr', '')):
+                    if n:
+                        idx.setdefault(n.casefold(), val)
+                if ph.get('id'):
+                    idx.setdefault('#' + ph['id'], val)
+            if unit['id'] and '#' + unit['id'] in idx:
+                return idx['#' + unit['id']], unit['name'].split(' / ')[0].strip()
+            for alt in [a.strip() for a in unit['name'].split(' / ') if a.strip()]:
+                if alt.casefold() in idx:
+                    return idx[alt.casefold()], alt
+                parts = [x.strip().casefold() for x in alt.split('+')]
+                if len(parts) > 1 and all(x in idx for x in parts):
+                    return sum(idx[x] for x in parts), alt
             return None
+
         last = {}
         for p in polls:  # file order: the first of two polls with the same end date wins
             if p['a'] != area:
@@ -204,25 +261,22 @@ def rate(apopod, results):
                 last[p['pf']] = p
         if not last:
             notes.append(f'{where}: no poll in the {WINDOW_DAYS} days before the election'); continue
-        unmatched = set()
         for pf, p in sorted(last.items()):
-            pairs = []
-            for key, v in p['v'].items():
-                r = result_for(key)
-                if r is None:
-                    unmatched.add(key)
+            pairs, missing = [], []
+            for u in units:
+                got = poll_value(u, p['v'])
+                if got is None:
+                    missing.append(u['name'])
                 else:
-                    pairs.append((key, v, r))
-            if len(pairs) < MIN_PARTIES:
-                notes.append(f'{where} {pf}: fewer than {MIN_PARTIES} parties matched the results tab'); continue
+                    pairs.append((got[1], got[0], u['pct']))
+            if missing:
+                notes.append(f'{where} {pf}: skipped, no figure for {", ".join(missing)}'); continue
             pairs.sort(key=lambda t: -t[2])
             err = mean(abs(v - r) for _, v, r in pairs)
             detail.append({'iso': iso, 'area': area, 'date': eday, 'pf': pf, 'c': p['c'], 'fe': p['fe'], 'days': (eday - p['fe']).days,
                            'n': p['n'], 'err': err, 'k': len(pairs),
-                           'pairs': [(parties.get(k, {}).get('abbr') or k, v, r) for k, v, r in pairs],
-                           'parties': ', '.join(f'{k} {v:.1f} ({r:.1f})' for k, v, r in pairs)})
-        if unmatched:
-            notes.append(f'{where}: poll parties without a results row (not compared): {", ".join(sorted(unmatched))}')
+                           'pairs': [(party_label(k, parties, iso), v, r) for k, v, r in pairs],
+                           'parties': ', '.join(f'{party_label(k, parties, iso)} {v:.1f} ({r:.1f})' for k, v, r in pairs)})
     # One rating per pollster AND country: the same pollster in two countries is rated twice, separately.
     ratings = {}
     for d in detail:
@@ -235,18 +289,22 @@ def rate(apopod, results):
 
 
 def tables(summary, detail):
-    r = [['Rank', 'Pollster', 'ISO-2', 'Country', 'Elections rated', 'Average error (pts)', 'Best election', 'Worst election',
-          'Latest election rated']]
+    r = [['Rank', 'Pollster', 'ISO-2', 'Country', 'Elections rated', 'Average error (pts)', 'Grade (US)', 'Grade (ECTS)',
+          'Best election', 'Worst election', 'Latest election rated']]
     for i, s in enumerate(summary, 1):
-        r.append([i, s['pf'], s['iso'], COUNTRY.get(s['iso'], s['iso']), s['k'], round(s['err'], 2), round(s['best'], 2),
-                  round(s['worst'], 2), s['last'].isoformat()])
+        r.append([i, romanise(s['pf'], s['iso']), s['iso'], COUNTRY.get(s['iso'], s['iso']), s['k'], round(s['err'], 2),
+                  grade(s['err'], s['k'], GRADES_US), grade(s['err'], s['k'], GRADES_ECTS),
+                  round(s['best'], 2), round(s['worst'], 2), s['last'].isoformat()])
     d = [['ISO-2', 'Area', 'Election date', 'Pollster', 'Commissioner', 'Fieldwork end', 'Days before election',
           'Sample size', 'Parties compared', 'Average error (pts)', 'Poll (result) per party']]
     for x in sorted(detail, key=lambda x: (x['iso'], x['area'], x['date'], x['err'])):
-        d.append([x['iso'], x['area'], x['date'].isoformat(), x['pf'], x['c'], x['fe'].isoformat(), x['days'],
+        d.append([x['iso'], x['area'], x['date'].isoformat(), romanise(x['pf'], x['iso']), romanise(x['c'], x['iso']), x['fe'].isoformat(), x['days'],
                   x['n'] or '', x['k'], round(x['err'], 2), x['parties']])
     stamp = 'Updated ' + dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC') + \
-            f' · last poll per pollster with fieldwork ending 1–{WINDOW_DAYS} days before election day'
+            f' · last poll per pollster with fieldwork ending 1–{WINDOW_DAYS} days before election day' + \
+            f' · grades only from {MIN_GRADED}+ elections; US: ' + \
+            ', '.join(f'{g} <{lim:.2f}' if lim else f'{g} ≥{GRADES_US[-2][0]:.2f}' for lim, g in GRADES_US) + \
+            '; ECTS: ' + ', '.join(f'{g} <{lim:.2f}' if lim else f'{g} ≥{GRADES_ECTS[-2][0]:.2f}' for lim, g in GRADES_ECTS)
     r.append([]); r.append([stamp])
     return r, d
 
@@ -256,10 +314,13 @@ def write_json(path, summary, detail):
     data = {
         'updated': dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         'window': WINDOW_DAYS,
+        'grades': {'min': MIN_GRADED, 'us': GRADES_US, 'ects': GRADES_ECTS},
         'countries': {iso: COUNTRY.get(iso, iso) for iso in sorted({d['iso'] for d in detail})},
-        'pollsters': [{'name': s['pf'], 'iso': s['iso'], 'err': round(s['err'], 2), 'elections': [
+        'pollsters': [{'name': romanise(s['pf'], s['iso']), **({'orig': s['pf']} if romanise(s['pf'], s['iso']) != s['pf'] else {}),
+                       'iso': s['iso'], 'err': round(s['err'], 2),
+                       'us': grade(s['err'], s['k'], GRADES_US), 'ects': grade(s['err'], s['k'], GRADES_ECTS), 'elections': [
             {'iso': d['iso'], 'area': d['area'], 'date': d['date'].isoformat(), 'fe': d['fe'].isoformat(),
-             'days': d['days'], 'n': d['n'], 'c': d['c'], 'err': round(d['err'], 2),
+             'days': d['days'], 'n': d['n'], 'c': romanise(d['c'], d['iso']), 'err': round(d['err'], 2),
              'parties': [[a, round(v, 1), round(r, 2)] for a, v, r in d['pairs']]}
             for d in sorted(s['ds'], key=lambda d: d['date'], reverse=True)]} for s in summary],
     }
