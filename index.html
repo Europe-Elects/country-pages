@@ -238,6 +238,7 @@ button.toggle:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .v-polling,.v-polling body{background:transparent}
 .v-polling .only-on .pchip[aria-pressed="false"]:not(.more-chips),.v-polling .only-on .pseg:not(:has([aria-pressed="true"])){display:none}
 .v-polling .more-chips{border-style:dashed;color:var(--muted)}
+.no-head .next-head{display:none}
 .v-polling .card{border:0;border-radius:0;padding-left:0;padding-right:0}
 .v-polling .wrap{padding:0 0 4px;gap:10px}
 .next-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 16px}
@@ -3116,6 +3117,7 @@ const params = new URLSearchParams(location.search);
 let ISO = (params.get('country') || 'AL').toUpperCase(); // 'NEXT' = next national parliament election with polls
 const VIEW = (params.get('view') || '').toLowerCase();  // 'polling' = polling chart only (for the home page)
 if (VIEW) document.documentElement.classList.add('v-' + VIEW);
+if (params.get('head') === '0') document.documentElement.classList.add('no-head');   // ?view=polling&head=0: chart without the country name and calendar link
 // Outside the EU, parties are labelled and coloured strictly by Europarty; EP groups are not shown.
 const EU_MEMBERS = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'AX', 'EU'];
 let IS_EU = EU_MEMBERS.includes(ISO);
