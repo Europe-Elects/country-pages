@@ -17,6 +17,7 @@ MIN_NEIGHBOURS = 8      # ... but at least this many
 GAP_DAYS = 150          # break a party's line where it went unpolled for longer than this
 MIN_POLLS = 4           # parties with fewer national polls get dots only, no line
 GRID_DAYS = 7           # spacing of the published curve points
+AS_PUBLISHED = {'ES'}  # countries whose polls are used as published, not normalised to 100 (see parse_ropf)
 NO_POLLING = {'RU', 'BY', 'AZ'}  # countries that never get a polling average
 
 FIELD = re.compile(r'•([A-Z]+):\s*(\S+)')
@@ -41,7 +42,7 @@ def parse_date(s, end=False):
 AREA_EXPORT = {'BE'}
 
 
-def parse_ropf(text):
+def parse_ropf(text, as_published=False):
     polls, parties, area_polls = [], {}, []
     head, head_fields, done = None, {}, True   # the current poll's first line, its fields, national row taken?
     for line in text.splitlines():
@@ -75,6 +76,8 @@ def parse_ropf(text):
             m = re.search(r'•PF:\s*(.*?)\s*(?=•|$)', line); pf = m.group(1) if m else ''
             if fields.get('SC', 'N') != 'N':
                 continue
+            if as_published and fields.get('U') == 'S':
+                continue  # seat projection, not vote shares: not part of the polling average
             area = fields.get('A', '')  # poll for one area/region only (e.g. Flanders): kept apart from the national average
             fs, fe = parse_date(fields.get('FS', '')), parse_date(fields.get('FE', ''), True)
             if not fs and not fe:
@@ -90,14 +93,23 @@ def parse_ropf(text):
                 num = float(val.strip('<>')) / (2 if val.startswith('<') else 1)
                 values[key] = num
             if values:
-                # Normalise every poll: all valid choices (the listed parties plus "others", •O) are scaled
-                # proportionally to add up to 100%. Undecided / excluded shares (•EX etc.) are not valid choices.
                 def num(x):
                     try: return float(str(x).replace(',', '.'))
                     except (TypeError, ValueError): return None
-                other = num(fields.get('O')) or 0.0
-                total = sum(values.values()) + max(other, 0.0)
-                if total > 0:
+                other = max(num(fields.get('O')) or 0.0, 0.0)
+                total = sum(values.values()) + other
+                if as_published:
+                    # AS_PUBLISHED countries: shares as published (same rule as the pollster ratings). A poll that
+                    # lists only the larger parties is NOT scaled up: the unlisted remainder is other parties.
+                    # Rescaled to valid choices (parties + "others", •O = 100) only when the poll reports a
+                    # non-choice share (•N: undecided, won't vote, refused …) or its figures are a share of all
+                    # respondents (•VS); listed shares adding up to more than 100 (rounding) are scaled down.
+                    rescale = (num(fields.get('N')) or 0) > 0 or bool(fields.get('VS')) or total > 100
+                else:
+                    # Other countries: every poll is normalised so that the listed parties plus "others" (•O)
+                    # add up to 100%. Undecided / excluded shares (•EX etc.) are not valid choices.
+                    rescale = True
+                if total > 0 and rescale:
                     values = {k: round(v * 100 / total, 2) for k, v in values.items()}
                 ss = num(fields.get('SS'))
                 rec = {'d': mid, 'pf': pf, 'v': values, 'n': int(ss) if ss and ss >= 50 else None}
@@ -286,7 +298,7 @@ def main(src, dst):
         if not m or m.group(1).upper() in NO_POLLING:
             continue
         with open(os.path.join(src, name), encoding='utf-8') as fh:
-            polls, parties, area_polls = parse_ropf(fh.read())
+            polls, parties, area_polls = parse_ropf(fh.read(), as_published=m.group(1).upper() in AS_PUBLISHED)
         iso = m.group(1).upper()
         areas = {}
         if iso in AREA_EXPORT:
